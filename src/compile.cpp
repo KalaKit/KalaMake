@@ -29,9 +29,8 @@ using KalaHeaders::KalaLog::LogType;
 using KalaHeaders::KalaFile::ReadLinesFromFile;
 
 using KalaHeaders::KalaString::StartsWith;
-using KalaHeaders::KalaString::RemoveAllFromString;
+using KalaHeaders::KalaString::RemoveFromString;
 using KalaHeaders::KalaString::SplitString;
-using KalaHeaders::KalaString::ContainsString;
 using KalaHeaders::KalaString::MakeViews;
 
 using KalaCLI::Core;
@@ -58,13 +57,15 @@ using u32 = uint32_t;
 struct CompileData
 {
 	string compiler{};
-	vector<string> scripts{};
+	vector<string> sources{};
+	vector<string> headers{};
+	vector<string> links{};
 	string type{};
 	string name{};
 	string standard{};
 	vector<string> defines{};
-	string targetDir{};
-	string objDir{};
+	string buildPath{};
+	string objPath{};
 	vector<string> extensions{};
 	vector<string> flags{};
 	vector<string> customFlags{};
@@ -73,17 +74,19 @@ struct CompileData
 //kma path is the root directory where the kma file is stored at
 static path kmaPath{};
 
-static path defaultTargetDir = "build";
-static path defaultObjDir = "obj";
+//default build directory path relative to kmaPath if buildpath is not added or filled
+static path defaultBuildPath = "build";
+//default object directory path relative to kmaPath if objpath is not added or filled
+static path defaultObjPath = "obj";
 
 constexpr string_view EXE_VERSION_NUMBER = "1.0";
 constexpr string_view KMA_VERSION_NUMBER = "1.0";
 constexpr string_view KMA_VERSION_NAME = "#KMA VERSION 1.0";
 
-static const array<string_view, 11> actionTypes =
+static const array<string_view, 13> actionTypes =
 {
 	"compiler",   //what is used to compile this source code
-	"scripts",    //what scripts are included
+	"sources",    //what source files are compiled
 	"type",       //what is the target type of the final file
 	"name",       //what is the name of the final file
 
@@ -91,39 +94,46 @@ static const array<string_view, 11> actionTypes =
 
 	//optional fields
 
-	"defines",    //compile-time defines linked to the binary
-	"targetdir",  //where the binary will be built to, defaults to /build/release if using standard release etc
-	"objdir",     //where the intermediate files live at during compilation
+	"links",      //what libraries will be linked to the binary
+
+	"headers",    //what header files are included (for C and C++)
+
+	"defines",    //what compile-time defines will be linked to the binary
+	"buildpath",  //where the binary will be built to
+	"objpath",    //where the object files live at during compilation
 
 	"extensions", //what language standard extensions will be used
 	"flags",      //what flags will be passed to the compiler
-	"customflags" //KalaMake-specific flags that trigger extra actions
+	"customflags" //what KalaMake-specific flags will trigger extra actions
 };
 
 static const array<string_view, 3> supportedCompilers =
 {
-	"clang-cl", //for windows, MSVC toolchain
-	"clang++",  //for windows, GNU toolchain for mingw, msys2 and similar
+	"clang-cl", //for windows only, MSVC toolchain
+	"clang++",  //for windows and linux, GNU toolchain for mingw, msys2 and similar
 
-	"cl"        //windows MSVC compiler
+	"cl"        //windows-only MSVC compiler
 };
 
-static const array<string_view, 4> supportedScriptExtensions =
+static const array<string_view, 2> supportedSourceExtensions =
 {
-	".hpp",
-	".h",
 	".cpp",
 	".c"
+};
+static const array<string_view, 2> supportedHeaderExtensions =
+{
+	".hpp",
+	".h"
 };
 
 static const array<string_view, 3> supportedTypes =
 {
 	"executable", //creates a runnable executable
-	"shared-lib", //creates dll + lib (or .so + .a on linux)
-	"static-lib"  //creates lib only (or .a only on linux)
+	"shared-lib", //creates .dll + .lib (or .so + .a on linux)
+	"static-lib"  //creates .lib only (or .a only on linux)
 };
 
-static const array<string_view, 9> supportedStandards =
+static const array<string_view, 10> supportedStandards =
 {
 	"cpp11",
 	"cpp14",
@@ -131,7 +141,8 @@ static const array<string_view, 9> supportedStandards =
 	"cpp20",
 	"cpp23",
 
-	"c98",
+	"c89",
+	"c99",
 	"c11",
 	"c17",
 	"c23"
@@ -154,7 +165,7 @@ static const array<string_view, 9> supportedCustomFlags =
 	"debug-minsizerel"  //create debug + minimum size release
 };
 
-constexpr u8 MIN_NAME_LENGTH = 3u;
+constexpr u8 MIN_NAME_LENGTH = 1u;
 constexpr u8 MAX_NAME_LENGTH = 20u;
 
 static void HandleProjectContent(const vector<string>& fileContent);
@@ -279,14 +290,16 @@ namespace KalaMake
 void HandleProjectContent(const vector<string>& fileContent)
 {
 	string compiler{};
-	vector<string> scripts{};
+	vector<string> sources{};
+	vector<string> headers{};
+	vector<string> links{};
 	string type{};
 	string name{};
 	string standard{};
 	
 	vector<string> defines{};
-	string targetDir{};
-	string objDir{};
+	string buildPath{};
+	string objPath{};
 	vector<string> extensions{};
 	vector<string> flags{};
 	vector<string> customFlags{};
@@ -295,9 +308,17 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			return StartsWith(value, "compiler: ");
 		};
-	auto IsScript = [](string_view value) -> bool
+	auto IsSource = [](string_view value) -> bool
 		{
-			return StartsWith(value, "scripts: ");
+			return StartsWith(value, "sources: ");
+		};
+	auto IsHeader = [](string_view value) -> bool
+		{
+			return StartsWith(value, "headers: ");
+		};
+	auto IsLink = [](string_view value) -> bool
+		{
+			return StartsWith(value, "links: ");
 		};
 	auto IsType = [](string_view value) -> bool
 		{
@@ -315,13 +336,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			return StartsWith(value, "defines: ");
 		};
-	auto IsTargetDir = [](string_view value) -> bool
+	auto IsBuildPath = [](string_view value) -> bool
 		{
-			return StartsWith(value, "targetdir: ");
+			return StartsWith(value, "buildpath: ");
 		};
-	auto IsObjDir = [](string_view value) -> bool
+	auto IsObjPath = [](string_view value) -> bool
 		{
-			return StartsWith(value, "objdir: ");
+			return StartsWith(value, "objpath: ");
 		};
 	auto IsExtension = [](string_view value) -> bool
 		{
@@ -342,11 +363,22 @@ void HandleProjectContent(const vector<string>& fileContent)
 				|| value == "clang++";
 		};
 
-	auto IsAllowedScriptExtension = [](path value) -> bool
+	auto IsAllowedSourceExtension = [](path value) -> bool
 		{
 			if (!value.has_extension()) return false;
 
-			for (const auto& e : supportedScriptExtensions)
+			for (const auto& e : supportedSourceExtensions)
+			{
+				if (value.extension() == e) return true;
+			}
+
+			return false;
+		};
+	auto IsAllowedHeaderExtension = [](path value) -> bool
+		{
+			if (!value.has_extension()) return false;
+
+			for (const auto& e : supportedHeaderExtensions)
 			{
 				if (value.extension() == e) return true;
 			}
@@ -436,19 +468,19 @@ void HandleProjectContent(const vector<string>& fileContent)
 	// READ FILE CONTENT IN KMA FILE
 	//
 
-	for (int i = 0; i < fileContent.size(); i++)
+	for (size_t i = 0; i < fileContent.size(); i++)
 	{
-		const string_view& c = fileContent[i];
+		const string_view& line = fileContent[i];
 
 		//ignore version line, empty lines and comments
 		if (i == 0
-			|| c.empty()
-			|| StartsWith(c, "//"))
+			|| line.empty()
+			|| StartsWith(line, "//"))
 		{
 			continue;
 		}
 
-		if (IsCompiler(c))
+		if (IsCompiler(line))
 		{
 			if (!compiler.empty())
 			{
@@ -457,75 +489,158 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "compiler: ");
+			string value = RemoveFromString(line, "compiler: ");
 
 			if (!IsAllowedCompiler(value)) return;
 
 			compiler = value;
 		}
-		else if (IsScript(c))
+		else if (IsSource(line))
 		{
-			if (!scripts.empty())
+			if (!sources.empty())
 			{
-				PrintError("Failed to compile project because more than one scripts line was passed!");
+				PrintError("Failed to compile project because more than one sources line was passed!");
 
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "scripts: ");
+			string value = RemoveFromString(line, "sources: ");
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because no scripts were passed!");
+				PrintError("Failed to compile project because no sources were passed!");
 
 				return;
 			}
 
-			vector<string> foundScripts = SplitString(value, ", ");
+			vector<string> foundSources = SplitString(value, ", ");
+			if (ContainsDuplicates(foundSources)) RemoveDuplicates(foundSources);
 
-			bool failedScriptSearch{};
+			bool failedSourceSearch{};
 
-			for (const auto& s : foundScripts)
+			for (const auto& s : foundSources)
 			{
-				path scriptPath{}; 
+				path sourcePath{}; 
 				
 				try
 				{
-					scriptPath = weakly_canonical(kmaPath / s);
+					sourcePath = weakly_canonical(kmaPath / s);
 				}
 				catch (const filesystem_error&)
 				{
-					PrintError("Failed to compile project because script '" + s + "' could not be resolved!");
+					PrintError("Failed to compile project because source '" + s + "' could not be resolved!");
 
-					failedScriptSearch = true;
-
-					break;
-				}
-
-				if (!exists(scriptPath))
-				{
-					PrintError("Failed to compile project because script '" + scriptPath.string() + "' was not found!");
-
-					failedScriptSearch = true;
+					failedSourceSearch = true;
 
 					break;
 				}
 
-				if (!IsAllowedScriptExtension(scriptPath))
+				if (!exists(sourcePath))
 				{
-					PrintError("Failed to compile project because script '" + scriptPath.string() + "' had an unsupported extension!");
+					PrintError("Failed to compile project because source '" + sourcePath.string() + "' was not found!");
 
-					failedScriptSearch = true;
+					failedSourceSearch = true;
+
+					break;
+				}
+
+				if (!IsAllowedSourceExtension(sourcePath))
+				{
+					PrintError("Failed to compile project because source '" + sourcePath.string() + "' had an unsupported extension!");
+
+					failedSourceSearch = true;
 
 					break;
 				}
 			}
 
-			if (failedScriptSearch) return;
+			if (failedSourceSearch) return;
 
-			scripts = std::move(foundScripts);
+			sources = std::move(foundSources);
 		}
-		else if (IsType(c))
+		else if (IsHeader(line))
+		{
+			if (!headers.empty())
+			{
+				PrintError("Failed to compile project because more than one headers line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "headers: ");
+
+			if (value.empty())
+			{
+				PrintError("Failed to compile project because no headers were passed!");
+
+				return;
+			}
+
+			vector<string> foundHeaders = SplitString(value, ", ");
+			if (ContainsDuplicates(foundHeaders)) RemoveDuplicates(foundHeaders);
+
+			bool failedHeaderSearch{};
+
+			for (const auto& s : foundHeaders)
+			{
+				path headerPath{};
+
+				try
+				{
+					headerPath = weakly_canonical(kmaPath / s);
+				}
+				catch (const filesystem_error&)
+				{
+					PrintError("Failed to compile project because header '" + s + "' could not be resolved!");
+
+					failedHeaderSearch = true;
+
+					break;
+				}
+
+				if (!exists(headerPath))
+				{
+					PrintError("Failed to compile project because header '" + headerPath.string() + "' was not found!");
+
+					failedHeaderSearch = true;
+
+					break;
+				}
+
+				if (!IsAllowedHeaderExtension(headerPath))
+				{
+					PrintError("Failed to compile project because header '" + headerPath.string() + "' had an unsupported extension!");
+
+					failedHeaderSearch = true;
+
+					break;
+				}
+			}
+
+			if (failedHeaderSearch) return;
+
+			headers = std::move(foundHeaders);
+		}
+		else if (IsLink(line))
+		{
+			if (!links.empty())
+			{
+				PrintError("Failed to compile project because more than one links line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "links: ");
+
+			//ignore empty links field
+			if (value.empty()) continue;
+
+			vector<string> foundLinks = SplitString(value, ", ");
+			if (ContainsDuplicates(foundLinks)) RemoveDuplicates(foundLinks);
+
+			links = std::move(foundLinks);
+		}
+		else if (IsType(line))
 		{
 			if (!type.empty())
 			{
@@ -534,13 +649,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "type: ");
+			string value = RemoveFromString(line, "type: ");
 
 			if (!IsAllowedType(value)) return;
 
 			type = value;
 		}
-		else if (IsName(c))
+		else if (IsName(line))
 		{
 			if (!name.empty())
 			{
@@ -549,13 +664,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "name: ");
+			string value = RemoveFromString(line, "name: ");
 
 			if (!IsAllowedName(value)) return;
 
 			name = value;
 		}
-		else if (IsStandard(c))
+		else if (IsStandard(line))
 		{
 			if (!standard.empty())
 			{
@@ -564,13 +679,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "standard: ");
+			string value = RemoveFromString(line, "standard: ");
 
-			if (!IsAllowedStandard(c)) return;
+			if (!IsAllowedStandard(value)) return;
 
 			standard = value;
 		}
-		else if (IsDefine(c))
+		else if (IsDefine(line))
 		{
 			if (!defines.empty())
 			{
@@ -579,86 +694,85 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "defines: ");
+			string value = RemoveFromString(line, "defines: ");
 
 			//ignore empty defines field
 			if (value.empty()) continue;
 
 			vector<string> tempDefines = SplitString(value, ", ");
-
 			if (ContainsDuplicates(tempDefines)) RemoveDuplicates(tempDefines);
 
 			defines = std::move(tempDefines);
 		}
-		else if (IsTargetDir(c))
+		else if (IsBuildPath(line))
 		{
-			if (!targetDir.empty())
+			if (!buildPath.empty())
 			{
-				PrintError("Failed to compile project because more than one target dir line was passed!");
+				PrintError("Failed to compile project because more than one build path line was passed!");
 
 				return;
 			}
 
-			path tempTargetDir = kmaPath / c;
+			path tempBuildPath = kmaPath / RemoveFromString(line, "buildpath: ");
 
-			if (!exists(tempTargetDir))
+			if (!exists(tempBuildPath))
 			{
-				PrintError("Failed to compile project because passed target dir path '" + tempTargetDir.string() + "' does not exist!");
+				PrintError("Failed to compile project because passed build path '" + tempBuildPath.string() + "' does not exist!");
 
 				return;
 			}
 
-			if (!is_directory(tempTargetDir))
+			if (!is_directory(tempBuildPath))
 			{
-				PrintError("Failed to compile project because passed target dir path '" + tempTargetDir.string() + "' does not lead to a directory!");
+				PrintError("Failed to compile project because passed build path '" + tempBuildPath.string() + "' does not lead to a directory!");
 
 				return;
 			}
 
-			if (tempTargetDir.string() == objDir)
+			if (tempBuildPath.string() == objPath)
 			{
-				PrintError("Failed to compile project because passed target dir path '" + tempTargetDir.string() + "' is the same as obj dir path!");
+				PrintError("Failed to compile project because passed build path '" + tempBuildPath.string() + "' is the same as obj path!");
 
 				return;
 			}
 
-			targetDir = tempTargetDir.string();
+			buildPath = tempBuildPath.string();
 		}
-		else if (IsObjDir(c))
+		else if (IsObjPath(line))
 		{
-			if (!objDir.empty())
+			if (!objPath.empty())
 			{
-				PrintError("Failed to compile project because more than one obj dir line was passed!");
+				PrintError("Failed to compile project because more than one obj path line was passed!");
 
 				return;
 			}
 
-			path tempObjDir = kmaPath / c;
+			path tempObjPath = kmaPath / RemoveFromString(line, "objpath: ");
 
-			if (!exists(tempObjDir))
+			if (!exists(tempObjPath))
 			{
-				PrintError("Failed to compile project because passed obj dir path '" + tempObjDir.string() + "' does not exist!");
+				PrintError("Failed to compile project because passed obj path '" + tempObjPath.string() + "' does not exist!");
 
 				return;
 			}
 
-			if (!is_directory(tempObjDir))
+			if (!is_directory(tempObjPath))
 			{
-				PrintError("Failed to compile project because passed obj dir path '" + tempObjDir.string() + "' does not lead to a directory!");
+				PrintError("Failed to compile project because passed obj path '" + tempObjPath.string() + "' does not lead to a directory!");
 
 				return;
 			}
 
-			if (tempObjDir.string() == targetDir)
+			if (tempObjPath.string() == buildPath)
 			{
-				PrintError("Failed to compile project because passed obj dir path '" + tempObjDir.string() + "' is the same as target dir path!");
+				PrintError("Failed to compile project because passed obj path '" + tempObjPath.string() + "' is the same as build path!");
 
 				return;
 			}
 
-			objDir = tempObjDir.string();
+			objPath = tempObjPath.string();
 		}
-		else if (IsExtension(c))
+		else if (IsExtension(line))
 		{
 			if (!extensions.empty())
 			{
@@ -667,18 +781,17 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "extensions: ");
+			string value = RemoveFromString(line, "extensions: ");
 
 			//ignore empty customflags field
 			if (value.empty()) continue;
 
 			vector<string> tempExtensions = SplitString(value, ", ");
-
 			if (ContainsDuplicates(tempExtensions)) RemoveDuplicates(tempExtensions);
 
-			extensions = std::move(extensions);
+			extensions = std::move(tempExtensions);
 		}
-		else if (IsFlag(c))
+		else if (IsFlag(line))
 		{
 			if (!flags.empty())
 			{
@@ -687,18 +800,17 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "flags: ");
+			string value = RemoveFromString(line, "flags: ");
 
 			//ignore empty flags field
 			if (value.empty()) continue;
 
 			vector<string> tempFlags = SplitString(value, ", ");
-
 			if (ContainsDuplicates(tempFlags)) RemoveDuplicates(tempFlags);
 
 			flags = std::move(tempFlags);
 		}
-		else if (IsCustomFlag(c))
+		else if (IsCustomFlag(line))
 		{
 			if (!customFlags.empty())
 			{
@@ -707,13 +819,12 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return;
 			}
 
-			string value = RemoveAllFromString(c, "customflags: ");
+			string value = RemoveFromString(line, "customflags: ");
 
 			//ignore empty customflags field
 			if (value.empty()) continue;
 
 			vector<string> tempCustomflags = SplitString(value, ", ");
-
 			if (ContainsDuplicates(tempCustomflags)) RemoveDuplicates(tempCustomflags);
 
 			bool failedCustomFlagsSearch{};
@@ -734,7 +845,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 		else
 		{
-			PrintError("Failed to compile project because unknown field '" + string(c) + "' was passed to the project file!");
+			PrintError("Failed to compile project because unknown field '" + string(line) + "' was passed to the project file!");
 
 			return;
 		}
@@ -750,9 +861,9 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 		return;
 	}
-	if (scripts.empty())
+	if (sources.empty())
 	{
-		PrintError("Failed to compile project because scripts have no value!");
+		PrintError("Failed to compile project because sources have no value!");
 
 		return;
 	}
@@ -778,13 +889,15 @@ void HandleProjectContent(const vector<string>& fileContent)
 	CompileProject(
 		{
 			.compiler = compiler,
-			.scripts = std::move(scripts),
+			.sources = std::move(sources),
+			.headers = std::move(headers),
+			.links = std::move(links),
 			.type = type,
 			.name = name,
 			.standard = standard,
 			.defines = std::move(defines),
-			.targetDir = targetDir,
-			.objDir = objDir,
+			.buildPath = buildPath,
+			.objPath = objPath,
 			.extensions = std::move(extensions),
 			.flags = std::move(flags),
 			.customFlags = std::move(customFlags),
