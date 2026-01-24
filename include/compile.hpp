@@ -16,6 +16,6 @@ namespace KalaMake
 	class KalaMakeCore
 	{
 	public:
-		static void Compile(const vector<string>& params);
+		static void Initialize(const vector<string>& params);
 	};
 }

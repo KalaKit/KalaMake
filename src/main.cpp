@@ -18,10 +18,10 @@ static void AddExternalCommands()
 {
 	Command cmd_compile
 		{
-			.primary = { "compile, cp" },
-			.description = "Compile a project from a kma file, second parameter must be valid path.",
+			.primary = { "compile" },
+			.description = "Compile a project from a kma file, third parameter must be valid path to a .kma file.",
 			.paramCount = 2,
-			.targetFunction = KalaMakeCore::Compile
+			.targetFunction = KalaMakeCore::Initialize
 		};
 
 	CommandManager::AddCommand(cmd_compile);
