@@ -28,6 +28,7 @@ using KalaHeaders::KalaLog::LogType;
 
 using KalaHeaders::KalaFile::ReadLinesFromFile;
 using KalaHeaders::KalaFile::GetRelativeFiles;
+using KalaHeaders::KalaFile::CreateNewDirectory;
 
 using KalaHeaders::KalaString::ContainsString;
 using KalaHeaders::KalaString::StartsWith;
@@ -59,18 +60,21 @@ using std::filesystem::is_regular_file;
 
 struct CompileData
 {
+	string name{};
+	string type{};
+	string standard{};
 	string compiler{};
 	vector<string> sources{};
-	vector<string> headers{};
-	vector<string> links{};
-	string warningLevel{};
-	string type{};
-	string name{};
-	string standard{};
-	vector<string> defines{};
+
 	string buildPath{};
 	string objPath{};
+	vector<string> headers{};
+	vector<string> links{};
+
+	string warningLevel;
+	vector<string> defines{};
 	vector<string> extensions{};
+
 	vector<string> flags{};
 	vector<string> customFlags{};
 };
@@ -96,61 +100,72 @@ static path foundCLPath{};
 
 static const array<string_view, 14> actionTypes =
 {
-	"compiler",     //what is used to compile this source code
-	"sources",      //what source files are compiled
-	"type",         //what is the target type of the final file
 	"name",         //what is the name of the final file
-
+	"type",         //what is the target type of the final file
+	"compiler",     //what is used to compile this source code
 	"standard",     //what is the language standard
-
+	"sources",      //what source files are compiled
+	
 	//optional fields
 
-	"warninglevel", //what warning level should the compiler use, defaults to strong if unset
-
-	"links",        //what libraries will be linked to the binary
-
-	"headers",      //what header files are included (for C and C++)
-
-	"defines",      //what compile-time defines will be linked to the binary
 	"buildpath",    //where the binary will be built to
 	"objpath",      //where the object files live at during compilation
-
+	"headers",      //what header files are included (for C and C++)
+	"links",        //what libraries will be linked to the binary
+	
+	"warninglevel", //what warning level should the compiler use, defaults to strong if unset
+	"defines",      //what compile-time defines will be linked to the binary
 	"extensions",   //what language standard extensions will be used
+
 	"flags",        //what flags will be passed to the compiler
 	"customflags"   //what KalaMake-specific flags will trigger extra actions
 };
 
-static const array<string_view, 3> supportedCompilers =
+static const array<string_view, 5> supportedCompilers =
 {
-	"clang-cl", //for windows only, MSVC toolchain
-	"clang++",  //for windows and linux, GNU toolchain for mingw, msys2 and similar
+	"clang-cl", //windows only, MSVC-style flags
+	"cl",       //windows only, MSVC-style flags
 
-	"cl"        //windows-only MSVC compiler
+	"clang++",  //windows + linux, GNU flags
+	"gcc",      //linux, GNU flags, used for C
+	"g++"       //linux, GNU flags, used for C++
 };
 
-static const array<string_view, 3> supportedTypes =
+static const array<string_view, 4> supportedTypes =
 {
-	"executable", //creates a runnable executable
-	"shared-lib", //creates .dll + .lib (.so + .a on Posix)
-	"static-lib"  //creates .lib only (.a only on Posix)
+	//creates a runnable executable
+	"executable",
+
+	//creates a .dll required at start + linkable .lib,
+	//creates a .so on Linux, same as dynamic lib
+	"shared-lib",
+
+	//creates a linkable .lib, .a on Linux
+	"static-lib",
+
+	//creates a loadable .dll,
+	//creates a .so on Linux, same as shared lib
+	"dynamic-dll"
 };
 
-static const array<string_view, 5> supportedCStandards =
+static const array<string_view, 6> supportedCStandards =
 {
 	"c89",
 	"c99",
 	"c11",
 	"c17",
-	"c23"
+	"c23",
+	"clatest"
 };
-static const array<string_view, 6> supportedCPPStandards =
+static const array<string_view, 7> supportedCPPStandards =
 {
 	"c++11",
 	"c++14",
 	"c++17",
 	"c++20",
 	"c++23",
-	"c++26"
+	"c++26",
+	"c++latest",
 };
 
 //same warning types are used for both Windows and Linux,
@@ -158,30 +173,30 @@ static const array<string_view, 6> supportedCPPStandards =
 static const array<string_view, 6> supportedWarningTypes =
 {
 	//no warnings
-	//  Windows: -W0
+	//  Windows: /W0
 	//  Linux:   -w
 	"none",
 
 	//very basic warnings
-	//  Windows: -W1
+	//  Windows: /W1
 	//  Linux:   -Wall
 	"basic",
 
 	//common, useful warnings
-	//  Windows: -W2
+	//  Windows: /W2
 	//  Linux:   -Wall
 	//           -Wextra
 	"normal",
 
 	//strong warnings, recommended default
-	//  Windows: -W3
+	//  Windows: /W3
 	//  Linux:   -Wall
 	//           -Wextra
 	//           -Wpedantic
 	"strong",
 
 	//very strict, high signal warnings
-	//  Windows: -W4
+	//  Windows: /W4
 	//  Linux:   -Wall
 	//           -Wextra
 	//           -Wpedantic
@@ -191,73 +206,67 @@ static const array<string_view, 6> supportedWarningTypes =
 	"strict",
 
 	//everything
-	//  Windows:       -Wall
-	//  Linux (clang): -Wall
-	//                 -Wextra
-	//                 -Wpedantic
-	//                 -Weverything
-	//  Linux (GCC):   -Wall
-	//                 -Wextra
-	//                 -Wpedantic
-	//                 -Wshadow
-	//                 -Wconversion
-	//                 -Wsign-conversion
-	//                 -Wcast-align
-	//                 -Wnull-dereference
-	//                 -Wdouble-promotion
-	//                 -Wformat=2
+	//  Windows: (cl + clang-cl): /Wall
+	// 
+	//  Windows/Linux (clang++):  -Wall
+	//                            -Wextra
+	//                            -Wpedantic
+	//                            -Weverything
+	// 
+	//  Linux (GCC + G++):        -Wall
+	//                            -Wextra
+	//                            -Wpedantic
+	//                            -Wshadow
+	//                            -Wconversion
+	//                            -Wsign-conversion
+	//                            -Wcast-align
+	//                            -Wnull-dereference
+	//                            -Wdouble-promotion
+	//                            -Wformat=2
 	"all"
 };
 
-static const array<string_view, 7> supportedCustomFlags =
+static const array<string_view, 8> supportedCustomFlags =
 {
 	//works on clang and cl, uses the multithreaded benefits of ninja for faster compilation
-	"useninja",
+	"use-ninja",
+
+	//should object files be kept or not? works only for languages
+	//that support object files for faster recompilation
+	"keep-obj",
 
 	//fails the build if the compiler cannot support the requested standard
-	//  cl:        /permissive-
-	//  clang-cl:  nothing
-	//  clang-c++: nothing
-	//  gcc:       nothing
-	"standardrequired",
+	//  cl + clang-cl:       nothing
+	//  gcc + g++ + clang++: nothing
+	"standard-required",
 
 	//treats all warnings as errors
-	//  cl:        /WX
-	//  clang-cl:  /WX
-	//  clang-c++: -Werror
-	//  gcc:       -Werror
-	"warningsaserrors",
+	//  cl + clang-cl:       /WX
+	//  gcc + g++ + clang++: -Werror
+	"warnings-as-errors",
 
 	//
-	// build types (do not add more than one of these)
+	// build types
 	//
 
 	//only create debug build
-	//  cl:        /Od /Zi
-	//  clang-cl:  /Od /Zi
-	//  clang-c++: -O0 -g
-	//  gcc:       -O0 -g
+	//  cl + clang-cl:       /Od /Zi
+	//  gcc + g++ + clang++: -O0 -g
 	"debug",
 
 	//only create standard release build
-	//  cl:        /O2
-	//  clang-cl:  /O2
-	//  clang-c++: -O2
-	//  gcc:       -O2
+	//  cl + clang-cl:       /O2
+	//  gcc + g++ + clang++: -O2
 	"release",
 
 	//only create release with debug symbols
-	//  cl:        /O2 /Zi
-	//  clang-cl:  /O2 /Zi
-	//  clang-c++: -O2 -g
-	//  gcc:       -O2 -g
+	//  cl + clang-cl:       /O2 /Zi
+	//  gcc + g++ + clang++: -O2 -g
 	"reldebug",
 
 	//only create minimum size release build
-	//  cl:        /O1
-	//  clang-cl:  /O1
-	//  clang-c++: -Os
-	//  gcc:       -Os
+	//  cl + clang-cl:       /O1
+	//  gcc + g++ + clang++: -Os
 	"minsizerel"
 };
 
@@ -409,29 +418,52 @@ namespace KalaMake
 
 void HandleProjectContent(const vector<string>& fileContent)
 {
+	string name{};
+	string type{};
+	string standard{};
 	string compiler{};
 	vector<string> sources{};
-	vector<string> headers{};
-	vector<string> links{};
-	string warningLevel;
-	string type{};
-	string name{};
-	string standard{};
-	
-	vector<string> defines{};
+
 	string buildPath{};
 	string objPath{};
+	vector<string> headers{};
+	vector<string> links{};
+
+	string warningLevel;
+	vector<string> defines{};
 	vector<string> extensions{};
+
 	vector<string> flags{};
 	vector<string> customFlags{};
 
+	auto IsName = [](string_view value) -> bool
+		{
+			return StartsWith(value, "name: ");
+		};
+	auto IsType = [](string_view value) -> bool
+		{
+			return StartsWith(value, "type: ");
+		};
 	auto IsCompiler = [](string_view value) -> bool
 		{
 			return StartsWith(value, "compiler: ");
 		};
+	auto IsStandard = [](string_view value) -> bool
+		{
+			return StartsWith(value, "standard: ");
+		};
 	auto IsSource = [](string_view value) -> bool
 		{
 			return StartsWith(value, "sources: ");
+		};
+
+	auto IsBuildPath = [](string_view value) -> bool
+		{
+			return StartsWith(value, "buildpath: ");
+		};
+	auto IsObjPath = [](string_view value) -> bool
+		{
+			return StartsWith(value, "objpath: ");
 		};
 	auto IsHeader = [](string_view value) -> bool
 		{
@@ -441,38 +473,20 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			return StartsWith(value, "links: ");
 		};
+
 	auto IsWarningLevel = [](string_view value) -> bool
 		{
 			return StartsWith(value, "warninglevel: ");
-		};
-	auto IsType = [](string_view value) -> bool
-		{
-			return StartsWith(value, "type: ");
-		};
-	auto IsName = [](string_view value) -> bool
-		{
-			return StartsWith(value, "name: ");
-		};
-	auto IsStandard = [](string_view value) -> bool
-		{
-			return StartsWith(value, "standard: ");
 		};
 	auto IsDefine = [](string_view value) -> bool
 		{
 			return StartsWith(value, "defines: ");
 		};
-	auto IsBuildPath = [](string_view value) -> bool
-		{
-			return StartsWith(value, "buildpath: ");
-		};
-	auto IsObjPath = [](string_view value) -> bool
-		{
-			return StartsWith(value, "objpath: ");
-		};
 	auto IsExtension = [](string_view value) -> bool
 		{
 			return StartsWith(value, "extensions: ");
 		};
+
 	auto IsFlag = [](string_view value) -> bool
 		{
 			return StartsWith(value, "flags: ");
@@ -480,96 +494,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 	auto IsCustomFlag = [](string_view value) -> bool
 		{
 			return StartsWith(value, "customflags: ");
-		};
-
-	auto IsSupportedCompiler = [](string_view value) -> bool
-		{
-			for (const auto& e : supportedCompilers)
-			{
-				if (value == e) return true;
-			}
-
-			PrintError("Failed to compile project because compiler '" + string(value) + "' is not supported!");
-
-			return false;
-		};
-
-	auto IsSupportedSourceExtension = [](string_view standard, const path& value) -> bool
-		{
-			if (IsCStandard(standard)
-				&& value.extension() != ".c")
-			{
-				Log::Print(
-					"Skipped invalid source file '" + value.string() + "' because it is not supported by the C standard.",
-					"KALAMAKE",
-					LogType::LOG_WARNING);
-
-				return false;
-			}
-
-			if (IsCPPStandard(standard)
-				&& value.extension() != ".cpp")
-			{
-				Log::Print(
-					"Skipped invalid source file '" + value.string() + "' because it is not supported by the C++ standard.",
-					"KALAMAKE",
-					LogType::LOG_WARNING);
-
-				return false;
-			}
-
-			return true;
-		};
-	auto IsSupportedHeaderExtension = [](string_view standard, const path& value) -> bool
-		{
-			if (IsCStandard(standard)
-				&& value.extension() != ".h")
-			{
-				Log::Print(
-					"Skipped invalid header file '" + value.string() + "' because it is not supported by the C standard.",
-					"KALAMAKE",
-					LogType::LOG_WARNING);
-
-				return false;
-			}
-
-			if (IsCPPStandard(standard)
-				&& value.extension() != ".hpp"
-				&& value.extension() != ".h")
-			{
-				Log::Print(
-					"Skipped invalid header file '" + value.string() + "' because it is not supported by the C++ standard.",
-					"KALAMAKE",
-					LogType::LOG_WARNING);
-
-				return false;
-			}
-
-			return true;
-		};
-
-	auto IsSupportedWarningLevel = [](string_view value) -> bool
-		{
-			for (const auto& t : supportedWarningTypes)
-			{
-				if (value == t) return true;
-			}
-
-			PrintError("Failed to compile project because warning level '" + string(value) + "' is not supported!");
-
-			return false;
-		};
-
-	auto IsSupportedType = [](string_view value) -> bool
-		{
-			for (const auto& t : supportedTypes)
-			{
-				if (value == t) return true;
-			}
-			
-			PrintError("Failed to compile project because build type '" + string(value) + "' is not supported!");
-
-			return false;
 		};
 
 	auto IsSupportedName = [](string_view value) -> bool
@@ -606,6 +530,66 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			return true;
 		};
+	auto IsSupportedType = [](string_view value) -> bool
+		{
+			for (const auto& t : supportedTypes)
+			{
+				if (value == t) return true;
+			}
+
+			PrintError("Failed to compile project because build type '" + string(value) + "' is not supported!");
+
+			return false;
+		};
+	auto IsSupportedStandard = [](string_view value) -> bool
+		{
+			if (IsCPPStandard(value)
+				|| IsCStandard(value))
+			{
+				return true;
+			}
+
+			PrintError("Failed to compile project because standard '" + string(value) + "' is not supported!");
+
+			return false;
+		};
+	auto IsSupportedCompiler = [](string_view value) -> bool
+		{
+			for (const auto& e : supportedCompilers)
+			{
+				if (value == e) return true;
+			}
+
+			PrintError("Failed to compile project because compiler '" + string(value) + "' is not supported!");
+
+			return false;
+		};
+	auto IsSupportedSourceExtension = [](string_view standard, const path& value) -> bool
+		{
+			if (IsCStandard(standard)
+				&& value.extension() != ".c")
+			{
+				Log::Print(
+					"Skipped invalid source file '" + value.string() + "' because it is not supported by the C standard.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
+			if (IsCPPStandard(standard)
+				&& value.extension() != ".cpp")
+			{
+				Log::Print(
+					"Skipped invalid source file '" + value.string() + "' because it is not supported by the C++ standard.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
+			return true;
+		};
 
 	auto IsSupportedBuildPath = [](
 		string_view compiler,
@@ -615,6 +599,9 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!exists(value))
 			{
+				//treat all extensionless values as dirs and return true
+				if (!value.has_extension()) return true;
+
 				PrintError("Failed to compile project because passed build path '" + value.string() + "' does not exist!");
 
 				return false;
@@ -628,51 +615,126 @@ void HandleProjectContent(const vector<string>& fileContent)
 				{
 					if (type == "executable")
 					{
-						if (value.extension() != ".exe"
-							&& (compiler == "clang-cl"
-								|| compiler == "cl"))
+						if ((compiler == "clang-cl"
+							|| compiler == "cl")
+							&& value.extension() != ".exe")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension on Windows is not valid!");
+							PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
 
 							return false;
+						}
+						else if (compiler == "clang++"
+								 || compiler == "gcc"
+								 || compiler == "g++")
+						{	
+#ifdef _WIN32
+							if (value.extension() != ".exe")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
+
+								return false;
+							}
+#else
+							if (value.has_extension())
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
+
+								return false;
+							}
+#endif						
 						}
 					}
 					else if (type == "shared-lib")
 					{
-						if (value.extension() != ".lib"
-							&& (compiler == "clang-cl"
-								|| compiler == "cl"))
+						if ((compiler == "clang-cl"
+							|| compiler == "cl")
+							&& value.extension() != ".dll")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension on Windows is not valid!");
+							PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
 
 							return false;
 						}
-						else if (value.extension() != ".so"
-							&& (compiler == "clang-c++"
-								|| compiler == "gcc"))
+						else if (compiler == "clang++"
+								 || compiler == "gcc"
+								 || compiler == "g++")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension on Posix is not valid!");
+#ifdef _WIN32
+							if (value.extension() != ".dll")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
 
-							return false;
+								return false;
+							}
+#else
+							if (value.extension() != ".so")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
+
+								return false;
+							}
+#endif
 						}
 					}
 					else if (type == "static-lib")
 					{
-						if (value.extension() != ".lib"
-							&& (compiler == "clang-cl"
-								|| compiler == "cl"))
+						if ((compiler == "clang-cl"
+							|| compiler == "cl")
+							&& value.extension() != ".lib")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension on Windows is not valid!");
+							PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
 
 							return false;
 						}
-						else if (value.extension() != ".a"
-							&& (compiler == "clang-c++"
-								|| compiler == "gcc"))
+						else if (compiler == "clang++"
+								 || compiler == "gcc"
+								 || compiler == "g++")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension on Posix is not valid!");
+#ifdef _WIN32
+							if (value.extension() != ".lib")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
+
+								return false;
+							}
+#else
+							if (value.extension() != ".a")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
+
+								return false;
+							}
+#endif
+						}
+					}
+					else if (type == "dynamic-dll")
+					{
+						if ((compiler == "clang-cl"
+							|| compiler == "cl")
+							&& value.extension() != ".dll")
+						{
+							PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
 
 							return false;
+						}
+						else if (compiler == "clang++"
+								 || compiler == "gcc"
+								 || compiler == "g++")
+						{
+#ifdef _WIN32
+							if (value.extension() != ".dll")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
+
+								return false;
+							}
+#else
+							if (value.extension() != ".so")
+							{
+								PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
+
+								return false;
+							}
+#endif
 						}
 					}
 				}
@@ -683,7 +745,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			return true;
 		};
-
 	auto IsSupportedObjPath = [](
 		string_view compiler,
 		string_view standard,
@@ -691,6 +752,9 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!exists(value))
 			{
+				//treat all extensionless values as dirs and return true
+				if (!value.has_extension()) return true;
+
 				PrintError("Failed to compile project because passed obj path '" + value.string() + "' does not exist!");
 
 				return false;
@@ -704,19 +768,31 @@ void HandleProjectContent(const vector<string>& fileContent)
 				{
 					if (value.extension() != ".obj"
 						&& (compiler == "clang-cl"
-						|| compiler == "cl"))
+							|| compiler == "cl"))
 					{
-						PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension on Windows is not valid!");
+						PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
 
 						return false;
 					}
-					else if (value.extension() != ".o"
-						&& (compiler == "clang-c++"
-							|| compiler == "gcc"))
+					else if (compiler == "clang++"
+							 || compiler == "gcc"
+							 || compiler == "g++")
 					{
-						PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension on Posix is not valid!");
+#ifdef _WIN32
+						if (value.extension() != ".obj")
+						{
+							PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
 
-						return false;
+							return false;
+						}
+#else
+						if (value.extension() != ".o")
+						{
+							PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
+
+							return false;
+						}
+#endif
 					}
 				}
 
@@ -726,20 +802,48 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			return true;
 		};
-
-	auto IsSupportedStandard = [](string_view value) -> bool
+	auto IsSupportedHeaderExtension = [](string_view standard, const path& value) -> bool
 		{
-			if (IsCPPStandard(value)
-				|| IsCStandard(value))
+			if (IsCStandard(standard)
+				&& value.extension() != ".h")
 			{
-				return true;
+				Log::Print(
+					"Skipped invalid header file '" + value.string() + "' because it is not supported by the C standard.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
 			}
 
-			PrintError("Failed to compile project because standard '" + string(value) + "' is not supported!");
+			//headers will bypass checks
+			if (is_directory(value)) return true;
+
+			if (IsCPPStandard(standard)
+				&& value.extension() != ".hpp"
+				&& value.extension() != ".h")
+			{
+				Log::Print(
+					"Skipped invalid header file '" + value.string() + "' because it is not supported by the C++ standard.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
+			return true;
+		};
+
+	auto IsSupportedWarningLevel = [](string_view value) -> bool
+		{
+			for (const auto& t : supportedWarningTypes)
+			{
+				if (value == t) return true;
+			}
+
+			PrintError("Failed to compile project because warning level '" + string(value) + "' is not supported!");
 
 			return false;
 		};
-
 	auto IsSupportedCustomFlag = [](string_view value) -> bool
 		{
 			for (const auto& f : supportedCustomFlags)
@@ -775,7 +879,73 @@ void HandleProjectContent(const vector<string>& fileContent)
 			continue;
 		}
 
-		if (IsCompiler(line))
+		if (IsName(line))
+		{
+			if (!name.empty())
+			{
+				PrintError("Failed to compile project because more than one name line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "name: ");
+
+			if (value.empty())
+			{
+				PrintError("Failed to compile project because no name value was passed!");
+
+				return;
+			}
+
+			if (!IsSupportedName(value)) return;
+
+			name = value;
+		}
+		else if (IsType(line))
+		{
+			if (!type.empty())
+			{
+				PrintError("Failed to compile project because more than one type line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "type: ");
+
+			if (value.empty())
+			{
+				PrintError("Failed to compile project because no type value was passed!");
+
+				return;
+			}
+
+			if (!IsSupportedType(value)) return;
+
+			type = value;
+		}
+		else if (IsStandard(line))
+		{
+			if (!standard.empty())
+			{
+				PrintError("Failed to compile project because more than one standard line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "standard: ");
+
+			if (value.empty())
+			{
+				PrintError("Failed to compile project because no standard value was passed!");
+
+				return;
+			}
+
+			if (!IsSupportedStandard(value)) return;
+
+			standard = value;
+		}
+		else if (IsCompiler(line))
 		{
 			if (!compiler.empty())
 			{
@@ -1067,6 +1237,71 @@ void HandleProjectContent(const vector<string>& fileContent)
 			//move found sources to sources container
 			sources = std::move(foundSources);
 		}
+
+		else if (IsBuildPath(line))
+		{
+			if (!buildPath.empty())
+			{
+				PrintError("Failed to compile project because more than one build path line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "buildpath: ");
+
+			//ignore empty build path field
+			if (value.empty()) continue;
+
+			//assume path is relative if it doesn't already exist
+			if (!exists(value))
+			{
+				if (path(value).has_extension()) value = path(kmaPath / buildPath).string();
+				else                             value = path(kmaPath / value).string();
+			}
+
+			try
+			{
+				value = path(weakly_canonical(value)).string();
+			}
+			catch (const filesystem_error&)
+			{
+				PrintError("Failed to compile project because build path '" + value + "' could not be resolved!");
+			}
+
+			buildPath = value;
+		}
+		else if (IsObjPath(line))
+		{
+			if (!objPath.empty())
+			{
+				PrintError("Failed to compile project because more than one obj path line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "objpath: ");
+
+			//ignore empty obj path field
+			if (value.empty()) continue;
+
+			//assume path is relative if it doesn't already exist
+			if (!exists(value))
+			{
+				if (path(value).has_extension()) value = path(kmaPath / buildPath).string();
+				else                             value = path(kmaPath / value).string();
+			}
+
+			try
+			{
+				value = path(weakly_canonical(value)).string();
+			}
+			catch (const filesystem_error&)
+			{
+				PrintError("Failed to compile project because obj path '" + value + "' could not be resolved!");
+			}
+
+			objPath = value;
+		}
 		else if (IsHeader(line))
 		{
 			if (!headers.empty())
@@ -1091,14 +1326,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 			{
 				auto is_valid_header = [](string& h, bool silent = false) -> bool
 					{
-						path sourcePath = exists(h)
+						path headerPath = exists(h)
 							? h
 							: (kmaPath / h);
 
-						if (!exists(sourcePath))
+						if (!exists(headerPath))
 						{
 							if (!silent) PrintError(
-								"Failed to compile project because the header '" + sourcePath.string() 
+								"Failed to compile project because the header '" + headerPath.string()
 								+ "' was not found!");
 
 							return false;
@@ -1106,12 +1341,12 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						try
 						{
-							h = path(weakly_canonical(sourcePath)).string();
+							h = path(weakly_canonical(headerPath)).string();
 						}
 						catch (const filesystem_error&)
 						{
 							if (!silent) PrintError(
-								"Failed to compile project because the header path '" + sourcePath.string() 
+								"Failed to compile project because the header path '" + headerPath.string()
 								+ "' could not be resolved!");
 
 							return false;
@@ -1341,12 +1576,23 @@ void HandleProjectContent(const vector<string>& fileContent)
 			//resolve all relative link files with extensions to project kma file path
 			for (auto& l : foundLinks)
 			{
-				if ((EndsWith(l, ".lib")
-					|| EndsWith(l, ".so")
-					|| EndsWith(l, ".a"))
+				if (ContainsString(".", l)
 					&& !exists(l))
 				{
-					l = path(kmaPath / l).string();
+					if (EndsWith(l, ".lib")
+						|| EndsWith(l, ".a"))
+					{
+						l = path(kmaPath / l).string();
+					}
+					else
+					{
+						Log::Print(
+							"Skipped invalid link file '" + l + "' because it is malformed.",
+							"KALAMAKE",
+							LogType::LOG_WARNING);
+
+						continue;
+					}
 				}
 
 				if (exists(l))
@@ -1364,12 +1610,24 @@ void HandleProjectContent(const vector<string>& fileContent)
 						return;
 					}
 				}
+				else if (!exists(l)
+						 && (ContainsString(("/"), l))
+						 || ContainsString(("\\"), l))
+				{
+					Log::Print(
+						"Skipped invalid link file '" + l + "' because it is malformed.",
+						"KALAMAKE",
+						LogType::LOG_WARNING);
+
+					continue;
+				}
 			}
 
 			if (failedLinkSearch) return;
 
 			links = std::move(foundLinks);
 		}
+
 		else if (IsWarningLevel(line))
 		{
 			if (!warningLevel.empty())
@@ -1387,72 +1645,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 			if (!IsSupportedWarningLevel(value)) return;
 
 			warningLevel = value;
-		}
-		else if (IsType(line))
-		{
-			if (!type.empty())
-			{
-				PrintError("Failed to compile project because more than one type line was passed!");
-
-				return;
-			}
-
-			string value = RemoveFromString(line, "type: ");
-
-			if (value.empty())
-			{
-				PrintError("Failed to compile project because no type value was passed!");
-
-				return;
-			}
-
-			if (!IsSupportedType(value)) return;
-
-			type = value;
-		}
-		else if (IsName(line))
-		{
-			if (!name.empty())
-			{
-				PrintError("Failed to compile project because more than one name line was passed!");
-
-				return;
-			}
-
-			string value = RemoveFromString(line, "name: ");
-
-			if (value.empty())
-			{
-				PrintError("Failed to compile project because no name value was passed!");
-
-				return;
-			}
-
-			if (!IsSupportedName(value)) return;
-
-			name = value;
-		}
-		else if (IsStandard(line))
-		{
-			if (!standard.empty())
-			{
-				PrintError("Failed to compile project because more than one standard line was passed!");
-
-				return;
-			}
-
-			string value = RemoveFromString(line, "standard: ");
-
-			if (value.empty())
-			{
-				PrintError("Failed to compile project because no standard value was passed!");
-
-				return;
-			}
-
-			if (!IsSupportedStandard(value)) return;
-
-			standard = value;
 		}
 		else if (IsDefine(line))
 		{
@@ -1472,58 +1664,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			defines = std::move(tempDefines);
 		}
-		else if (IsBuildPath(line))
-		{
-			if (!buildPath.empty())
-			{
-				PrintError("Failed to compile project because more than one build path line was passed!");
-
-				return;
-			}
-
-			string value = RemoveFromString(line, "buildpath: ");
-
-			//ignore empty build path field
-			if (value.empty()) continue;
-
-			if (!exists(value)) value = path(kmaPath / buildPath).string();
-			try
-			{
-				value = path(weakly_canonical(value)).string();
-			}
-			catch (const filesystem_error&)
-			{
-				PrintError("Failed to compile project because build path '" + value + "' could not be resolved!");
-			}
-
-			buildPath = value;
-		}
-		else if (IsObjPath(line))
-		{
-			if (!objPath.empty())
-			{
-				PrintError("Failed to compile project because more than one obj path line was passed!");
-
-				return;
-			}
-
-			string value = RemoveFromString(line, "objpath: ");
-
-			//ignore empty obj path field
-			if (value.empty()) continue;
-
-			if (!exists(value)) value = path(kmaPath / objPath).string();
-			try
-			{
-				value = path(weakly_canonical(value)).string();
-			}
-			catch (const filesystem_error&)
-			{
-				PrintError("Failed to compile project because obj path '" + value + "' could not be resolved!");
-			}
-
-			objPath = value;
-		}
 		else if (IsExtension(line))
 		{
 			if (!extensions.empty())
@@ -1542,6 +1682,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			extensions = std::move(tempExtensions);
 		}
+
 		else if (IsFlag(line))
 		{
 			if (!flags.empty())
@@ -1675,7 +1816,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 	}
 
 	//
-	// ASSIGN DEFAULT VALUES
+	// CLEAN UP VALUES
 	//
 
 	if (warningLevel.empty()) warningLevel = "strong";
@@ -1684,11 +1825,11 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 	if (ContainsDuplicates(cleanedSources)) RemoveDuplicates(cleanedSources);
 	if (ContainsDuplicates(cleanedHeaders)) RemoveDuplicates(cleanedHeaders);
-	if (ContainsDuplicates(links)) RemoveDuplicates(links);
-	if (ContainsDuplicates(defines)) RemoveDuplicates(defines);
-	if (ContainsDuplicates(extensions)) RemoveDuplicates(extensions);
-	if (ContainsDuplicates(flags)) RemoveDuplicates(flags);
-	if (ContainsDuplicates(customFlags)) RemoveDuplicates(customFlags);
+	if (ContainsDuplicates(links))          RemoveDuplicates(links);
+	if (ContainsDuplicates(defines))        RemoveDuplicates(defines);
+	if (ContainsDuplicates(extensions))     RemoveDuplicates(extensions);
+	if (ContainsDuplicates(flags))          RemoveDuplicates(flags);
+	if (ContainsDuplicates(customFlags))    RemoveDuplicates(customFlags);
 
 	//
 	// VERIFY BUILD AND OBJ PATHS
@@ -1706,7 +1847,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 	if (!IsSupportedObjPath(
 		compiler,
 		standard,
-		buildPath))
+		objPath))
 	{
 		return;
 	}
@@ -1721,8 +1862,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 		<< "name: " << name << "\n"
 		<< "type: " << type << "\n"
-		<< "compiler: " << compiler << "\n"
 		<< "standard: " << standard << "\n"
+		<< "compiler: " << compiler << "\n"
 		<< "sources:\n";
 
 	for (const auto& s : cleanedSources)
@@ -1730,6 +1871,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 		oss << "  " << s << "\n";
 	}
 
+	oss << "build path: " << buildPath << "\n";
+	oss << "obj path: " << objPath << "\n";
 	if (!headers.empty())
 	{
 		oss << "headers:\n";
@@ -1750,9 +1893,24 @@ void HandleProjectContent(const vector<string>& fileContent)
 	}
 
 	oss << "warning level: " << warningLevel << "\n";
+	if (!defines.empty())
+	{
+		oss << "defines:\n";
 
-	oss << "build path: " << buildPath << "\n";
-	oss << "obj path: " << objPath << "\n";
+		for (const auto& e : defines)
+		{
+			oss << "  " << e << "\n";
+		}
+	}
+	if (!extensions.empty())
+	{
+		oss << "extensions:\n";
+
+		for (const auto& e : extensions)
+		{
+			oss << "  " << e << "\n";
+		}
+	}
 
 	if (!flags.empty())
 	{
@@ -1773,16 +1931,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 	}
 
-	if (!extensions.empty())
-	{
-		oss << "extensions:\n";
-
-		for (const auto& e : extensions)
-		{
-			oss << "  " << e << "\n";
-		}
-	}
-
 	Log::Print(
 		oss.str(),
 		"KALAMAKE",
@@ -1792,18 +1940,21 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 	CompileProject(
 		{
+			.name = name,
+			.type = type,
+			.standard = standard,
 			.compiler = compiler,
 			.sources = std::move(cleanedSources),
-			.headers = std::move(cleanedHeaders),
-			.links = std::move(links),
-			.warningLevel = warningLevel,
-			.type = type,
-			.name = name,
-			.standard = standard,
-			.defines = std::move(defines),
+
 			.buildPath = buildPath,
 			.objPath = objPath,
+			.headers = std::move(cleanedHeaders),
+			.links = std::move(links),
+
+			.warningLevel = warningLevel,
+			.defines = std::move(defines),
 			.extensions = std::move(extensions),
+
 			.flags = std::move(flags),
 			.customFlags = std::move(customFlags),
 		});
@@ -1811,55 +1962,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 void CompileProject(const CompileData& compileData)
 {
-	vector<string> finalFlags = std::move(compileData.flags);
-
-	//
-	// BINARY TYPE
-	//
-
-	path buildPath{};
-
-	if (compileData.type == "executable")
-	{
-		if (compileData.compiler == "clang-cl"
-			|| compileData.compiler == "cl")
-		{
-			buildPath = path(compileData.buildPath) / string(compileData.name + ".exe");
-
-			finalFlags.push_back("/Fe:\"" + buildPath.string() + "\"");
-		}
-		else if (compileData.compiler == "clang-c++"
-			|| compileData.compiler == "gcc")
-		{
-			buildPath = path(compileData.buildPath) / compileData.name;
-
-			finalFlags.push_back("-o \"" + buildPath.string() + "\"");
-		}
-	}
-	else if (compileData.type == "shared-lib")
-	{
-		if (compileData.compiler == "clang-cl"
-			|| compileData.compiler == "cl")
-		{
-			buildPath = path(compileData.buildPath) / string(compileData.name + ".dll");
-			path libPath = path(compileData.buildPath) / string(compileData.name + ".lib");
-
-			finalFlags.push_back("/LD");
-			finalFlags.push_back("/link");
-			finalFlags.push_back("/OUT:\"" + buildPath.string() + "\"");
-			finalFlags.push_back("/IMPLIB:\"" + libPath.string() + "\"");
-		}
-		else if (compileData.compiler == "clang-c++"
-			|| compileData.compiler == "gcc")
-		{
-			buildPath = path(compileData.buildPath) / string(compileData.name + ".so");
-
-			finalFlags.push_back("-fPIC");
-			finalFlags.push_back("-shared");
-			finalFlags.push_back("-o \"" + buildPath.string() + "\"");
-		}
-	}
-	else if (compileData.type == "static-lib")
+	if (compileData.type == "static-lib")
 	{
 		//continue to static lib compilation function
 		//since its very different from exe and shared lib
@@ -1868,26 +1971,7 @@ void CompileProject(const CompileData& compileData)
 		return;
 	}
 
-	//
-	// STANDARD
-	//
-
-	if (compileData.compiler == "clang-cl"
-		|| compileData.compiler == "cl")
-	{
-		finalFlags.push_back("/std:" + compileData.standard);
-	}
-	else if (compileData.compiler == "clang-c++"
-		|| compileData.compiler == "gcc")
-	{
-		finalFlags.push_back("-std=" + compileData.standard);
-	}
-
-	//
-	// EXTENSIONS
-	//
-
-	//...
+	vector<string> finalFlags = std::move(compileData.flags);
 
 	//
 	// SOURCES
@@ -1895,8 +1979,9 @@ void CompileProject(const CompileData& compileData)
 
 	if (compileData.compiler == "clang-cl"
 		|| compileData.compiler == "cl"
-		|| compileData.compiler == "clang-c++"
-		|| compileData.compiler == "gcc")
+		|| compileData.compiler == "clang++"
+		|| compileData.compiler == "gcc"
+		|| compileData.compiler == "g++")
 	{
 		for (const auto& s : compileData.sources)
 		{
@@ -1918,8 +2003,9 @@ void CompileProject(const CompileData& compileData)
 				finalFlags.push_back("/I\"" + s + "\"");
 			}
 		}
-		else if (compileData.compiler == "clang-c++"
-				 || compileData.compiler == "gcc")
+		else if (compileData.compiler == "clang++"
+				 || compileData.compiler == "gcc"
+				 || compileData.compiler == "g++")
 		{
 			for (const auto& s : compileData.headers)
 			{
@@ -1943,12 +2029,13 @@ void CompileProject(const CompileData& compileData)
 				else                     finalFlags.push_back(l);                   
 			}
 		}
-		else if (compileData.compiler == "clang-c++"
-				 || compileData.compiler == "gcc")
+		else if (compileData.compiler == "clang++"
+				 || compileData.compiler == "gcc"
+				 || compileData.compiler == "g++")
 		{
 			for (const auto& l : compileData.links)
 			{
-				if (EndsWith(l, ".so")
+				if (EndsWith(l, ".lib")
 					|| EndsWith(l, ".a"))
 				{
 					finalFlags.push_back("\"" + l + "\"");
@@ -1957,6 +2044,28 @@ void CompileProject(const CompileData& compileData)
 			}
 		}
 	}
+
+	//
+	// STANDARD
+	//
+
+	if (compileData.compiler == "clang-cl"
+		|| compileData.compiler == "cl")
+	{
+		finalFlags.push_back("/std:" + compileData.standard);
+	}
+	else if (compileData.compiler == "clang++"
+			 || compileData.compiler == "gcc"
+			 || compileData.compiler == "g++")
+	{
+		finalFlags.push_back("-std=" + compileData.standard);
+	}
+
+	//
+	// EXTENSIONS
+	//
+
+	//...
 
 	//
 	// WARNING LEVEL
@@ -1972,8 +2081,9 @@ void CompileProject(const CompileData& compileData)
 		else if (compileData.warningLevel == "strict") finalFlags.push_back("/W4");
 		else if (compileData.warningLevel == "all")    finalFlags.push_back("/Wall");
 	}
-	else if (compileData.compiler == "clang-c++"
-		|| compileData.compiler == "gcc")
+	else if (compileData.compiler == "clang++"
+			 || compileData.compiler == "gcc"
+			 || compileData.compiler == "g++")
 	{
 		if (compileData.warningLevel == "none")        finalFlags.push_back("-w");
 		else if (compileData.warningLevel == "basic")  finalFlags.push_back("-Wall");
@@ -1999,7 +2109,7 @@ void CompileProject(const CompileData& compileData)
 		}
 		else if (compileData.warningLevel == "all")
 		{
-			if (compileData.compiler == "clang-c++")
+			if (compileData.compiler == "clang++")
 			{
 				finalFlags.push_back("-Wall");
 				finalFlags.push_back("-Wextra");
@@ -2030,8 +2140,9 @@ void CompileProject(const CompileData& compileData)
 	{
 		if (compileData.compiler == "clang-cl"
 			|| compileData.compiler == "cl"
-			|| compileData.compiler == "clang-c++"
-			|| compileData.compiler == "gcc")
+			|| compileData.compiler == "clang++"
+			|| compileData.compiler == "gcc"
+			|| compileData.compiler == "g++")
 		{
 			for (const auto& d : compileData.defines)
 			{
@@ -2046,7 +2157,7 @@ void CompileProject(const CompileData& compileData)
 
 	for (const auto& f : compileData.customFlags)
 	{
-		if (f == "standardrequired"
+		if (f == "standard-required"
 			&& compileData.compiler == "cl")
 		{
 			finalFlags.push_back("/permissive-");
@@ -2054,127 +2165,387 @@ void CompileProject(const CompileData& compileData)
 			continue;
 		}
 
-		if (f == "warningsaserrors")
+		if (f == "warnings-as-errors")
 		{
 			if (compileData.compiler == "clang-cl"
 				|| compileData.compiler == "cl")
 			{
 				finalFlags.push_back("/WX");
 			}
-			else if (compileData.compiler == "clang-c++"
-				|| compileData.compiler == "gcc")
+			else if (compileData.compiler == "clang++"
+					 || compileData.compiler == "gcc"
+					 || compileData.compiler == "g++")
 			{
 				finalFlags.push_back("-Werror");
 			}
 
 			continue;
 		}
-
-		//build types
-
-		if (f == "debug")
-		{
-			if (compileData.compiler == "clang-cl"
-				|| compileData.compiler == "cl")
-			{
-				finalFlags.push_back("/Od");
-				finalFlags.push_back("/Zi");
-			}
-			else if (compileData.compiler == "clang-c++"
-					 || compileData.compiler == "gcc")
-			{
-				finalFlags.push_back("-O0");
-				finalFlags.push_back("-g");
-			}
-
-			continue;
-		}
-		if (f == "release")
-		{
-			if (compileData.compiler == "clang-cl"
-				|| compileData.compiler == "cl")
-			{
-				finalFlags.push_back("/O2");
-			}
-			if (compileData.compiler == "clang-c++"
-				|| compileData.compiler == "gcc")
-			{
-				finalFlags.push_back("-O2");
-			}
-
-			continue;
-		}
-		if (f == "relwithdebinfo")
-		{
-			if (compileData.compiler == "clang-cl"
-				|| compileData.compiler == "cl")
-			{
-				finalFlags.push_back("/O2");
-				finalFlags.push_back("/Zi");
-			}
-			else if (compileData.compiler == "clang-c++"
-					 || compileData.compiler == "gcc")
-			{
-				finalFlags.push_back("-O2");
-				finalFlags.push_back("-g");
-			}
-
-			continue;
-		}
-		if (f == "minsizerel")
-		{
-			if (compileData.compiler == "clang-cl"
-				|| compileData.compiler == "cl")
-			{
-				finalFlags.push_back("/O1");
-			}
-			else if (compileData.compiler == "clang-c++"
-					 || compileData.compiler == "gcc")
-			{
-				finalFlags.push_back("-O1");
-			}
-
-			continue;
-		}
 	}
 
 	//
-	// BUILD THE PROJECT
+	// BUILD TYPES
 	//
 
-	if (ContainsDuplicates(finalFlags)) RemoveDuplicates(finalFlags);
+	vector<string> buildFlags{};
 
-	ostringstream oss{};
-
-	for (int i = 0; i < finalFlags.size(); i++)
+	for (const auto& f : compileData.customFlags)
 	{
-		if (i > 0) oss << ' ';
-		oss << finalFlags[i];
+		if (f == "debug")      buildFlags.push_back("debug");
+		if (f == "release")    buildFlags.push_back("release");
+		if (f == "reldebug")   buildFlags.push_back("reldebug");
+		if (f == "minsizerel") buildFlags.push_back("minsizerel");
 	}
 
-	Log::Print(
-		"Flags passed to compiler " + compileData.compiler + ":\n\n" + oss.str(),
-		"KALAMAKE",
-		LogType::LOG_INFO);
-
-	Log::Print("\n==========================================================================================\n");
-
-	string finalValue{};
-	if (compileData.compiler == "cl")
+	//MSVC requires explicit exception semantics for standards-compliant C++
+	if (compileData.compiler == "cl"
+		&& IsCPPStandard(compileData.standard))
 	{
-		finalValue = 
-			"cmd /c \"\"" 
-			+ foundCLPath.string() 
-			+ "\" && cl "
-			+ oss.str() + "\"";
+		finalFlags.push_back("/EHsc");
 	}
-	else if (compileData.compiler == "clang-cl")   finalValue = "clang-cl " + oss.str();
-	else if (compileData.compiler == "clang-c++")  finalValue = "clang-c++ " + oss.str();
-	else if (compileData.compiler == "gcc")        finalValue = "gcc " + oss.str();
 
-	if (system(finalValue.c_str()) != 0)
+	//
+	// BUILD PROJECT
+	//
+
+	auto get_build_path = [](
+		string_view name,
+		string_view compiler,
+		string_view type,
+		const path& buildPath) -> string
+		{
+			if (type == "executable")
+			{
+				if (compiler == "clang-cl"
+					|| compiler == "cl")
+				{
+					path newBuildPath = buildPath / string(string(name) + ".exe");
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return "/Fe:\"" + newBuildPath.string() + "\"";
+				}
+				else if (compiler == "clang++"
+						 || compiler == "gcc"
+						 || compiler == "g++")
+				{
+#ifdef _WIN32
+					path newBuildPath = buildPath / string(string(name) + ".exe");
+#else
+					path newBuildPath = buildPath / name;
+#endif
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return "-o \"" + newBuildPath.string() + "\"";
+				}
+			}
+			else if (type == "shared-lib")
+			{
+				if (compiler == "clang-cl"
+					|| compiler == "cl")
+				{
+					path newBuildPath = buildPath / string(string(name) + ".dll");
+					path libPath = buildPath / string(string(name) + ".lib");
+
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return
+						"/LD /link / "
+						"/OUT:\"" + newBuildPath.string() + "\" "
+						"/IMPLIB:\"" + libPath.string() + "\"";
+				}
+				else if (compiler == "clang++"
+						 || compiler == "gcc"
+						 || compiler == "g++")
+				{
+#ifdef _WIN32
+					path newBuildPath = buildPath / string(string(name) + ".dll");
+					path libPath = buildPath / string("lib" + string(name) + ".dll.a");
+
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return
+						"-shared "
+						"-o \"" + newBuildPath.string() + "\" "
+						"-Wl,--out-implib,\"" + libPath.string() + "\"";
+#else
+					path newBuildPath = buildPath / string(string(name) + ".so");
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return "-fPIC -shared "
+						"-o \"" + newBuildPath.string() + "\"";
+#endif
+				}
+			}
+			else if (type == "dynamic-dll")
+			{
+				if (compiler == "clang-cl"
+					|| compiler == "cl")
+				{
+					path newBuildPath = buildPath / string(string(name) + ".dll");
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return
+						"/LD /link / "
+						"/OUT:\"" + newBuildPath.string() + "\"";
+				}
+				else if (compiler == "clang++"
+						 || compiler == "gcc"
+						 || compiler == "g++")
+				{
+#ifdef _WIN32
+					path newBuildPath = buildPath / string(string(name) + ".dll");
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return
+						"-shared "
+						"-o \"" + newBuildPath.string() + "\"";
+#else
+					path newBuildPath = buildPath / string(string(name) + ".so");
+					path parentDir = newBuildPath.parent_path();
+
+					if (!exists(parentDir))
+					{
+						string result = CreateNewDirectory(parentDir);
+						if (!result.empty()) return "Reason: " + result;
+					}
+
+					return "-fPIC -shared "
+						"-o \"" + newBuildPath.string() + "\"";
+#endif
+				}
+			}
+
+			return "Reason: Invalid target type.";
+		};
+
+	auto get_build_type = [](
+		string_view compiler,
+		const vector<string>& flags) -> string
+		{
+			auto contains_string = [&flags](
+				string_view target) -> bool
+				{
+					return find(flags.begin(), flags.end(), target) != flags.end();
+				};
+
+			if (compiler == "clang-cl"
+				|| compiler == "cl")
+			{
+				if (contains_string("/Od")
+					&& contains_string("/Zi"))
+				{
+					return "debug";
+				}
+				else if (contains_string("/O2")
+						 && contains_string("/Zi"))
+				{
+					return "reldebug";
+				}
+				else if (contains_string("/O2"))
+				{
+					return "release";
+				}
+				else if (contains_string("/O1"))
+				{
+					return "minsizerel";
+				}
+				else
+				{
+					Log::Print(
+						"Failed to find valid combination of build flags, assuming 'release' as default.",
+						"KALAMAKE",
+						LogType::LOG_WARNING);
+
+					return "release";
+				}
+			}
+			else if (compiler == "clang++"
+					 || compiler == "gcc"
+					 || compiler == "g++")
+			{
+				if (contains_string("-O0")
+					&& contains_string("-g"))
+				{
+					return "debug";
+				}
+				else if (contains_string("-O2")
+						 && contains_string("-g"))
+				{
+					return "reldebug";
+				}
+				else if (contains_string("-O2"))
+				{
+					return "release";
+				}
+				else if (contains_string("-Os"))
+				{
+					return "minsizerel";
+				}
+				else
+				{
+					Log::Print(
+						"Failed to find valid combination of build flags, assuming 'release' as default.",
+						"KALAMAKE",
+						LogType::LOG_WARNING);
+
+					return "release";
+				}
+			}
+
+			Log::Print(
+				"Failed to find any valid build flags from parsed flags, assuming 'release' as default.",
+				"KALAMAKE",
+				LogType::LOG_WARNING);
+
+			return "release";
+		};
+
+	auto build_project = [&compileData](
+		string_view compiler,
+		const path& buildPath,
+		vector<string> finalFlags)
+		{
+			finalFlags.push_back(" " + buildPath.string());
+
+			if (ContainsDuplicates(finalFlags)) RemoveDuplicates(finalFlags);
+
+			ostringstream oss{};
+
+			for (int i = 0; i < finalFlags.size(); i++)
+			{
+				if (i > 0) oss << ' ';
+				oss << finalFlags[i];
+			}
+
+			Log::Print(
+				"Flags passed to compiler " + string(compiler) + ":\n\n" + oss.str(),
+				"KALAMAKE",
+				LogType::LOG_INFO);
+
+			Log::Print("\n==========================================================================================\n");
+
+			string finalValue{};
+			if (compiler == "cl")
+			{
+				Log::Print(
+					"Found valid vcvars64.bat from '" + foundCLPath.string() + "'.",
+					"KALAMAKE",
+					LogType::LOG_INFO);
+
+				finalValue =
+					"cmd /c \"\""
+					+ foundCLPath.string()
+					+ "\" && cl "
+					+ oss.str() + "\"";
+			}
+			else if (compiler == "clang-cl") finalValue = "clang-cl " + oss.str();
+			else if (compiler == "clang++") finalValue = "clang++ " + oss.str();
+			else if (compiler == "gcc")       finalValue = "gcc " + oss.str();
+			else if (compiler == "g++")       finalValue = "g++ " + oss.str();
+
+			if (system(finalValue.c_str()) != 0)
+			{
+				PrintError("Compilation failed!");
+			}
+			else
+			{
+				Log::Print(
+					"Compilation succeeded!",
+					"KALAMAKE",
+					LogType::LOG_SUCCESS);
+			}
+
+			Log::Print("\n==========================================================================================\n");
+		};
+
+	if (!buildFlags.empty())
 	{
-		PrintError("Compilation failed!");
+		for (const auto& b : buildFlags)
+		{
+			//adds build flag as build folder between build path and binary name
+			string finalBuildPath = get_build_path(
+				compileData.name,
+				compileData.compiler,
+				compileData.type,
+				path(compileData.buildPath) / b);
+
+			if (ContainsString(finalBuildPath, "Result: "))
+			{
+				PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+				return;
+			}
+
+			build_project(
+				compileData.compiler,
+				finalBuildPath,
+				finalFlags);
+		}
+	}
+	else
+	{
+		string buildType = get_build_type(
+			compileData.compiler,
+			compileData.flags);
+
+		//adds build flag as build folder between build path and binary name
+		string finalBuildPath = get_build_path(
+			compileData.name,
+			compileData.compiler,
+			compileData.type,
+			path(compileData.buildPath) / buildType);
+
+		if (ContainsString(finalBuildPath, "Result: "))
+		{
+			PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+			return;
+		}
+
+		build_project(
+			compileData.compiler,
+			finalBuildPath,
+			finalFlags);
 	}
 }
 
