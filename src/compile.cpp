@@ -69,13 +69,15 @@ struct CompileData
 	string buildPath{};
 	string objPath{};
 	vector<string> headers{};
-	vector<string> links{};
+	vector<string> rellinks{};
+	vector<string> deblinks{};
 
 	string warningLevel;
 	vector<string> defines{};
 	vector<string> extensions{};
 
-	vector<string> flags{};
+	vector<string> relflags{};
+	vector<string> debflags{};
 	vector<string> customFlags{};
 };
 
@@ -98,7 +100,7 @@ constexpr string_view cl_build_bat_2022 = "C:\\Program Files (x86)\\Microsoft Vi
 
 static path foundCLPath{};
 
-static const array<string_view, 14> actionTypes =
+static const array<string_view, 16> actionTypes =
 {
 	"name",         //what is the name of the final file
 	"type",         //what is the target type of the final file
@@ -109,15 +111,17 @@ static const array<string_view, 14> actionTypes =
 	//optional fields
 
 	"buildpath",    //where the binary will be built to
-	"objpath",      //where the object files live at during compilation
+	"objpath",      //where the object files live at when linked
 	"headers",      //what header files are included (for C and C++)
-	"links",        //what libraries will be linked to the binary
+	"rellinks",     //what release libraries will be linked to the release binary
+	"deblinks",     //what debug libraries will be linked to the debug binary
 	
 	"warninglevel", //what warning level should the compiler use, defaults to strong if unset
 	"defines",      //what compile-time defines will be linked to the binary
 	"extensions",   //what language standard extensions will be used
 
-	"flags",        //what flags will be passed to the compiler
+	"relflags", //what flags will be passed to the compiler in any release build
+	"debflags",   //what flags will be passed to the compiler in the debug build
 	"customflags"   //what KalaMake-specific flags will trigger extra actions
 };
 
@@ -136,16 +140,17 @@ static const array<string_view, 4> supportedTypes =
 	//creates a runnable executable
 	"executable",
 
-	//creates a .dll required at start + linkable .lib,
-	//creates a .so on Linux, same as dynamic lib
-	"shared-lib",
+	//creates a linkable .lib on windows,
+	//creates a linkable .a on linux
+	"link-only",
 
-	//creates a linkable .lib, .a on Linux
-	"static-lib",
+	//creates a .dll on windows,
+	//creates a .so on linux
+	"runtime-only",
 
-	//creates a loadable .dll,
-	//creates a .so on Linux, same as shared lib
-	"dynamic-dll"
+	//creates a .dll and a linkable .lib on windows,
+	//creates a .so on linux, same as runtime-only
+	"link-runtime"
 };
 
 static const array<string_view, 6> supportedCStandards =
@@ -290,6 +295,8 @@ static void PrintError(const string& message)
 
 static bool IsCStandard(string_view value)
 {
+	return ContainsString(supportedCStandards, value);
+
 	return find(
 		supportedCStandards.begin(), 
 		supportedCStandards.end(), 
@@ -427,13 +434,15 @@ void HandleProjectContent(const vector<string>& fileContent)
 	string buildPath{};
 	string objPath{};
 	vector<string> headers{};
-	vector<string> links{};
+	vector<string> rellinks{};
+	vector<string> deblinks{};
 
 	string warningLevel;
 	vector<string> defines{};
 	vector<string> extensions{};
 
-	vector<string> flags{};
+	vector<string> relflags{};
+	vector<string> debflags{};
 	vector<string> customFlags{};
 
 	auto IsName = [](string_view value) -> bool
@@ -469,9 +478,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			return StartsWith(value, "headers: ");
 		};
-	auto IsLink = [](string_view value) -> bool
+	auto IsRelLink = [](string_view value) -> bool
 		{
-			return StartsWith(value, "links: ");
+			return StartsWith(value, "rellinks: ");
+		};
+	auto IsDebLink = [](string_view value) -> bool
+		{
+			return StartsWith(value, "deblinks: ");
 		};
 
 	auto IsWarningLevel = [](string_view value) -> bool
@@ -487,9 +500,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 			return StartsWith(value, "extensions: ");
 		};
 
-	auto IsFlag = [](string_view value) -> bool
+	auto IsRelFlag = [](string_view value) -> bool
 		{
-			return StartsWith(value, "flags: ");
+			return StartsWith(value, "relflags: ");
+		};
+	auto IsDebFlag = [](string_view value) -> bool
+		{
+			return StartsWith(value, "debflags: ");
 		};
 	auto IsCustomFlag = [](string_view value) -> bool
 		{
@@ -566,6 +583,26 @@ void HandleProjectContent(const vector<string>& fileContent)
 		};
 	auto IsSupportedSourceExtension = [](string_view standard, const path& value) -> bool
 		{
+			if (!exists(value))
+			{
+				Log::Print(
+					"Skipped invalid source file '" + value.string() + "' because it was not found.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
+			if (is_directory(value))
+			{
+				Log::Print(
+					"Skipped invalid source file '" + value.string() + "' because it is a directory.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
 			if (IsCStandard(standard)
 				&& value.extension() != ".c")
 			{
@@ -644,7 +681,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 #endif						
 						}
 					}
-					else if (type == "shared-lib")
+					else if (type == "link-runtime")
 					{
 						if ((compiler == "clang-cl"
 							|| compiler == "cl")
@@ -675,7 +712,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 #endif
 						}
 					}
-					else if (type == "static-lib")
+					else if (type == "link-only")
 					{
 						if ((compiler == "clang-cl"
 							|| compiler == "cl")
@@ -706,7 +743,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 #endif
 						}
 					}
-					else if (type == "dynamic-dll")
+					else if (type == "runtime-only")
 					{
 						if ((compiler == "clang-cl"
 							|| compiler == "cl")
@@ -804,6 +841,19 @@ void HandleProjectContent(const vector<string>& fileContent)
 		};
 	auto IsSupportedHeaderExtension = [](string_view standard, const path& value) -> bool
 		{
+			if (!exists(value))
+			{
+				Log::Print(
+					"Skipped invalid header file '" + value.string() + "' because it was not found.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return false;
+			}
+
+			//directories are allowed
+			if (is_directory(value)) return true;
+
 			if (IsCStandard(standard)
 				&& value.extension() != ".h")
 			{
@@ -814,9 +864,6 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 				return false;
 			}
-
-			//headers will bypass checks
-			if (is_directory(value)) return true;
 
 			if (IsCPPStandard(standard)
 				&& value.extension() != ".hpp"
@@ -1000,22 +1047,21 @@ void HandleProjectContent(const vector<string>& fileContent)
 			}
 
 			vector<string> foundSources = SplitString(value, ", ");
-			vector<string> asteriskSources{};
 			if (ContainsDuplicates(foundSources)) RemoveDuplicates(foundSources);
 
 			bool failedSourceSearch{};
 
 			for (auto& s : foundSources)
 			{
-				auto is_valid_source = [](string& h, bool silent = false) -> bool
+				auto is_valid_source = [](string& s) -> bool
 					{
-						path sourcePath = exists(h)
-							? h
-							: (kmaPath / h);
+						path sourcePath = exists(s)
+							? s
+							: (kmaPath / s);
 
 						if (!exists(sourcePath))
 						{
-							if (!silent) PrintError(
+							PrintError(
 								"Failed to compile project because the source '" + sourcePath.string() 
 								+ "' was not found!");
 
@@ -1024,11 +1070,11 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						try
 						{
-							h = path(weakly_canonical(sourcePath)).string();
+							s = path(weakly_canonical(sourcePath)).string();
 						}
 						catch (const filesystem_error&)
 						{
-							if (!silent) PrintError(
+							PrintError(
 								"Failed to compile project because the source path '" + sourcePath.string() 
 								+ "' could not be resolved!");
 
@@ -1038,201 +1084,40 @@ void HandleProjectContent(const vector<string>& fileContent)
 						return true;
 					};
 
-				auto add_to_asterisk_container = [is_valid_source](
-					const path& dir,
-					vector<string>& target,
-					bool recursive = false)
-					{
-						if (recursive)
-						{
-							for (const auto& p : recursive_directory_iterator(dir))
-							{
-								string updatedValue = path(p).string();
-								if (is_valid_source(updatedValue, true))
-								{
-									target.push_back(updatedValue);
-								}
-							}
-						}
-						else
-						{
-							for (const auto& p : directory_iterator(dir))
-							{
-								string updatedValue = path(p).string();
-								if (is_valid_source(updatedValue, true))
-								{
-									target.push_back(updatedValue);
-								}
-							}
-						}
-					};
-
-				if (ContainsString(s, "/*.")
-					|| ContainsString(s, "\\*.")
-					|| ContainsString(s, "/**.")
-					|| ContainsString(s, "\\**."))
+				//always allow directories
+				if (!path(s).has_extension())
 				{
-					vector<string> split = SplitString(s, ".");
+					path sourcePath = exists(s)
+						? s
+						: (kmaPath / s);
 
-					if (split.size() == 2)
+					try
 					{
-						if (ContainsString(s, "/*.")
-							|| ContainsString(s, "\\*."))
-						{
-							path full = s;
-							path baseDir = full.parent_path();
-							string pattern = full.filename().string();
-
-							if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-							if (!exists(baseDir)
-								|| !is_directory(baseDir))
-							{
-								PrintError(
-									"Failed to compile project because the source path with asterisk '" + s
-									+ "' does not exist or does not lead to a directory!");
-
-								failedSourceSearch = true;
-
-								break;
-							}
-
-							vector<path> foundPaths{};
-							string result = GetRelativeFiles(baseDir, pattern, foundPaths);
-
-							if (!result.empty())
-							{
-								PrintError(
-									"Failed to compile project because the source path with asterisk '" + s
-									+ "' failed to be resolved! Reason: " + result);
-
-								failedSourceSearch = true;
-
-								break;
-							}
-
-							for (auto& p : foundPaths)
-							{
-								string updatedValue = p.string();
-								if (is_valid_source(updatedValue, true))
-								{
-									asteriskSources.push_back(updatedValue);
-								}
-							}
-						}
-						else if (ContainsString(s, "/**.")
-							|| ContainsString(s, "\\**."))
-						{
-							path full = s;
-							path baseDir = full.parent_path();
-							string pattern = full.filename().string();
-
-							if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-							if (!exists(baseDir)
-								|| !is_directory(baseDir))
-							{
-								PrintError(
-									"Failed to compile project because the source path with asterisk '" + s
-									+ "' does not exist or does not lead to a directory!");
-
-								failedSourceSearch = true;
-
-								break;
-							}
-
-							vector<path> foundPaths{};
-							string result = GetRelativeFiles(baseDir, pattern, foundPaths, true);
-
-							if (!result.empty())
-							{
-								PrintError(
-									"Failed to compile project because the source path with asterisk '" + s
-									+ "' failed to be resolved! Reason: " + result);
-
-								failedSourceSearch = true;
-
-								break;
-							}
-
-							for (auto& p : foundPaths)
-							{
-								string updatedValue = p.string();
-								if (is_valid_source(updatedValue, true))
-								{
-									asteriskSources.push_back(updatedValue);
-								}
-							}
-						}
+						s = path(weakly_canonical(sourcePath)).string();
 					}
-					else
+					catch (const filesystem_error&)
 					{
 						PrintError(
-							"Failed to compile project because the source path with asterisk '" + s
-							+ "' structure is invalid");
+							"Failed to compile project because the source path '" + sourcePath.string()
+							+ "' could not be resolved!");
 
 						failedSourceSearch = true;
 
 						break;
 					}
+
+					continue;
 				}
-				else if (s == "*")  add_to_asterisk_container(kmaPath, asteriskSources);
-				else if (s == "**") add_to_asterisk_container(kmaPath, asteriskSources, true);
-				else if (EndsWith(s, "/*")
-					|| EndsWith(s, "\\*"))
+				//check files with extensions
+				if (!is_valid_source(s))
 				{
-					string baseDir = s.substr(0, s.size() - 2);
-					if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-					if (!exists(baseDir)
-						|| !is_directory(baseDir))
-					{
-						PrintError(
-							"Failed to compile project because source path with asterisk '" + s 
-							+ "' does not exist or does not lead to a directory!");
+					failedSourceSearch = true;
 
-						failedSourceSearch = true;
-
-						break;
-					}
-
-					add_to_asterisk_container(baseDir, asteriskSources);
-				}
-				else if (EndsWith(s, "/**")
-					|| EndsWith(s, "\\**"))
-				{
-					string baseDir = s.substr(0, s.size() - 3);
-					if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-					if (!exists(baseDir)
-						|| !is_directory(baseDir))
-					{
-						PrintError(
-							"Failed to compile project because the source path with asterisk '" + s 
-							+ "' does not exist or does not lead to a directory!");
-
-						failedSourceSearch = true;
-
-						break;
-					}
-
-					add_to_asterisk_container(baseDir, asteriskSources, true);
-				}
-				else
-				{
-					if (!is_valid_source(s))
-					{
-						failedSourceSearch = true;
-
-						break;
-					}
-
+					break;
 				}
 			}
 
 			if (failedSourceSearch) return;
-
-			//move asterisk sources content to found sources container end
-			foundSources.insert(
-				foundSources.end(),
-				make_move_iterator(asteriskSources.begin()),
-				make_move_iterator(asteriskSources.end()));
 
 			//move found sources to sources container
 			sources = std::move(foundSources);
@@ -1317,14 +1202,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 			if (value.empty()) continue;
 
 			vector<string> foundHeaders = SplitString(value, ", ");
-			vector<string> asteriskHeaders{};
 			if (ContainsDuplicates(foundHeaders)) RemoveDuplicates(foundHeaders);
 
 			bool failedHeaderSearch{};
 
 			for (auto& h : foundHeaders)
 			{
-				auto is_valid_header = [](string& h, bool silent = false) -> bool
+				auto is_valid_header = [](string& h) -> bool
 					{
 						path headerPath = exists(h)
 							? h
@@ -1332,7 +1216,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						if (!exists(headerPath))
 						{
-							if (!silent) PrintError(
+							PrintError(
 								"Failed to compile project because the header '" + headerPath.string()
 								+ "' was not found!");
 
@@ -1345,7 +1229,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 						}
 						catch (const filesystem_error&)
 						{
-							if (!silent) PrintError(
+							PrintError(
 								"Failed to compile project because the header path '" + headerPath.string()
 								+ "' could not be resolved!");
 
@@ -1355,215 +1239,54 @@ void HandleProjectContent(const vector<string>& fileContent)
 						return true;
 					};
 
-				auto add_to_asterisk_container = [is_valid_header](
-					const path& dir, 
-					vector<string>& target,
-					bool recursive = false)
-					{
-						if (recursive)
-						{
-							for (const auto& p : recursive_directory_iterator(dir))
-							{
-								string updatedValue = path(p).string();
-								if (is_valid_header(updatedValue, true))
-								{
-									target.push_back(updatedValue);
-								}
-							}
-						}
-						else
-						{
-							for (const auto& p : directory_iterator(dir))
-							{
-								string updatedValue = path(p).string();
-								if (is_valid_header(updatedValue, true))
-								{
-									target.push_back(updatedValue);
-								}
-							}
-						}
-					};
-
-				if (ContainsString(h, "/*.")
-					|| ContainsString(h, "\\*.")
-					|| ContainsString(h, "/**.")
-					|| ContainsString(h, "\\**."))
+				//always allow directories
+				if (!path(h).has_extension())
 				{
-					vector<string> split = SplitString(h, ".");
+					path headerPath = exists(h)
+						? h
+						: (kmaPath / h);
 
-					if (split.size() == 2)
+					try
 					{
-						if (ContainsString(h, "/*.")
-							|| ContainsString(h, "\\*."))
-						{
-							path full = h;
-							path baseDir = full.parent_path();
-							string pattern = full.filename().string();
-
-							if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-							if (!exists(baseDir)
-								|| !is_directory(baseDir))
-							{
-								PrintError(
-									"Failed to compile project because the header path with asterisk '" + h
-									+ "' does not exist or does not lead to a directory!");
-
-								failedHeaderSearch = true;
-
-								break;
-							}
-
-							vector<path> foundPaths{};
-							string result = GetRelativeFiles(baseDir, pattern, foundPaths);
-
-							if (!result.empty())
-							{
-								PrintError(
-									"Failed to compile project because the header path with asterisk '" + h
-									+ "' failed to be resolved! Reason: " + result);
-
-								failedHeaderSearch = true;
-
-								break;
-							}
-
-							for (auto& p : foundPaths)
-							{
-								string updatedValue = p.string();
-								if (is_valid_header(updatedValue, true))
-								{
-									asteriskHeaders.push_back(updatedValue);
-								}
-							}
-						}
-						else if (ContainsString(h, "/**.")
-							|| ContainsString(h, "\\**."))
-						{
-							path full = h;
-							path baseDir = full.parent_path();
-							string pattern = full.filename().string();
-
-							if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-							if (!exists(baseDir)
-								|| !is_directory(baseDir))
-							{
-								PrintError(
-									"Failed to compile project because the header path with asterisk '" + h
-									+ "' does not exist or does not lead to a directory!");
-
-								failedHeaderSearch = true;
-
-								break;
-							}
-
-							vector<path> foundPaths{};
-							string result = GetRelativeFiles(baseDir, pattern, foundPaths, true);
-
-							if (!result.empty())
-							{
-								PrintError(
-									"Failed to compile project because the header path with asterisk '" + h
-									+ "' failed to be resolved! Reason: " + result);
-
-								failedHeaderSearch = true;
-
-								break;
-							}
-
-							for (auto& p : foundPaths)
-							{
-								string updatedValue = p.string();
-								if (is_valid_header(updatedValue, true))
-								{
-									asteriskHeaders.push_back(updatedValue);
-								}
-							}
-						}
+						h = path(weakly_canonical(headerPath)).string();
 					}
-					else
+					catch (const filesystem_error&)
 					{
 						PrintError(
-							"Failed to compile project because the header path with asterisk '" + h
-							+ "' structure is invalid");
+							"Failed to compile project because the header path '" + headerPath.string()
+							+ "' could not be resolved!");
 
 						failedHeaderSearch = true;
 
 						break;
 					}
+
+					continue;
 				}
-				else if (h == "*")  add_to_asterisk_container(kmaPath, asteriskHeaders);
-				else if (h == "**") add_to_asterisk_container(kmaPath, asteriskHeaders, true);
-				else if (EndsWith(h, "/*")
-						 || EndsWith(h, "\\*"))
+				//check files with extensions
+				if (!is_valid_header(h))
 				{
-					string baseDir = h.substr(0, h.size() - 2);
-					if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-					if (!exists(baseDir)
-						|| !is_directory(baseDir))
-					{
-						PrintError(
-							"Failed to compile project because header path with asterisk '" + h 
-							+ "' does not exist or does not lead to a directory!");
+					failedHeaderSearch = true;
 
-						failedHeaderSearch = true;
-
-						break;
-					}
-
-					add_to_asterisk_container(baseDir, asteriskHeaders);
-				}
-				else if (EndsWith(h, "/**")
-						 || EndsWith(h, "\\**"))
-				{
-					string baseDir = h.substr(0, h.size() - 3);
-					if (!exists(baseDir)) baseDir = path(kmaPath / baseDir).string();
-					if (!exists(baseDir)
-						|| !is_directory(baseDir))
-					{
-						PrintError(
-							"Failed to compile project because header path with asterisk '" + h 
-							+ "' does not exist or does not lead to a directory!");
-
-						failedHeaderSearch = true;
-
-						break;
-					}
-
-					add_to_asterisk_container(baseDir, asteriskHeaders, true);
-				}
-				else
-				{
-					if (!is_valid_header(h))
-					{
-						failedHeaderSearch = true;
-
-						break;
-					}
-
+					break;
 				}
 			}
 
 			if (failedHeaderSearch) return;
 
-			//move asterisk headers content to found headers container end
-			foundHeaders.insert(
-				foundHeaders.end(),
-				make_move_iterator(asteriskHeaders.begin()),
-				make_move_iterator(asteriskHeaders.end()));
-
 			//move found sources to headers container
 			headers = std::move(foundHeaders);
 		}
-		else if (IsLink(line))
+		else if (IsRelLink(line))
 		{
-			if (!links.empty())
+			if (!rellinks.empty())
 			{
 				PrintError("Failed to compile project because more than one links line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "links: ");
+			string value = RemoveFromString(line, "rellinks: ");
 
 			//ignore empty links field
 			if (value.empty()) continue;
@@ -1576,23 +1299,12 @@ void HandleProjectContent(const vector<string>& fileContent)
 			//resolve all relative link files with extensions to project kma file path
 			for (auto& l : foundLinks)
 			{
-				if (ContainsString(".", l)
-					&& !exists(l))
+				if (ContainsString("/", l)
+					|| ContainsString("\\", l))
 				{
-					if (EndsWith(l, ".lib")
-						|| EndsWith(l, ".a"))
-					{
-						l = path(kmaPath / l).string();
-					}
-					else
-					{
-						Log::Print(
-							"Skipped invalid link file '" + l + "' because it is malformed.",
-							"KALAMAKE",
-							LogType::LOG_WARNING);
-
-						continue;
-					}
+					l = exists(path(l))
+						? l
+						: path(kmaPath / l).string();
 				}
 
 				if (exists(l))
@@ -1603,29 +1315,69 @@ void HandleProjectContent(const vector<string>& fileContent)
 					}
 					catch (const filesystem_error&)
 					{
-						PrintError("Failed to compile project because link path '" + l + "' could not be resolved!");
+						PrintError("Failed to compile project because reklink path '" + l + "' could not be resolved!");
 
 						failedLinkSearch = true;
 
 						return;
 					}
 				}
-				else if (!exists(l)
-						 && (ContainsString(("/"), l))
-						 || ContainsString(("\\"), l))
-				{
-					Log::Print(
-						"Skipped invalid link file '" + l + "' because it is malformed.",
-						"KALAMAKE",
-						LogType::LOG_WARNING);
+			}
 
-					continue;
+			if (failedLinkSearch) return;
+
+			rellinks = std::move(foundLinks);
+		}
+		else if (IsDebLink(line))
+		{
+			if (!deblinks.empty())
+			{
+				PrintError("Failed to compile project because more than one deblinks line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "deblinks: ");
+
+			//ignore empty links field
+			if (value.empty()) continue;
+
+			vector<string> foundLinks = SplitString(value, ", ");
+			if (ContainsDuplicates(foundLinks)) RemoveDuplicates(foundLinks);
+
+			bool failedLinkSearch{};
+
+			//resolve all relative link files with extensions to project kma file path
+			for (auto& l : foundLinks)
+			{
+				if (ContainsString("/", l)
+					|| ContainsString("\\", l))
+				{
+					l = exists(path(l))
+						? l
+						: path(kmaPath / l).string();
+				}
+
+				if (exists(l))
+				{
+					try
+					{
+						l = path(weakly_canonical(l)).string();
+					}
+					catch (const filesystem_error&)
+					{
+						PrintError("Failed to compile project because deblink path '" + l + "' could not be resolved!");
+
+						failedLinkSearch = true;
+
+						return;
+					}
 				}
 			}
 
 			if (failedLinkSearch) return;
 
-			links = std::move(foundLinks);
+			deblinks = std::move(foundLinks);
 		}
 
 		else if (IsWarningLevel(line))
@@ -1683,23 +1435,41 @@ void HandleProjectContent(const vector<string>& fileContent)
 			extensions = std::move(tempExtensions);
 		}
 
-		else if (IsFlag(line))
+		else if (IsRelFlag(line))
 		{
-			if (!flags.empty())
+			if (!relflags.empty())
 			{
-				PrintError("Failed to compile project because more than one flags line was passed!");
+				PrintError("Failed to compile project because more than one relflags line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "flags: ");
+			string value = RemoveFromString(line, "relflags: ");
 
 			//ignore empty flags field
 			if (value.empty()) continue;
 
 			vector<string> tempFlags = SplitString(value, ", ");
 
-			flags = std::move(tempFlags);
+			relflags = std::move(tempFlags);
+		}
+		else if (IsDebFlag(line))
+		{
+			if (!debflags.empty())
+			{
+				PrintError("Failed to compile project because more than one debflags line was passed!");
+
+				return;
+			}
+
+			string value = RemoveFromString(line, "debflags: ");
+
+			//ignore empty flags field
+			if (value.empty()) continue;
+
+			vector<string> tempFlags = SplitString(value, ", ");
+
+			debflags = std::move(tempFlags);
 		}
 		else if (IsCustomFlag(line))
 		{
@@ -1743,19 +1513,22 @@ void HandleProjectContent(const vector<string>& fileContent)
 	}
 
 	//
-	// VERIFY SOURCES AND HEADERS AGAINST STANDARD
+	// VERIFY SOURCES, HEADERS AND LINKS
 	//
 
 	vector<string> cleanedSources{};
 	vector<string> cleanedHeaders{};
+	vector<string> cleanedRelLinks{};
+	vector<string> cleanedDebLinks{};
 
 	for (const auto& s : sources)
 	{
+		//scan source folder
 		if (is_directory(s))
 		{
 			for (const auto& d : recursive_directory_iterator(s))
 			{
-				if (!is_regular_file(d)) continue;
+				if (is_directory(d)) continue;
 
 				path p = path(d);
 				if (IsSupportedSourceExtension(standard, p)) cleanedSources.push_back(p.string());
@@ -1777,6 +1550,66 @@ void HandleProjectContent(const vector<string>& fileContent)
 			if (!IsSupportedHeaderExtension(standard, p)) continue;
 
 			cleanedHeaders.push_back(h);
+		}
+	}
+	if (!rellinks.empty())
+	{
+		for (const auto& l : rellinks)
+		{
+			if (!EndsWith(l, ".lib")
+				&& !EndsWith(l, ".a"))
+			{
+				Log::Print(
+					"Skipped invalid link file '" + l + "' because it has no extension.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				continue;
+			}
+
+			if ((ContainsString("/", l)
+				|| ContainsString("\\", l))
+				&& !exists(l))
+			{
+				Log::Print(
+					"Skipped invalid link file '" + l + "' because it does not exist.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				continue;
+			}
+
+			cleanedRelLinks.push_back(l);
+		}
+	}
+	if (!deblinks.empty())
+	{
+		for (const auto& l : deblinks)
+		{
+			if (!EndsWith(l, ".lib")
+				&& !EndsWith(l, ".a"))
+			{
+				Log::Print(
+					"Skipped invalid link file '" + l + "' because it has no extension.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				continue;
+			}
+
+			if ((ContainsString("/", l)
+				|| ContainsString("\\", l))
+				&& !exists(l))
+			{
+				Log::Print(
+					"Skipped invalid link file '" + l + "' because it does not exist.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				continue;
+			}
+
+			cleanedDebLinks.push_back(l);
 		}
 	}
 
@@ -1823,13 +1656,43 @@ void HandleProjectContent(const vector<string>& fileContent)
 	if (buildPath.empty()) buildPath = path(kmaPath / defaultBuildPath).string();
 	if (objPath.empty()) objPath = path(kmaPath / defaultObjPath).string();
 
-	if (ContainsDuplicates(cleanedSources)) RemoveDuplicates(cleanedSources);
-	if (ContainsDuplicates(cleanedHeaders)) RemoveDuplicates(cleanedHeaders);
-	if (ContainsDuplicates(links))          RemoveDuplicates(links);
-	if (ContainsDuplicates(defines))        RemoveDuplicates(defines);
-	if (ContainsDuplicates(extensions))     RemoveDuplicates(extensions);
-	if (ContainsDuplicates(flags))          RemoveDuplicates(flags);
-	if (ContainsDuplicates(customFlags))    RemoveDuplicates(customFlags);
+	if (ContainsDuplicates(cleanedSources))  RemoveDuplicates(cleanedSources);
+	if (ContainsDuplicates(cleanedHeaders))  RemoveDuplicates(cleanedHeaders);
+	if (ContainsDuplicates(cleanedRelLinks)) RemoveDuplicates(cleanedDebLinks);
+	if (ContainsDuplicates(defines))         RemoveDuplicates(defines);
+	if (ContainsDuplicates(extensions))      RemoveDuplicates(extensions);
+	if (ContainsDuplicates(relflags))        RemoveDuplicates(relflags);
+	if (ContainsDuplicates(debflags))        RemoveDuplicates(debflags);
+	if (ContainsDuplicates(customFlags))     RemoveDuplicates(customFlags);
+
+	for (auto& f : relflags)
+	{
+		if (compiler == "clang-cl"
+			|| compiler == "cl")
+		{
+			if (!f.starts_with('/')) f = "/" + f;
+		}
+		else if (compiler == "clang++"
+			|| compiler == "gcc"
+			|| compiler == "g++")
+		{
+			if (!f.starts_with('-')) f = "-" + f;
+		}
+	}
+	for (auto& f : debflags)
+	{
+		if (compiler == "clang-cl"
+			|| compiler == "cl")
+		{
+			if (!f.starts_with('/')) f = "/" + f;
+		}
+		else if (compiler == "clang++"
+			|| compiler == "gcc"
+			|| compiler == "g++")
+		{
+			if (!f.starts_with('-')) f = "-" + f;
+		}
+	}
 
 	//
 	// VERIFY BUILD AND OBJ PATHS
@@ -1882,11 +1745,20 @@ void HandleProjectContent(const vector<string>& fileContent)
 			oss << "  " << h << "\n";
 		}
 	}
-	if (!links.empty())
+	if (!cleanedRelLinks.empty())
 	{
-		oss << "links:\n";
+		oss << "release links:\n";
 
-		for (const auto& l : links)
+		for (const auto& l : cleanedRelLinks)
+		{
+			oss << "  " << l << "\n";
+		}
+	}
+	if (!cleanedDebLinks.empty())
+	{
+		oss << "debug links:\n";
+
+		for (const auto& l : cleanedDebLinks)
 		{
 			oss << "  " << l << "\n";
 		}
@@ -1912,11 +1784,20 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 	}
 
-	if (!flags.empty())
+	if (!relflags.empty())
 	{
-		oss << "flags:\n";
+		oss << "release flags:\n";
 
-		for (const auto& f : flags)
+		for (const auto& f : relflags)
+		{
+			oss << "  " << f << "\n";
+		}
+	}
+	if (!debflags.empty())
+	{
+		oss << "debug flags:\n";
+
+		for (const auto& f : debflags)
 		{
 			oss << "  " << f << "\n";
 		}
@@ -1949,20 +1830,22 @@ void HandleProjectContent(const vector<string>& fileContent)
 			.buildPath = buildPath,
 			.objPath = objPath,
 			.headers = std::move(cleanedHeaders),
-			.links = std::move(links),
+			.rellinks = std::move(cleanedRelLinks),
+			.deblinks = std::move(cleanedDebLinks),
 
 			.warningLevel = warningLevel,
 			.defines = std::move(defines),
 			.extensions = std::move(extensions),
 
-			.flags = std::move(flags),
+			.relflags = std::move(relflags),
+			.debflags = std::move(debflags),
 			.customFlags = std::move(customFlags),
 		});
 }
 
 void CompileProject(const CompileData& compileData)
 {
-	if (compileData.type == "static-lib")
+	if (compileData.type == "link-only")
 	{
 		//continue to static lib compilation function
 		//since its very different from exe and shared lib
@@ -1971,7 +1854,8 @@ void CompileProject(const CompileData& compileData)
 		return;
 	}
 
-	vector<string> finalFlags = std::move(compileData.flags);
+	vector<string> finalRelFlags = std::move(compileData.relflags);
+	vector<string> finalDebFlags = std::move(compileData.debflags);
 
 	//
 	// SOURCES
@@ -1985,7 +1869,8 @@ void CompileProject(const CompileData& compileData)
 	{
 		for (const auto& s : compileData.sources)
 		{
-			finalFlags.push_back("\"" + s + "\"");
+			finalRelFlags.push_back("\"" + s + "\"");
+			finalDebFlags.push_back("\"" + s + "\"");
 		}
 	}
 
@@ -2000,7 +1885,8 @@ void CompileProject(const CompileData& compileData)
 		{
 			for (const auto& s : compileData.headers)
 			{
-				finalFlags.push_back("/I\"" + s + "\"");
+				finalRelFlags.push_back("/I\"" + s + "\"");
+				finalDebFlags.push_back("/I\"" + s + "\"");
 			}
 		}
 		else if (compileData.compiler == "clang++"
@@ -2009,7 +1895,8 @@ void CompileProject(const CompileData& compileData)
 		{
 			for (const auto& s : compileData.headers)
 			{
-				finalFlags.push_back("-I\"" + s + "\"");
+				finalRelFlags.push_back("-I\"" + s + "\"");
+				finalDebFlags.push_back("-I\"" + s + "\"");
 			}
 		}
 	}
@@ -2018,29 +1905,55 @@ void CompileProject(const CompileData& compileData)
 	// LINKS
 	//
 
-	if (!compileData.links.empty())
+	if (!compileData.rellinks.empty())
 	{
 		if (compileData.compiler == "clang-cl"
 			|| compileData.compiler == "cl")
 		{
-			for (const auto& l : compileData.links)
+			for (const auto& l : compileData.rellinks)
 			{
-				if (EndsWith(l, ".lib")) finalFlags.push_back("\"" + l + "\"");
-				else                     finalFlags.push_back(l);                   
+				if (EndsWith(l, ".lib")) finalRelFlags.push_back("\"" + l + "\"");
+				else                     finalRelFlags.push_back(l);                   
 			}
 		}
 		else if (compileData.compiler == "clang++"
 				 || compileData.compiler == "gcc"
 				 || compileData.compiler == "g++")
 		{
-			for (const auto& l : compileData.links)
+			for (const auto& l : compileData.rellinks)
 			{
 				if (EndsWith(l, ".lib")
 					|| EndsWith(l, ".a"))
 				{
-					finalFlags.push_back("\"" + l + "\"");
+					finalRelFlags.push_back("\"" + l + "\"");
 				}
-				else finalFlags.push_back("-l" + l);
+				else finalRelFlags.push_back("-l" + l);
+			}
+		}
+	}
+	if (!compileData.deblinks.empty())
+	{
+		if (compileData.compiler == "clang-cl"
+			|| compileData.compiler == "cl")
+		{
+			for (const auto& l : compileData.deblinks)
+			{
+				if (EndsWith(l, ".lib")) finalDebFlags.push_back("\"" + l + "\"");
+				else                     finalDebFlags.push_back(l);
+			}
+		}
+		else if (compileData.compiler == "clang++"
+			|| compileData.compiler == "gcc"
+			|| compileData.compiler == "g++")
+		{
+			for (const auto& l : compileData.deblinks)
+			{
+				if (EndsWith(l, ".lib")
+					|| EndsWith(l, ".a"))
+				{
+					finalDebFlags.push_back("\"" + l + "\"");
+				}
+				else finalDebFlags.push_back("-l" + l);
 			}
 		}
 	}
@@ -2052,13 +1965,15 @@ void CompileProject(const CompileData& compileData)
 	if (compileData.compiler == "clang-cl"
 		|| compileData.compiler == "cl")
 	{
-		finalFlags.push_back("/std:" + compileData.standard);
+		finalRelFlags.push_back("/std:" + compileData.standard);
+		finalDebFlags.push_back("/std:" + compileData.standard);
 	}
 	else if (compileData.compiler == "clang++"
 			 || compileData.compiler == "gcc"
 			 || compileData.compiler == "g++")
 	{
-		finalFlags.push_back("-std=" + compileData.standard);
+		finalRelFlags.push_back("-std=" + compileData.standard);
+		finalDebFlags.push_back("-std=" + compileData.standard);
 	}
 
 	//
@@ -2074,60 +1989,122 @@ void CompileProject(const CompileData& compileData)
 	if (compileData.compiler == "clang-cl"
 		|| compileData.compiler == "cl")
 	{
-		if (compileData.warningLevel == "none")        finalFlags.push_back("/W0");
-		else if (compileData.warningLevel == "basic")  finalFlags.push_back("/W1");
-		else if (compileData.warningLevel == "normal") finalFlags.push_back("/W2");
-		else if (compileData.warningLevel == "strong") finalFlags.push_back("/W3");
-		else if (compileData.warningLevel == "strict") finalFlags.push_back("/W4");
-		else if (compileData.warningLevel == "all")    finalFlags.push_back("/Wall");
+		if (compileData.warningLevel == "none")
+		{
+			finalRelFlags.push_back("/W0");
+			finalDebFlags.push_back("/W0");
+		}
+		else if (compileData.warningLevel == "basic")
+		{
+			finalRelFlags.push_back("/W1");
+			finalDebFlags.push_back("/W1");
+		}
+		else if (compileData.warningLevel == "normal")
+		{
+			finalRelFlags.push_back("/W2");
+			finalDebFlags.push_back("/W2");
+		}
+		else if (compileData.warningLevel == "strong")
+		{
+			finalRelFlags.push_back("/W3");
+			finalDebFlags.push_back("/W3");
+		}
+		else if (compileData.warningLevel == "strict")
+		{
+			finalRelFlags.push_back("/W4");
+			finalDebFlags.push_back("/W4");
+		}
+		else if (compileData.warningLevel == "all")
+		{
+			finalRelFlags.push_back("/Wall");
+			finalDebFlags.push_back("/Wall");
+		}
 	}
 	else if (compileData.compiler == "clang++"
 			 || compileData.compiler == "gcc"
 			 || compileData.compiler == "g++")
 	{
-		if (compileData.warningLevel == "none")        finalFlags.push_back("-w");
-		else if (compileData.warningLevel == "basic")  finalFlags.push_back("-Wall");
+		if (compileData.warningLevel == "none")
+		{
+			finalRelFlags.push_back("-w");
+			finalDebFlags.push_back("-w");
+		}
+		else if (compileData.warningLevel == "basic")
+		{
+			finalRelFlags.push_back("-Wall");
+			finalDebFlags.push_back("-Wall");
+		}
 		else if (compileData.warningLevel == "normal")
 		{
-			finalFlags.push_back("-Wall");
-			finalFlags.push_back("-Wextra");
+			finalRelFlags.push_back("-Wall");
+			finalRelFlags.push_back("-Wextra");
+
+			finalDebFlags.push_back("-Wall");
+			finalDebFlags.push_back("-Wextra");
 		}
 		else if (compileData.warningLevel == "strong")
 		{
-			finalFlags.push_back("-Wall");
-			finalFlags.push_back("-Wextra");
-			finalFlags.push_back("-Wpedantic");
+			finalRelFlags.push_back("-Wall");
+			finalRelFlags.push_back("-Wextra");
+			finalRelFlags.push_back("-Wpedantic");
+
+			finalDebFlags.push_back("-Wall");
+			finalDebFlags.push_back("-Wextra");
+			finalDebFlags.push_back("-Wpedantic");
 		}
 		else if (compileData.warningLevel == "strict")
 		{
-			finalFlags.push_back("-Wall");
-			finalFlags.push_back("-Wextra");
-			finalFlags.push_back("-Wpedantic");
-			finalFlags.push_back("-Wshadow");
-			finalFlags.push_back("-Wconversion");
-			finalFlags.push_back("-Wsign-conversion");
+			finalRelFlags.push_back("-Wall");
+			finalRelFlags.push_back("-Wextra");
+			finalRelFlags.push_back("-Wpedantic");
+			finalRelFlags.push_back("-Wshadow");
+			finalRelFlags.push_back("-Wconversion");
+			finalRelFlags.push_back("-Wsign-conversion");
+
+			finalDebFlags.push_back("-Wall");
+			finalDebFlags.push_back("-Wextra");
+			finalDebFlags.push_back("-Wpedantic");
+			finalDebFlags.push_back("-Wshadow");
+			finalDebFlags.push_back("-Wconversion");
+			finalDebFlags.push_back("-Wsign-conversion");
 		}
 		else if (compileData.warningLevel == "all")
 		{
 			if (compileData.compiler == "clang++")
 			{
-				finalFlags.push_back("-Wall");
-				finalFlags.push_back("-Wextra");
-				finalFlags.push_back("-Wpedantic");
-				finalFlags.push_back("-Weverything");
+				finalRelFlags.push_back("-Wall");
+				finalRelFlags.push_back("-Wextra");
+				finalRelFlags.push_back("-Wpedantic");
+				finalRelFlags.push_back("-Weverything");
+
+				finalDebFlags.push_back("-Wall");
+				finalDebFlags.push_back("-Wextra");
+				finalDebFlags.push_back("-Wpedantic");
+				finalDebFlags.push_back("-Weverything");
 			}
 			else
 			{
-				finalFlags.push_back("-Wall");
-				finalFlags.push_back("-Wextra");
-				finalFlags.push_back("-Wpedantic");
-				finalFlags.push_back("-Wshadow");
-				finalFlags.push_back("-Wconversion");
-				finalFlags.push_back("-Wsign-conversion");
-				finalFlags.push_back("-Wcast-align");
-				finalFlags.push_back("-Wnull-dereference");
-				finalFlags.push_back("-Wdouble-promotion");
-				finalFlags.push_back("-Wformat=2");
+				finalRelFlags.push_back("-Wall");
+				finalRelFlags.push_back("-Wextra");
+				finalRelFlags.push_back("-Wpedantic");
+				finalRelFlags.push_back("-Wshadow");
+				finalRelFlags.push_back("-Wconversion");
+				finalRelFlags.push_back("-Wsign-conversion");
+				finalRelFlags.push_back("-Wcast-align");
+				finalRelFlags.push_back("-Wnull-dereference");
+				finalRelFlags.push_back("-Wdouble-promotion");
+				finalRelFlags.push_back("-Wformat=2");
+
+				finalDebFlags.push_back("-Wall");
+				finalDebFlags.push_back("-Wextra");
+				finalDebFlags.push_back("-Wpedantic");
+				finalDebFlags.push_back("-Wshadow");
+				finalDebFlags.push_back("-Wconversion");
+				finalDebFlags.push_back("-Wsign-conversion");
+				finalDebFlags.push_back("-Wcast-align");
+				finalDebFlags.push_back("-Wnull-dereference");
+				finalDebFlags.push_back("-Wdouble-promotion");
+				finalDebFlags.push_back("-Wformat=2");
 			}
 		}
 	}
@@ -2146,7 +2123,8 @@ void CompileProject(const CompileData& compileData)
 		{
 			for (const auto& d : compileData.defines)
 			{
-				finalFlags.push_back("-D" + d);
+				finalRelFlags.push_back("-D" + d);
+				finalDebFlags.push_back("-D" + d);
 			}
 		}
 	}
@@ -2160,7 +2138,8 @@ void CompileProject(const CompileData& compileData)
 		if (f == "standard-required"
 			&& compileData.compiler == "cl")
 		{
-			finalFlags.push_back("/permissive-");
+			finalRelFlags.push_back("/permissive-");
+			finalDebFlags.push_back("/permissive-");
 
 			continue;
 		}
@@ -2170,13 +2149,15 @@ void CompileProject(const CompileData& compileData)
 			if (compileData.compiler == "clang-cl"
 				|| compileData.compiler == "cl")
 			{
-				finalFlags.push_back("/WX");
+				finalRelFlags.push_back("/WX");
+				finalDebFlags.push_back("/WX");
 			}
 			else if (compileData.compiler == "clang++"
 					 || compileData.compiler == "gcc"
 					 || compileData.compiler == "g++")
 			{
-				finalFlags.push_back("-Werror");
+				finalRelFlags.push_back("-Werror");
+				finalDebFlags.push_back("-Werror");
 			}
 
 			continue;
@@ -2197,11 +2178,13 @@ void CompileProject(const CompileData& compileData)
 		if (f == "minsizerel") buildFlags.push_back("minsizerel");
 	}
 
-	//MSVC requires explicit exception semantics for standards-compliant C++
-	if (compileData.compiler == "cl"
-		&& IsCPPStandard(compileData.standard))
+	//enable standard C++ extensions for MSVC
+	if (IsCPPStandard(compileData.standard)
+		&& (compileData.compiler == "cl"
+		|| compileData.compiler == "clang-cl"))
 	{
-		finalFlags.push_back("/EHsc");
+		finalRelFlags.push_back("/EHsc");
+		finalDebFlags.push_back("/EHsc");
 	}
 
 	//
@@ -2250,7 +2233,7 @@ void CompileProject(const CompileData& compileData)
 					return "-o \"" + newBuildPath.string() + "\"";
 				}
 			}
-			else if (type == "shared-lib")
+			else if (type == "link-runtime")
 			{
 				if (compiler == "clang-cl"
 					|| compiler == "cl")
@@ -2267,7 +2250,7 @@ void CompileProject(const CompileData& compileData)
 					}
 
 					return
-						"/LD /link / "
+						"/LD /link "
 						"/OUT:\"" + newBuildPath.string() + "\" "
 						"/IMPLIB:\"" + libPath.string() + "\"";
 				}
@@ -2306,7 +2289,7 @@ void CompileProject(const CompileData& compileData)
 #endif
 				}
 			}
-			else if (type == "dynamic-dll")
+			else if (type == "runtime-only")
 			{
 				if (compiler == "clang-cl"
 					|| compiler == "cl")
@@ -2321,7 +2304,7 @@ void CompileProject(const CompileData& compileData)
 					}
 
 					return
-						"/LD /link / "
+						"/LD /link "
 						"/OUT:\"" + newBuildPath.string() + "\"";
 				}
 				else if (compiler == "clang++"
@@ -2361,93 +2344,130 @@ void CompileProject(const CompileData& compileData)
 		};
 
 	auto get_build_type = [](
+		string_view flagsType,
 		string_view compiler,
 		const vector<string>& flags) -> string
 		{
-			auto contains_string = [&flags](
-				string_view target) -> bool
-				{
-					return find(flags.begin(), flags.end(), target) != flags.end();
-				};
-
 			if (compiler == "clang-cl"
 				|| compiler == "cl")
 			{
-				if (contains_string("/Od")
-					&& contains_string("/Zi"))
+				if (flagsType == "debug"
+					&& ContainsString(flags, "/Od")
+					&& ContainsString(flags, "/Zi"))
 				{
 					return "debug";
 				}
-				else if (contains_string("/O2")
-						 && contains_string("/Zi"))
+
+				if (flagsType == "release")
 				{
-					return "reldebug";
+					if (ContainsString(flags, "/O2")
+						&& ContainsString(flags, "/Zi"))
+					{
+						return "reldebug";
+					}
+					else if (ContainsString(flags, "/O2"))
+					{
+						return "release";
+					}
+					else if (ContainsString(flags, "/O1"))
+					{
+						return "minsizerel";
+					}
 				}
-				else if (contains_string("/O2"))
-				{
-					return "release";
-				}
-				else if (contains_string("/O1"))
-				{
-					return "minsizerel";
-				}
-				else
+
+				if (flagsType == "release")
 				{
 					Log::Print(
-						"Failed to find valid combination of build flags, assuming 'release' as default.",
+						"Failed to find valid combination of release build flags, assuming 'release' as default.",
 						"KALAMAKE",
 						LogType::LOG_WARNING);
 
 					return "release";
+				}
+				else
+				{
+					Log::Print(
+						"Failed to find valid combination of debug build flags, skipping build in debug.",
+						"KALAMAKE",
+						LogType::LOG_WARNING);
+
+					return "none";
 				}
 			}
 			else if (compiler == "clang++"
 					 || compiler == "gcc"
 					 || compiler == "g++")
 			{
-				if (contains_string("-O0")
-					&& contains_string("-g"))
+				if (flagsType == "debug"
+					&& ContainsString(flags, "-O0")
+					&& ContainsString(flags, "-g"))
 				{
 					return "debug";
 				}
-				else if (contains_string("-O2")
-						 && contains_string("-g"))
+
+				if (flagsType == "release")
 				{
-					return "reldebug";
+					if (ContainsString(flags, "-O2")
+						&& ContainsString(flags, "-g"))
+					{
+						return "reldebug";
+					}
+					else if (ContainsString(flags, "-O2"))
+					{
+						return "release";
+					}
+					else if (ContainsString(flags, "-Os"))
+					{
+						return "minsizerel";
+					}
 				}
-				else if (contains_string("-O2"))
-				{
-					return "release";
-				}
-				else if (contains_string("-Os"))
-				{
-					return "minsizerel";
-				}
-				else
+
+				if (flagsType == "release")
 				{
 					Log::Print(
-						"Failed to find valid combination of build flags, assuming 'release' as default.",
+						"Failed to find valid combination of release build flags, assuming 'release' as default.",
 						"KALAMAKE",
 						LogType::LOG_WARNING);
 
 					return "release";
 				}
+				else
+				{
+					Log::Print(
+						"Failed to find valid combination of debug build flags, skipping build in debug.",
+						"KALAMAKE",
+						LogType::LOG_WARNING);
+
+					return "none";
+				}
 			}
 
-			Log::Print(
-				"Failed to find any valid build flags from parsed flags, assuming 'release' as default.",
-				"KALAMAKE",
-				LogType::LOG_WARNING);
+			if (flagsType == "release")
+			{
+				Log::Print(
+					"Failed to find valid combination of release build flags, assuming 'release' as default.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
 
-			return "release";
+				return "release";
+			}
+			else
+			{
+				Log::Print(
+					"Failed to find valid combination of debug build flags, skipping build in debug.",
+					"KALAMAKE",
+					LogType::LOG_WARNING);
+
+				return "none";
+			}
 		};
 
 	auto build_project = [&compileData](
 		string_view compiler,
 		const path& buildPath,
-		vector<string> finalFlags)
+		vector<string> finalFlags) -> bool
 		{
-			finalFlags.push_back(" " + buildPath.string());
+			finalFlags.push_back(buildPath.string());
 
 			if (ContainsDuplicates(finalFlags)) RemoveDuplicates(finalFlags);
 
@@ -2488,6 +2508,10 @@ void CompileProject(const CompileData& compileData)
 			if (system(finalValue.c_str()) != 0)
 			{
 				PrintError("Compilation failed!");
+
+				Log::Print("\n==========================================================================================\n");
+
+				return false;
 			}
 			else
 			{
@@ -2498,6 +2522,8 @@ void CompileProject(const CompileData& compileData)
 			}
 
 			Log::Print("\n==========================================================================================\n");
+
+			return true;
 		};
 
 	if (!buildFlags.empty())
@@ -2517,35 +2543,143 @@ void CompileProject(const CompileData& compileData)
 				return;
 			}
 
-			build_project(
-				compileData.compiler,
-				finalBuildPath,
-				finalFlags);
+			if (b != "debug")
+			{
+				if (compileData.compiler == "clang-cl"
+					|| compileData.compiler == "cl")
+				{
+					if (b == "release")
+					{
+						if (!ContainsString(finalRelFlags, "/O2")) finalRelFlags.push_back("/O2");
+					}
+					else if (b == "reldebug")
+					{
+						if (!ContainsString(finalRelFlags, "/O2")) finalRelFlags.push_back("/O2");
+						if (!ContainsString(finalRelFlags, "/Zi")) finalRelFlags.push_back("/Zi");
+					}
+					else if (b == "minsizerel")
+					{
+						if (!ContainsString(finalRelFlags, "/O1")) finalRelFlags.push_back("/O1");
+					}
+
+					if (!ContainsString(finalRelFlags, "/MD")) finalRelFlags.push_back("/MD");
+				}
+				else if (compileData.compiler == "clang++"
+						 || compileData.compiler == "gcc"
+						 || compileData.compiler == "g++")
+				{
+					if (b == "release")
+					{
+						if (!ContainsString(finalRelFlags, "-O2")) finalRelFlags.push_back("-O2");
+					}
+					else if (b == "reldebug")
+					{
+						if (!ContainsString(finalRelFlags, "-O2")) finalRelFlags.push_back("-O2");
+						if (!ContainsString(finalRelFlags, "-g")) finalRelFlags.push_back("-g");
+					}
+					else if (b == "minsizerel")
+					{
+						if (!ContainsString(finalRelFlags, "-Os")) finalRelFlags.push_back("-Os");
+					}
+				}
+
+				if (!build_project(
+					compileData.compiler,
+					finalBuildPath,
+					finalRelFlags))
+				{
+					return;
+				}
+			}
+			else
+			{
+				if (compileData.compiler == "clang-cl"
+					|| compileData.compiler == "cl")
+				{
+					if (!ContainsString(finalDebFlags, "/Od")) finalDebFlags.push_back("/Od");
+					if (!ContainsString(finalDebFlags, "/Zi")) finalDebFlags.push_back("/Zi");
+					if (!ContainsString(finalDebFlags, "/MDd")) finalDebFlags.push_back("/MDd");
+				}
+				else if (compileData.compiler == "clang++"
+						 || compileData.compiler == "gcc"
+						 || compileData.compiler == "g++")
+				{
+					if (!ContainsString(finalDebFlags, "-O0")) finalDebFlags.push_back("-O0");
+					if (!ContainsString(finalDebFlags, "-g")) finalDebFlags.push_back("-g");
+				}
+
+				if (!build_project(
+					compileData.compiler,
+					finalBuildPath,
+					finalDebFlags))
+				{
+					return;
+				}
+			}
 		}
 	}
 	else
 	{
-		string buildType = get_build_type(
+		string relbuildType = get_build_type(
+			"release",
 			compileData.compiler,
-			compileData.flags);
+			compileData.relflags);
 
-		//adds build flag as build folder between build path and binary name
-		string finalBuildPath = get_build_path(
-			compileData.name,
-			compileData.compiler,
-			compileData.type,
-			path(compileData.buildPath) / buildType);
-
-		if (ContainsString(finalBuildPath, "Result: "))
+		//build in any release mode
 		{
-			PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
-			return;
+			//adds build flag as build folder between build path and binary name
+			string finalBuildPath = get_build_path(
+				compileData.name,
+				compileData.compiler,
+				compileData.type,
+				path(compileData.buildPath) / relbuildType);
+
+			if (ContainsString(finalBuildPath, "Result: "))
+			{
+				PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+				return;
+			}
+
+			if (!build_project(
+				compileData.compiler,
+				finalBuildPath,
+				finalRelFlags))
+			{
+				return;
+			}
 		}
 
-		build_project(
-			compileData.compiler,
-			finalBuildPath,
-			finalFlags);
+		if (!compileData.debflags.empty())
+		{
+			string debbuildType = get_build_type(
+				"debug",
+				compileData.compiler,
+				compileData.debflags);
+
+			if (debbuildType != "none")
+			{
+				//adds build flag as build folder between build path and binary name
+				string finalBuildPath = get_build_path(
+					compileData.name,
+					compileData.compiler,
+					compileData.type,
+					path(compileData.buildPath) / debbuildType);
+
+				if (ContainsString(finalBuildPath, "Result: "))
+				{
+					PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+					return;
+				}
+
+				if (!build_project(
+					compileData.compiler,
+					finalBuildPath,
+					finalDebFlags))
+				{
+					return;
+				}
+			}
+		}
 	}
 }
 
