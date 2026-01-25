@@ -6,7 +6,6 @@ build/
 # Release and Debug in root folder
 /release/
 /debug/
-/___test/
 
 # Large files
 *.pdb
