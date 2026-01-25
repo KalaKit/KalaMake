@@ -6,25 +6,36 @@
 #include "core.hpp"
 #include "command.hpp"
 
-#include "compile.hpp"
+#include "core/kma_core.hpp"
 
 using KalaCLI::Core;
 using KalaCLI::Command;
 using KalaCLI::CommandManager;
 
-using KalaMake::KalaMakeCore;
+using KalaMake::Core::KalaMakeCore;
 
 static void AddExternalCommands()
 {
-	Command cmd_compile
+	CommandManager::AddCommand(
 		{
 			.primary = { "compile" },
-			.description = "Compile a project from a kma file, third parameter must be valid path to a .kma file.",
+			.description =
+				"Compile a project from a kma file, "
+				"third parameter must be valid path to a .kma file.",
 			.paramCount = 2,
 			.targetFunction = KalaMakeCore::Initialize
-		};
+		});
 
-	CommandManager::AddCommand(cmd_compile);
+	CommandManager::AddCommand(
+		{
+			.primary = { "generate" },
+			.description =
+				"Generate a solution file from a kma file, "
+				"third parameter must be valid path to a .kma file, "
+				"fourth parameter must be a solution type.",
+			.paramCount = 3,
+			.targetFunction = KalaMakeCore::Initialize
+		});
 }
 
 int main(int argc, char* argv[])

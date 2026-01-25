@@ -3,19 +3,9 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
-#pragma once
+#include "generate/kma_generate.hpp"
 
-#include <vector>
-#include <string>
-
-namespace KalaMake
+namespace KalaMake::Generate
 {
-	using std::vector;
-	using std::string;
 
-	class KalaMakeCore
-	{
-	public:
-		static void Initialize(const vector<string>& params);
-	};
 }

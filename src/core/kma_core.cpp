@@ -16,9 +16,9 @@
 #include "KalaHeaders/string_utils.hpp"
 #include "KalaHeaders/file_utils.hpp"
 
-#include "KalaCLI/include/core.hpp"
+#include "core.hpp"
 
-#include "compile.hpp"
+#include "core/kma_core.hpp"
 
 using KalaHeaders::KalaCore::ContainsDuplicates;
 using KalaHeaders::KalaCore::RemoveDuplicates;
@@ -69,15 +69,15 @@ struct CompileData
 	string buildPath{};
 	string objPath{};
 	vector<string> headers{};
-	vector<string> rellinks{};
-	vector<string> deblinks{};
+	vector<string> links{};
+	vector<string> debuglinks{};
 
 	string warningLevel;
 	vector<string> defines{};
 	vector<string> extensions{};
 
-	vector<string> relflags{};
-	vector<string> debflags{};
+	vector<string> flags{};
+	vector<string> debugflags{};
 	vector<string> customFlags{};
 };
 
@@ -113,26 +113,27 @@ static const array<string_view, 16> actionTypes =
 	"buildpath",    //where the binary will be built to
 	"objpath",      //where the object files live at when linked
 	"headers",      //what header files are included (for C and C++)
-	"rellinks",     //what release libraries will be linked to the release binary
-	"deblinks",     //what debug libraries will be linked to the debug binary
+	"links",     //what release libraries will be linked to the release binary
+	"debuglinks",     //what debug libraries will be linked to the debug binary
 	
-	"warninglevel", //what warning level should the compiler use, defaults to strong if unset
+	"warninglevel", //what warning level should the compiler use, defaults to none if unset
 	"defines",      //what compile-time defines will be linked to the binary
 	"extensions",   //what language standard extensions will be used
 
-	"relflags", //what flags will be passed to the compiler in any release build
-	"debflags",   //what flags will be passed to the compiler in the debug build
+	"flags", //what flags will be passed to the compiler in any release build
+	"debugflags",   //what flags will be passed to the compiler in the debug build
 	"customflags"   //what KalaMake-specific flags will trigger extra actions
 };
 
-static const array<string_view, 5> supportedCompilers =
+static const array<string_view, 6> supportedCompilers =
 {
 	"clang-cl", //windows only, MSVC-style flags
 	"cl",       //windows only, MSVC-style flags
 
-	"clang++",  //windows + linux, GNU flags
-	"gcc",      //linux, GNU flags, used for C
-	"g++"       //linux, GNU flags, used for C++
+	"clang",    //windows + linux, GNU flags, defaults to C
+	"clang++",  //windows + linux, GNU flags, defaults to C++
+	"gcc",      //linux, GNU flags, defaults to C
+	"g++"       //linux, GNU flags, defaults to C++
 };
 
 static const array<string_view, 4> supportedTypes =
@@ -211,67 +212,70 @@ static const array<string_view, 6> supportedWarningTypes =
 	"strict",
 
 	//everything
-	//  Windows: (cl + clang-cl): /Wall
+	//  Windows: (cl + clang-cl):         /Wall
 	// 
-	//  Windows/Linux (clang++):  -Wall
-	//                            -Wextra
-	//                            -Wpedantic
-	//                            -Weverything
+	//  Windows/Linux (clang + clang++):  -Wall
+	//                                    -Wextra
+	//                                    -Wpedantic
+	//                                    -Weverything
 	// 
-	//  Linux (GCC + G++):        -Wall
-	//                            -Wextra
-	//                            -Wpedantic
-	//                            -Wshadow
-	//                            -Wconversion
-	//                            -Wsign-conversion
-	//                            -Wcast-align
-	//                            -Wnull-dereference
-	//                            -Wdouble-promotion
-	//                            -Wformat=2
+	//  Linux (GCC + G++):                -Wall
+	//                                    -Wextra
+	//                                    -Wpedantic
+	//                                    -Wshadow
+	//                                    -Wconversion
+	//                                    -Wsign-conversion
+	//                                    -Wcast-align
+	//                                    -Wnull-dereference
+	//                                    -Wdouble-promotion
+	//                                    -Wformat=2
 	"all"
 };
 
-static const array<string_view, 8> supportedCustomFlags =
+static const array<string_view, 9> supportedCustomFlags =
 {
 	//works on clang and cl, uses the multithreaded benefits of ninja for faster compilation
 	"use-ninja",
 
-	//should object files be kept or not? works only for languages
-	//that support object files for faster recompilation
-	"keep-obj",
+	//does not generate obj files for obj-compatible languages and compiles and links directly
+	"no-obj",
 
 	//fails the build if the compiler cannot support the requested standard
-	//  cl + clang-cl:       nothing
-	//  gcc + g++ + clang++: nothing
+	//  cl + clang-cl:               nothing
+	//  gcc + g++ + clang + clang++: nothing
 	"standard-required",
 
 	//treats all warnings as errors
-	//  cl + clang-cl:       /WX
-	//  gcc + g++ + clang++: -Werror
+	//  cl + clang-cl:               /WX
+	//  gcc + g++ + clang + clang++: -Werror
 	"warnings-as-errors",
+
+	//used only for the --generate command in kalamake,
+	//exports the compilation commands to your solution file type you selected
+	"export-compile-commands",
 
 	//
 	// build types
 	//
 
 	//only create debug build
-	//  cl + clang-cl:       /Od /Zi
-	//  gcc + g++ + clang++: -O0 -g
+	//  cl + clang-cl:               /Od /Zi
+	//  gcc + g++ + clang + clang++: -O0 -g
 	"debug",
 
 	//only create standard release build
-	//  cl + clang-cl:       /O2
-	//  gcc + g++ + clang++: -O2
+	//  cl + clang-cl:               /O2
+	//  gcc + g++ + clang + clang++: -O2
 	"release",
 
 	//only create release with debug symbols
-	//  cl + clang-cl:       /O2 /Zi
-	//  gcc + g++ + clang++: -O2 -g
+	//  cl + clang-cl:               /O2 /Zi
+	//  gcc + g++ + clang + clang++: -O2 -g
 	"reldebug",
 
 	//only create minimum size release build
-	//  cl + clang-cl:       /O1
-	//  gcc + g++ + clang++: -Os
+	//  cl + clang-cl:               /O1
+	//  gcc + g++ + clang + clang++: -Os
 	"minsizerel"
 };
 
@@ -312,7 +316,7 @@ static bool IsCPPStandard(string_view value)
 		!= supportedCPPStandards.end();
 }
 
-namespace KalaMake
+namespace KalaMake::Core
 {
 	void KalaMakeCore::Initialize(const vector<string>& params)
 	{
@@ -326,7 +330,7 @@ namespace KalaMake
 
 		path projectFile = params[1];
 
-		string& currentDir = Core::GetCurrentDir();
+		string& currentDir = KalaCLI::Core::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
 		auto readprojectfile = [](path filePath) -> void
@@ -383,7 +387,7 @@ namespace KalaMake
 
 		try
 		{
-			correctTarget = weakly_canonical(path(Core::GetCurrentDir()) / projectFile);
+			correctTarget = weakly_canonical(path(KalaCLI::Core::GetCurrentDir()) / projectFile);
 		}
 		catch (const filesystem_error&)
 		{
@@ -434,15 +438,15 @@ void HandleProjectContent(const vector<string>& fileContent)
 	string buildPath{};
 	string objPath{};
 	vector<string> headers{};
-	vector<string> rellinks{};
-	vector<string> deblinks{};
+	vector<string> links{};
+	vector<string> debuglinks{};
 
 	string warningLevel;
 	vector<string> defines{};
 	vector<string> extensions{};
 
-	vector<string> relflags{};
-	vector<string> debflags{};
+	vector<string> flags{};
+	vector<string> debugflags{};
 	vector<string> customFlags{};
 
 	auto IsName = [](string_view value) -> bool
@@ -480,11 +484,11 @@ void HandleProjectContent(const vector<string>& fileContent)
 		};
 	auto IsRelLink = [](string_view value) -> bool
 		{
-			return StartsWith(value, "rellinks: ");
+			return StartsWith(value, "links: ");
 		};
 	auto IsDebLink = [](string_view value) -> bool
 		{
-			return StartsWith(value, "deblinks: ");
+			return StartsWith(value, "debuglinks: ");
 		};
 
 	auto IsWarningLevel = [](string_view value) -> bool
@@ -502,11 +506,11 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 	auto IsRelFlag = [](string_view value) -> bool
 		{
-			return StartsWith(value, "relflags: ");
+			return StartsWith(value, "flags: ");
 		};
 	auto IsDebFlag = [](string_view value) -> bool
 		{
-			return StartsWith(value, "debflags: ");
+			return StartsWith(value, "debugflags: ");
 		};
 	auto IsCustomFlag = [](string_view value) -> bool
 		{
@@ -660,7 +664,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 							return false;
 						}
-						else if (compiler == "clang++"
+						else if (compiler == "clang"
+								 || compiler == "clang++"
 								 || compiler == "gcc"
 								 || compiler == "g++")
 						{	
@@ -691,7 +696,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 							return false;
 						}
-						else if (compiler == "clang++"
+						else if (compiler == "clang"
+								 || compiler == "clang++"
 								 || compiler == "gcc"
 								 || compiler == "g++")
 						{
@@ -722,7 +728,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 							return false;
 						}
-						else if (compiler == "clang++"
+						else if (compiler == "clang"
+								 || compiler == "clang++"
 								 || compiler == "gcc"
 								 || compiler == "g++")
 						{
@@ -753,7 +760,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 							return false;
 						}
-						else if (compiler == "clang++"
+						else if (compiler == "clang"
+								 || compiler == "clang++"
 								 || compiler == "gcc"
 								 || compiler == "g++")
 						{
@@ -811,7 +819,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						return false;
 					}
-					else if (compiler == "clang++"
+					else if (compiler == "clang"
+							 || compiler == "clang++"
 							 || compiler == "gcc"
 							 || compiler == "g++")
 					{
@@ -1279,14 +1288,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 		else if (IsRelLink(line))
 		{
-			if (!rellinks.empty())
+			if (!links.empty())
 			{
 				PrintError("Failed to compile project because more than one links line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "rellinks: ");
+			string value = RemoveFromString(line, "links: ");
 
 			//ignore empty links field
 			if (value.empty()) continue;
@@ -1326,18 +1335,18 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (failedLinkSearch) return;
 
-			rellinks = std::move(foundLinks);
+			links = std::move(foundLinks);
 		}
 		else if (IsDebLink(line))
 		{
-			if (!deblinks.empty())
+			if (!debuglinks.empty())
 			{
-				PrintError("Failed to compile project because more than one deblinks line was passed!");
+				PrintError("Failed to compile project because more than one debuglinks line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "deblinks: ");
+			string value = RemoveFromString(line, "debuglinks: ");
 
 			//ignore empty links field
 			if (value.empty()) continue;
@@ -1377,7 +1386,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (failedLinkSearch) return;
 
-			deblinks = std::move(foundLinks);
+			debuglinks = std::move(foundLinks);
 		}
 
 		else if (IsWarningLevel(line))
@@ -1437,39 +1446,39 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 		else if (IsRelFlag(line))
 		{
-			if (!relflags.empty())
+			if (!flags.empty())
 			{
-				PrintError("Failed to compile project because more than one relflags line was passed!");
+				PrintError("Failed to compile project because more than one flags line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "relflags: ");
+			string value = RemoveFromString(line, "flags: ");
 
 			//ignore empty flags field
 			if (value.empty()) continue;
 
 			vector<string> tempFlags = SplitString(value, ", ");
 
-			relflags = std::move(tempFlags);
+			flags = std::move(tempFlags);
 		}
 		else if (IsDebFlag(line))
 		{
-			if (!debflags.empty())
+			if (!debugflags.empty())
 			{
-				PrintError("Failed to compile project because more than one debflags line was passed!");
+				PrintError("Failed to compile project because more than one debugflags line was passed!");
 
 				return;
 			}
 
-			string value = RemoveFromString(line, "debflags: ");
+			string value = RemoveFromString(line, "debugflags: ");
 
 			//ignore empty flags field
 			if (value.empty()) continue;
 
 			vector<string> tempFlags = SplitString(value, ", ");
 
-			debflags = std::move(tempFlags);
+			debugflags = std::move(tempFlags);
 		}
 		else if (IsCustomFlag(line))
 		{
@@ -1518,8 +1527,8 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 	vector<string> cleanedSources{};
 	vector<string> cleanedHeaders{};
-	vector<string> cleanedRelLinks{};
-	vector<string> cleanedDebLinks{};
+	vector<string> cleanedLinks{};
+	vector<string> cleanedDebugLinks{};
 
 	for (const auto& s : sources)
 	{
@@ -1552,9 +1561,9 @@ void HandleProjectContent(const vector<string>& fileContent)
 			cleanedHeaders.push_back(h);
 		}
 	}
-	if (!rellinks.empty())
+	if (!links.empty())
 	{
-		for (const auto& l : rellinks)
+		for (const auto& l : links)
 		{
 			if (!EndsWith(l, ".lib")
 				&& !EndsWith(l, ".a"))
@@ -1579,12 +1588,12 @@ void HandleProjectContent(const vector<string>& fileContent)
 				continue;
 			}
 
-			cleanedRelLinks.push_back(l);
+			cleanedLinks.push_back(l);
 		}
 	}
-	if (!deblinks.empty())
+	if (!debuglinks.empty())
 	{
-		for (const auto& l : deblinks)
+		for (const auto& l : debuglinks)
 		{
 			if (!EndsWith(l, ".lib")
 				&& !EndsWith(l, ".a"))
@@ -1609,7 +1618,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				continue;
 			}
 
-			cleanedDebLinks.push_back(l);
+			cleanedDebugLinks.push_back(l);
 		}
 	}
 
@@ -1652,43 +1661,46 @@ void HandleProjectContent(const vector<string>& fileContent)
 	// CLEAN UP VALUES
 	//
 
-	if (warningLevel.empty()) warningLevel = "strong";
+	if (warningLevel.empty()) warningLevel = "none";
 	if (buildPath.empty()) buildPath = path(kmaPath / defaultBuildPath).string();
 	if (objPath.empty()) objPath = path(kmaPath / defaultObjPath).string();
 
-	if (ContainsDuplicates(cleanedSources))  RemoveDuplicates(cleanedSources);
-	if (ContainsDuplicates(cleanedHeaders))  RemoveDuplicates(cleanedHeaders);
-	if (ContainsDuplicates(cleanedRelLinks)) RemoveDuplicates(cleanedDebLinks);
-	if (ContainsDuplicates(defines))         RemoveDuplicates(defines);
-	if (ContainsDuplicates(extensions))      RemoveDuplicates(extensions);
-	if (ContainsDuplicates(relflags))        RemoveDuplicates(relflags);
-	if (ContainsDuplicates(debflags))        RemoveDuplicates(debflags);
-	if (ContainsDuplicates(customFlags))     RemoveDuplicates(customFlags);
+	if (ContainsDuplicates(cleanedSources))    RemoveDuplicates(cleanedSources);
+	if (ContainsDuplicates(cleanedHeaders))    RemoveDuplicates(cleanedHeaders);
+	if (ContainsDuplicates(cleanedLinks))      RemoveDuplicates(cleanedLinks);
+	if (ContainsDuplicates(cleanedDebugLinks)) RemoveDuplicates(cleanedDebugLinks);
+	if (ContainsDuplicates(defines))           RemoveDuplicates(defines);
+	if (ContainsDuplicates(extensions))        RemoveDuplicates(extensions);
+	if (ContainsDuplicates(flags))             RemoveDuplicates(flags);
+	if (ContainsDuplicates(debugflags))        RemoveDuplicates(debugflags);
+	if (ContainsDuplicates(customFlags))       RemoveDuplicates(customFlags);
 
-	for (auto& f : relflags)
+	for (auto& f : flags)
 	{
 		if (compiler == "clang-cl"
 			|| compiler == "cl")
 		{
 			if (!f.starts_with('/')) f = "/" + f;
 		}
-		else if (compiler == "clang++"
-			|| compiler == "gcc"
-			|| compiler == "g++")
+		else if (compiler == "clang"
+				 || compiler == "clang++"
+				 || compiler == "gcc"
+				 || compiler == "g++")
 		{
 			if (!f.starts_with('-')) f = "-" + f;
 		}
 	}
-	for (auto& f : debflags)
+	for (auto& f : debugflags)
 	{
 		if (compiler == "clang-cl"
 			|| compiler == "cl")
 		{
 			if (!f.starts_with('/')) f = "/" + f;
 		}
-		else if (compiler == "clang++"
-			|| compiler == "gcc"
-			|| compiler == "g++")
+		else if (compiler == "clang"
+				 || compiler == "clang++"
+				 || compiler == "gcc"
+				 || compiler == "g++")
 		{
 			if (!f.starts_with('-')) f = "-" + f;
 		}
@@ -1745,20 +1757,20 @@ void HandleProjectContent(const vector<string>& fileContent)
 			oss << "  " << h << "\n";
 		}
 	}
-	if (!cleanedRelLinks.empty())
+	if (!cleanedLinks.empty())
 	{
-		oss << "release links:\n";
+		oss << "links:\n";
 
-		for (const auto& l : cleanedRelLinks)
+		for (const auto& l : cleanedLinks)
 		{
 			oss << "  " << l << "\n";
 		}
 	}
-	if (!cleanedDebLinks.empty())
+	if (!cleanedDebugLinks.empty())
 	{
 		oss << "debug links:\n";
 
-		for (const auto& l : cleanedDebLinks)
+		for (const auto& l : cleanedDebugLinks)
 		{
 			oss << "  " << l << "\n";
 		}
@@ -1784,20 +1796,20 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 	}
 
-	if (!relflags.empty())
+	if (!flags.empty())
 	{
-		oss << "release flags:\n";
+		oss << "flags:\n";
 
-		for (const auto& f : relflags)
+		for (const auto& f : flags)
 		{
 			oss << "  " << f << "\n";
 		}
 	}
-	if (!debflags.empty())
+	if (!debugflags.empty())
 	{
 		oss << "debug flags:\n";
 
-		for (const auto& f : debflags)
+		for (const auto& f : debugflags)
 		{
 			oss << "  " << f << "\n";
 		}
@@ -1830,15 +1842,15 @@ void HandleProjectContent(const vector<string>& fileContent)
 			.buildPath = buildPath,
 			.objPath = objPath,
 			.headers = std::move(cleanedHeaders),
-			.rellinks = std::move(cleanedRelLinks),
-			.deblinks = std::move(cleanedDebLinks),
+			.links = std::move(cleanedLinks),
+			.debuglinks = std::move(cleanedDebugLinks),
 
 			.warningLevel = warningLevel,
 			.defines = std::move(defines),
 			.extensions = std::move(extensions),
 
-			.relflags = std::move(relflags),
-			.debflags = std::move(debflags),
+			.flags = std::move(flags),
+			.debugflags = std::move(debugflags),
 			.customFlags = std::move(customFlags),
 		});
 }
@@ -1854,8 +1866,8 @@ void CompileProject(const CompileData& compileData)
 		return;
 	}
 
-	vector<string> finalRelFlags = std::move(compileData.relflags);
-	vector<string> finalDebFlags = std::move(compileData.debflags);
+	vector<string> finalFlags = std::move(compileData.flags);
+	vector<string> finalDebugFlags = std::move(compileData.debugflags);
 
 	//
 	// SOURCES
@@ -1863,14 +1875,15 @@ void CompileProject(const CompileData& compileData)
 
 	if (compileData.compiler == "clang-cl"
 		|| compileData.compiler == "cl"
+		|| compileData.compiler == "clang"
 		|| compileData.compiler == "clang++"
 		|| compileData.compiler == "gcc"
 		|| compileData.compiler == "g++")
 	{
 		for (const auto& s : compileData.sources)
 		{
-			finalRelFlags.push_back("\"" + s + "\"");
-			finalDebFlags.push_back("\"" + s + "\"");
+			finalFlags.push_back("\"" + s + "\"");
+			finalDebugFlags.push_back("\"" + s + "\"");
 		}
 	}
 
@@ -1885,18 +1898,19 @@ void CompileProject(const CompileData& compileData)
 		{
 			for (const auto& s : compileData.headers)
 			{
-				finalRelFlags.push_back("/I\"" + s + "\"");
-				finalDebFlags.push_back("/I\"" + s + "\"");
+				finalFlags.push_back("/I\"" + s + "\"");
+				finalDebugFlags.push_back("/I\"" + s + "\"");
 			}
 		}
-		else if (compileData.compiler == "clang++"
+		else if (compileData.compiler == "clang"
+				 || compileData.compiler == "clang++"
 				 || compileData.compiler == "gcc"
 				 || compileData.compiler == "g++")
 		{
 			for (const auto& s : compileData.headers)
 			{
-				finalRelFlags.push_back("-I\"" + s + "\"");
-				finalDebFlags.push_back("-I\"" + s + "\"");
+				finalFlags.push_back("-I\"" + s + "\"");
+				finalDebugFlags.push_back("-I\"" + s + "\"");
 			}
 		}
 	}
@@ -1905,55 +1919,57 @@ void CompileProject(const CompileData& compileData)
 	// LINKS
 	//
 
-	if (!compileData.rellinks.empty())
+	if (!compileData.links.empty())
 	{
 		if (compileData.compiler == "clang-cl"
 			|| compileData.compiler == "cl")
 		{
-			for (const auto& l : compileData.rellinks)
+			for (const auto& l : compileData.links)
 			{
-				if (EndsWith(l, ".lib")) finalRelFlags.push_back("\"" + l + "\"");
-				else                     finalRelFlags.push_back(l);                   
+				if (EndsWith(l, ".lib")) finalFlags.push_back("\"" + l + "\"");
+				else                     finalFlags.push_back(l);                   
 			}
 		}
-		else if (compileData.compiler == "clang++"
+		else if (compileData.compiler == "clang"
+				 || compileData.compiler == "clang++"
 				 || compileData.compiler == "gcc"
 				 || compileData.compiler == "g++")
 		{
-			for (const auto& l : compileData.rellinks)
+			for (const auto& l : compileData.links)
 			{
 				if (EndsWith(l, ".lib")
 					|| EndsWith(l, ".a"))
 				{
-					finalRelFlags.push_back("\"" + l + "\"");
+					finalFlags.push_back("\"" + l + "\"");
 				}
-				else finalRelFlags.push_back("-l" + l);
+				else finalFlags.push_back("-l" + l);
 			}
 		}
 	}
-	if (!compileData.deblinks.empty())
+	if (!compileData.debuglinks.empty())
 	{
 		if (compileData.compiler == "clang-cl"
 			|| compileData.compiler == "cl")
 		{
-			for (const auto& l : compileData.deblinks)
+			for (const auto& l : compileData.debuglinks)
 			{
-				if (EndsWith(l, ".lib")) finalDebFlags.push_back("\"" + l + "\"");
-				else                     finalDebFlags.push_back(l);
+				if (EndsWith(l, ".lib")) finalDebugFlags.push_back("\"" + l + "\"");
+				else                     finalDebugFlags.push_back(l);
 			}
 		}
-		else if (compileData.compiler == "clang++"
-			|| compileData.compiler == "gcc"
-			|| compileData.compiler == "g++")
+		else if (compileData.compiler == "clang"
+				 || compileData.compiler == "clang++"
+				 || compileData.compiler == "gcc"
+				 || compileData.compiler == "g++")
 		{
-			for (const auto& l : compileData.deblinks)
+			for (const auto& l : compileData.debuglinks)
 			{
 				if (EndsWith(l, ".lib")
 					|| EndsWith(l, ".a"))
 				{
-					finalDebFlags.push_back("\"" + l + "\"");
+					finalDebugFlags.push_back("\"" + l + "\"");
 				}
-				else finalDebFlags.push_back("-l" + l);
+				else finalDebugFlags.push_back("-l" + l);
 			}
 		}
 	}
@@ -1965,15 +1981,16 @@ void CompileProject(const CompileData& compileData)
 	if (compileData.compiler == "clang-cl"
 		|| compileData.compiler == "cl")
 	{
-		finalRelFlags.push_back("/std:" + compileData.standard);
-		finalDebFlags.push_back("/std:" + compileData.standard);
+		finalFlags.push_back("/std:" + compileData.standard);
+		finalDebugFlags.push_back("/std:" + compileData.standard);
 	}
-	else if (compileData.compiler == "clang++"
+	else if (compileData.compiler == "clang"
+			 || compileData.compiler == "clang++"
 			 || compileData.compiler == "gcc"
 			 || compileData.compiler == "g++")
 	{
-		finalRelFlags.push_back("-std=" + compileData.standard);
-		finalDebFlags.push_back("-std=" + compileData.standard);
+		finalFlags.push_back("-std=" + compileData.standard);
+		finalDebugFlags.push_back("-std=" + compileData.standard);
 	}
 
 	//
@@ -1991,120 +2008,122 @@ void CompileProject(const CompileData& compileData)
 	{
 		if (compileData.warningLevel == "none")
 		{
-			finalRelFlags.push_back("/W0");
-			finalDebFlags.push_back("/W0");
+			finalFlags.push_back("/W0");
+			finalDebugFlags.push_back("/W0");
 		}
 		else if (compileData.warningLevel == "basic")
 		{
-			finalRelFlags.push_back("/W1");
-			finalDebFlags.push_back("/W1");
+			finalFlags.push_back("/W1");
+			finalDebugFlags.push_back("/W1");
 		}
 		else if (compileData.warningLevel == "normal")
 		{
-			finalRelFlags.push_back("/W2");
-			finalDebFlags.push_back("/W2");
+			finalFlags.push_back("/W2");
+			finalDebugFlags.push_back("/W2");
 		}
 		else if (compileData.warningLevel == "strong")
 		{
-			finalRelFlags.push_back("/W3");
-			finalDebFlags.push_back("/W3");
+			finalFlags.push_back("/W3");
+			finalDebugFlags.push_back("/W3");
 		}
 		else if (compileData.warningLevel == "strict")
 		{
-			finalRelFlags.push_back("/W4");
-			finalDebFlags.push_back("/W4");
+			finalFlags.push_back("/W4");
+			finalDebugFlags.push_back("/W4");
 		}
 		else if (compileData.warningLevel == "all")
 		{
-			finalRelFlags.push_back("/Wall");
-			finalDebFlags.push_back("/Wall");
+			finalFlags.push_back("/Wall");
+			finalDebugFlags.push_back("/Wall");
 		}
 	}
-	else if (compileData.compiler == "clang++"
+	else if (compileData.compiler == "clang"
+			 || compileData.compiler == "clang++"
 			 || compileData.compiler == "gcc"
 			 || compileData.compiler == "g++")
 	{
 		if (compileData.warningLevel == "none")
 		{
-			finalRelFlags.push_back("-w");
-			finalDebFlags.push_back("-w");
+			finalFlags.push_back("-w");
+			finalDebugFlags.push_back("-w");
 		}
 		else if (compileData.warningLevel == "basic")
 		{
-			finalRelFlags.push_back("-Wall");
-			finalDebFlags.push_back("-Wall");
+			finalFlags.push_back("-Wall");
+			finalDebugFlags.push_back("-Wall");
 		}
 		else if (compileData.warningLevel == "normal")
 		{
-			finalRelFlags.push_back("-Wall");
-			finalRelFlags.push_back("-Wextra");
+			finalFlags.push_back("-Wall");
+			finalFlags.push_back("-Wextra");
 
-			finalDebFlags.push_back("-Wall");
-			finalDebFlags.push_back("-Wextra");
+			finalDebugFlags.push_back("-Wall");
+			finalDebugFlags.push_back("-Wextra");
 		}
 		else if (compileData.warningLevel == "strong")
 		{
-			finalRelFlags.push_back("-Wall");
-			finalRelFlags.push_back("-Wextra");
-			finalRelFlags.push_back("-Wpedantic");
+			finalFlags.push_back("-Wall");
+			finalFlags.push_back("-Wextra");
+			finalFlags.push_back("-Wpedantic");
 
-			finalDebFlags.push_back("-Wall");
-			finalDebFlags.push_back("-Wextra");
-			finalDebFlags.push_back("-Wpedantic");
+			finalDebugFlags.push_back("-Wall");
+			finalDebugFlags.push_back("-Wextra");
+			finalDebugFlags.push_back("-Wpedantic");
 		}
 		else if (compileData.warningLevel == "strict")
 		{
-			finalRelFlags.push_back("-Wall");
-			finalRelFlags.push_back("-Wextra");
-			finalRelFlags.push_back("-Wpedantic");
-			finalRelFlags.push_back("-Wshadow");
-			finalRelFlags.push_back("-Wconversion");
-			finalRelFlags.push_back("-Wsign-conversion");
+			finalFlags.push_back("-Wall");
+			finalFlags.push_back("-Wextra");
+			finalFlags.push_back("-Wpedantic");
+			finalFlags.push_back("-Wshadow");
+			finalFlags.push_back("-Wconversion");
+			finalFlags.push_back("-Wsign-conversion");
 
-			finalDebFlags.push_back("-Wall");
-			finalDebFlags.push_back("-Wextra");
-			finalDebFlags.push_back("-Wpedantic");
-			finalDebFlags.push_back("-Wshadow");
-			finalDebFlags.push_back("-Wconversion");
-			finalDebFlags.push_back("-Wsign-conversion");
+			finalDebugFlags.push_back("-Wall");
+			finalDebugFlags.push_back("-Wextra");
+			finalDebugFlags.push_back("-Wpedantic");
+			finalDebugFlags.push_back("-Wshadow");
+			finalDebugFlags.push_back("-Wconversion");
+			finalDebugFlags.push_back("-Wsign-conversion");
 		}
 		else if (compileData.warningLevel == "all")
 		{
-			if (compileData.compiler == "clang++")
+			if (compileData.compiler == "clang"
+				|| compileData.compiler == "clang++")
 			{
-				finalRelFlags.push_back("-Wall");
-				finalRelFlags.push_back("-Wextra");
-				finalRelFlags.push_back("-Wpedantic");
-				finalRelFlags.push_back("-Weverything");
+				finalFlags.push_back("-Wall");
+				finalFlags.push_back("-Wextra");
+				finalFlags.push_back("-Wpedantic");
+				finalFlags.push_back("-Weverything");
 
-				finalDebFlags.push_back("-Wall");
-				finalDebFlags.push_back("-Wextra");
-				finalDebFlags.push_back("-Wpedantic");
-				finalDebFlags.push_back("-Weverything");
+				finalDebugFlags.push_back("-Wall");
+				finalDebugFlags.push_back("-Wextra");
+				finalDebugFlags.push_back("-Wpedantic");
+				finalDebugFlags.push_back("-Weverything");
 			}
 			else
 			{
-				finalRelFlags.push_back("-Wall");
-				finalRelFlags.push_back("-Wextra");
-				finalRelFlags.push_back("-Wpedantic");
-				finalRelFlags.push_back("-Wshadow");
-				finalRelFlags.push_back("-Wconversion");
-				finalRelFlags.push_back("-Wsign-conversion");
-				finalRelFlags.push_back("-Wcast-align");
-				finalRelFlags.push_back("-Wnull-dereference");
-				finalRelFlags.push_back("-Wdouble-promotion");
-				finalRelFlags.push_back("-Wformat=2");
+				finalFlags.push_back("-Wall");
+				finalFlags.push_back("-Wextra");
+				finalFlags.push_back("-Wpedantic");
+				finalFlags.push_back("-Wshadow");
+				finalFlags.push_back("-Wconversion");
+				finalFlags.push_back("-Wsign-conversion");
+				finalFlags.push_back("-Wcast-align");
+				finalFlags.push_back("-Wnull-dereference");
+				finalFlags.push_back("-Wdouble-promotion");
+				finalFlags.push_back("-Wformat=2");
 
-				finalDebFlags.push_back("-Wall");
-				finalDebFlags.push_back("-Wextra");
-				finalDebFlags.push_back("-Wpedantic");
-				finalDebFlags.push_back("-Wshadow");
-				finalDebFlags.push_back("-Wconversion");
-				finalDebFlags.push_back("-Wsign-conversion");
-				finalDebFlags.push_back("-Wcast-align");
-				finalDebFlags.push_back("-Wnull-dereference");
-				finalDebFlags.push_back("-Wdouble-promotion");
-				finalDebFlags.push_back("-Wformat=2");
+				finalDebugFlags.push_back("-Wall");
+				finalDebugFlags.push_back("-Wextra");
+				finalDebugFlags.push_back("-Wpedantic");
+				finalDebugFlags.push_back("-Wshadow");
+				finalDebugFlags.push_back("-Wconversion");
+				finalDebugFlags.push_back("-Wsign-conversion");
+				finalDebugFlags.push_back("-Wcast-align");
+				finalDebugFlags.push_back("-Wnull-dereference");
+				finalDebugFlags.push_back("-Wdouble-promotion");
+				finalDebugFlags.push_back("-Wformat=2");
 			}
 		}
 	}
@@ -2117,14 +2136,15 @@ void CompileProject(const CompileData& compileData)
 	{
 		if (compileData.compiler == "clang-cl"
 			|| compileData.compiler == "cl"
+			|| compileData.compiler == "clang"
 			|| compileData.compiler == "clang++"
 			|| compileData.compiler == "gcc"
 			|| compileData.compiler == "g++")
 		{
 			for (const auto& d : compileData.defines)
 			{
-				finalRelFlags.push_back("-D" + d);
-				finalDebFlags.push_back("-D" + d);
+				finalFlags.push_back("-D" + d);
+				finalDebugFlags.push_back("-D" + d);
 			}
 		}
 	}
@@ -2138,8 +2158,8 @@ void CompileProject(const CompileData& compileData)
 		if (f == "standard-required"
 			&& compileData.compiler == "cl")
 		{
-			finalRelFlags.push_back("/permissive-");
-			finalDebFlags.push_back("/permissive-");
+			finalFlags.push_back("/permissive-");
+			finalDebugFlags.push_back("/permissive-");
 
 			continue;
 		}
@@ -2149,15 +2169,16 @@ void CompileProject(const CompileData& compileData)
 			if (compileData.compiler == "clang-cl"
 				|| compileData.compiler == "cl")
 			{
-				finalRelFlags.push_back("/WX");
-				finalDebFlags.push_back("/WX");
+				finalFlags.push_back("/WX");
+				finalDebugFlags.push_back("/WX");
 			}
-			else if (compileData.compiler == "clang++"
+			else if (compileData.compiler == "clang"
+					 || compileData.compiler == "clang++"
 					 || compileData.compiler == "gcc"
 					 || compileData.compiler == "g++")
 			{
-				finalRelFlags.push_back("-Werror");
-				finalDebFlags.push_back("-Werror");
+				finalFlags.push_back("-Werror");
+				finalDebugFlags.push_back("-Werror");
 			}
 
 			continue;
@@ -2183,8 +2204,8 @@ void CompileProject(const CompileData& compileData)
 		&& (compileData.compiler == "cl"
 		|| compileData.compiler == "clang-cl"))
 	{
-		finalRelFlags.push_back("/EHsc");
-		finalDebFlags.push_back("/EHsc");
+		finalFlags.push_back("/EHsc");
+		finalDebugFlags.push_back("/EHsc");
 	}
 
 	//
@@ -2213,7 +2234,8 @@ void CompileProject(const CompileData& compileData)
 
 					return "/Fe:\"" + newBuildPath.string() + "\"";
 				}
-				else if (compiler == "clang++"
+				else if (compiler == "clang"
+						 || compiler == "clang++"
 						 || compiler == "gcc"
 						 || compiler == "g++")
 				{
@@ -2254,7 +2276,8 @@ void CompileProject(const CompileData& compileData)
 						"/OUT:\"" + newBuildPath.string() + "\" "
 						"/IMPLIB:\"" + libPath.string() + "\"";
 				}
-				else if (compiler == "clang++"
+				else if (compiler == "clang"
+						 || compiler == "clang++"
 						 || compiler == "gcc"
 						 || compiler == "g++")
 				{
@@ -2307,7 +2330,8 @@ void CompileProject(const CompileData& compileData)
 						"/LD /link "
 						"/OUT:\"" + newBuildPath.string() + "\"";
 				}
-				else if (compiler == "clang++"
+				else if (compiler == "clang"
+						 || compiler == "clang++"
 						 || compiler == "gcc"
 						 || compiler == "g++")
 				{
@@ -2394,7 +2418,8 @@ void CompileProject(const CompileData& compileData)
 					return "none";
 				}
 			}
-			else if (compiler == "clang++"
+			else if (compiler == "clang"
+					 || compiler == "clang++"
 					 || compiler == "gcc"
 					 || compiler == "g++")
 			{
@@ -2501,9 +2526,10 @@ void CompileProject(const CompileData& compileData)
 					+ oss.str() + "\"";
 			}
 			else if (compiler == "clang-cl") finalValue = "clang-cl " + oss.str();
-			else if (compiler == "clang++") finalValue = "clang++ " + oss.str();
-			else if (compiler == "gcc")       finalValue = "gcc " + oss.str();
-			else if (compiler == "g++")       finalValue = "g++ " + oss.str();
+			else if (compiler == "clang")    finalValue = "clang " + oss.str();
+			else if (compiler == "clang++")  finalValue = "clang++ " + oss.str();
+			else if (compiler == "gcc")      finalValue = "gcc " + oss.str();
+			else if (compiler == "g++")      finalValue = "g++ " + oss.str();
 
 			if (system(finalValue.c_str()) != 0)
 			{
@@ -2550,43 +2576,44 @@ void CompileProject(const CompileData& compileData)
 				{
 					if (b == "release")
 					{
-						if (!ContainsString(finalRelFlags, "/O2")) finalRelFlags.push_back("/O2");
+						if (!ContainsString(finalFlags, "/O2")) finalFlags.push_back("/O2");
 					}
 					else if (b == "reldebug")
 					{
-						if (!ContainsString(finalRelFlags, "/O2")) finalRelFlags.push_back("/O2");
-						if (!ContainsString(finalRelFlags, "/Zi")) finalRelFlags.push_back("/Zi");
+						if (!ContainsString(finalFlags, "/O2")) finalFlags.push_back("/O2");
+						if (!ContainsString(finalFlags, "/Zi")) finalFlags.push_back("/Zi");
 					}
 					else if (b == "minsizerel")
 					{
-						if (!ContainsString(finalRelFlags, "/O1")) finalRelFlags.push_back("/O1");
+						if (!ContainsString(finalFlags, "/O1")) finalFlags.push_back("/O1");
 					}
 
-					if (!ContainsString(finalRelFlags, "/MD")) finalRelFlags.push_back("/MD");
+					if (!ContainsString(finalFlags, "/MD")) finalFlags.push_back("/MD");
 				}
-				else if (compileData.compiler == "clang++"
+				else if (compileData.compiler == "clang"
+						 || compileData.compiler == "clang++"
 						 || compileData.compiler == "gcc"
 						 || compileData.compiler == "g++")
 				{
 					if (b == "release")
 					{
-						if (!ContainsString(finalRelFlags, "-O2")) finalRelFlags.push_back("-O2");
+						if (!ContainsString(finalFlags, "-O2")) finalFlags.push_back("-O2");
 					}
 					else if (b == "reldebug")
 					{
-						if (!ContainsString(finalRelFlags, "-O2")) finalRelFlags.push_back("-O2");
-						if (!ContainsString(finalRelFlags, "-g")) finalRelFlags.push_back("-g");
+						if (!ContainsString(finalFlags, "-O2")) finalFlags.push_back("-O2");
+						if (!ContainsString(finalFlags, "-g")) finalFlags.push_back("-g");
 					}
 					else if (b == "minsizerel")
 					{
-						if (!ContainsString(finalRelFlags, "-Os")) finalRelFlags.push_back("-Os");
+						if (!ContainsString(finalFlags, "-Os")) finalFlags.push_back("-Os");
 					}
 				}
 
 				if (!build_project(
 					compileData.compiler,
 					finalBuildPath,
-					finalRelFlags))
+					finalFlags))
 				{
 					return;
 				}
@@ -2596,22 +2623,23 @@ void CompileProject(const CompileData& compileData)
 				if (compileData.compiler == "clang-cl"
 					|| compileData.compiler == "cl")
 				{
-					if (!ContainsString(finalDebFlags, "/Od")) finalDebFlags.push_back("/Od");
-					if (!ContainsString(finalDebFlags, "/Zi")) finalDebFlags.push_back("/Zi");
-					if (!ContainsString(finalDebFlags, "/MDd")) finalDebFlags.push_back("/MDd");
+					if (!ContainsString(finalDebugFlags, "/Od")) finalDebugFlags.push_back("/Od");
+					if (!ContainsString(finalDebugFlags, "/Zi")) finalDebugFlags.push_back("/Zi");
+					if (!ContainsString(finalDebugFlags, "/MDd")) finalDebugFlags.push_back("/MDd");
 				}
-				else if (compileData.compiler == "clang++"
+				else if (compileData.compiler == "clang"
+						 || compileData.compiler == "clang++"
 						 || compileData.compiler == "gcc"
 						 || compileData.compiler == "g++")
 				{
-					if (!ContainsString(finalDebFlags, "-O0")) finalDebFlags.push_back("-O0");
-					if (!ContainsString(finalDebFlags, "-g")) finalDebFlags.push_back("-g");
+					if (!ContainsString(finalDebugFlags, "-O0")) finalDebugFlags.push_back("-O0");
+					if (!ContainsString(finalDebugFlags, "-g")) finalDebugFlags.push_back("-g");
 				}
 
 				if (!build_project(
 					compileData.compiler,
 					finalBuildPath,
-					finalDebFlags))
+					finalDebugFlags))
 				{
 					return;
 				}
@@ -2623,7 +2651,7 @@ void CompileProject(const CompileData& compileData)
 		string relbuildType = get_build_type(
 			"release",
 			compileData.compiler,
-			compileData.relflags);
+			compileData.flags);
 
 		//build in any release mode
 		{
@@ -2643,18 +2671,18 @@ void CompileProject(const CompileData& compileData)
 			if (!build_project(
 				compileData.compiler,
 				finalBuildPath,
-				finalRelFlags))
+				finalFlags))
 			{
 				return;
 			}
 		}
 
-		if (!compileData.debflags.empty())
+		if (!compileData.debugflags.empty())
 		{
 			string debbuildType = get_build_type(
 				"debug",
 				compileData.compiler,
-				compileData.debflags);
+				compileData.debugflags);
 
 			if (debbuildType != "none")
 			{
@@ -2674,7 +2702,7 @@ void CompileProject(const CompileData& compileData)
 				if (!build_project(
 					compileData.compiler,
 					finalBuildPath,
-					finalDebFlags))
+					finalDebugFlags))
 				{
 					return;
 				}
