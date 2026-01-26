@@ -7,16 +7,14 @@
 
 #include <vector>
 #include <string>
-
-#ifndef scast
-	#define scast static_cast
-#endif
+#include <filesystem>
 
 namespace KalaMake::Core
 {
 	using std::vector;
 	using std::string;
 	using std::string_view;
+	using std::filesystem::path;
 
 	using u8 = uint8_t;
 
@@ -192,11 +190,45 @@ namespace KalaMake::Core
 		F_BUILD_MINSIZEREL = 9u
 	};
 
+	struct CompileData
+	{
+		string name{};
+		BinaryType binaryType{};
+		string standard{};
+		string compiler{};
+		vector<string> sources{};
+
+		string buildPath{};
+		string objPath{};
+		vector<string> headers{};
+		vector<string> links{};
+		vector<string> debuglinks{};
+
+		WarningLevel warningLevel;
+		vector<string> defines{};
+		vector<string> extensions{};
+
+		vector<string> flags{};
+		vector<string> debugflags{};
+		vector<CustomFlag> customFlags{};
+	};
+
 	class KalaMakeCore
 	{
 	public:
 		static void Initialize(const vector<string>& params);
 
+		static CompileData Parse(const vector<string>& lines);
+
+		static bool IsActionType(string_view value);
+		static bool IsBinaryType(string_view value);
+		static bool IsWarningLevel(string_view value);
+		static bool IsCustomFlag(string_view value);
+
+		static const path& GetFoundCLPath();
+
 		static void PrintError(string_view message);
+	private:
+		static path foundCLPath;
 	};
 }

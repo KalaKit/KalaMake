@@ -5,7 +5,11 @@
 
 #include <unordered_map>
 
+#include "KalaHeaders/core_utils.hpp"
+
 #include "language/kma_language_c.hpp"
+
+using KalaHeaders::KalaCore::ContainsValue;
 
 using std::unordered_map;
 
@@ -20,7 +24,7 @@ namespace KalaMake::Language
 		size_t operator()(C_Standard_Type s) const noexcept { return scast<size_t>(s); }
 	};
 
-	static const unordered_map<C_Standard_Type, string_view, Standard_C_Hash> c_standard_Types =
+	static const unordered_map<C_Standard_Type, string_view, Standard_C_Hash> c_standard_types =
 	{
 		{ C_Standard_Type::S_C89,     "c89" },
 		{ C_Standard_Type::S_C99,     "c99" },
@@ -32,6 +36,16 @@ namespace KalaMake::Language
 
 	bool Language_C::IsCStandard(string_view value)
 	{
+		return ContainsValue(c_standard_types, value);
+	}
 
+	unique_ptr<Language_C> Language_C::Initialize(CompileData data)
+	{
+		return nullptr;
+	}
+
+	bool Language_C::Compile(vector<CompileFlag> compileFlags)
+	{
+		return false;
 	}
 }

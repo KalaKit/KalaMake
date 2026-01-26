@@ -43,9 +43,12 @@ namespace KalaHeaders::KalaString
 	using std::isspace;
 	using std::memcpy;
 	using std::memset;
+	using std::is_pointer_v;
 	using std::is_array_v;
 	using std::is_enum_v;
 	using std::same_as;
+	using std::remove_pointer_t;
+	using std::remove_cv_t;
 	using std::remove_cvref_t;
 	using std::remove_reference_t;
 	using std::remove_extent_t;
@@ -80,13 +83,15 @@ namespace KalaHeaders::KalaString
 	// STRING-ENUM GETTERS
 	//
 
-	//This value is map<K, V> or unordered_map<K, V>
-	template<typename M>
-	concept TargetIsAnyMap =
-		requires(M & m, typename M::key_type k)
+	//Map or unordered map with key of type K and value of type V (map<K, V>/unordered_map<K, V>)
+	template<typename T>
+	concept AnyMap =
+		requires(
+	remove_cvref_t<T>&m,
+		typename remove_cvref_t<T>::key_type k)
 	{
-		typename M::key_type;
-		typename M::mapped_type;
+		typename remove_cvref_t<T>::key_type;
+		typename remove_cvref_t<T>::mapped_type;
 
 		{ m.find(k) };
 		{ m.end() };
@@ -94,26 +99,35 @@ namespace KalaHeaders::KalaString
 		{ m.begin()->second };
 	};
 
-	//This value is string, string_view, const char* or const charArrayName[N]
+	//String, string_view, char* or charArrayName[N]
 	template<typename T>
-	concept TargetIsAnyString =
+	concept AnyString =
 		same_as<remove_cvref_t<T>, string>
 		|| same_as<remove_cvref_t<T>, string_view>
-		|| same_as<remove_cvref_t<T>, const char*>
+		|| (is_pointer_v<remove_cvref_t<T>>
+			&& same_as
+			<
+				remove_cv_t<remove_pointer_t<remove_cvref_t<T>>>,
+				char
+			>)
 		|| (is_array_v<remove_reference_t<T>>
-		&& same_as<remove_extent_t<remove_reference_t<T>>, const char>);
+			&& same_as
+			<
+				remove_cv_t<remove_extent_t<remove_reference_t<T>>>, 
+				char
+			>);
 
-	//This value is map<K, V> or unordered_map<K, V> that stores enums in K and string types in V
+	//Any map or unordered map that stores enums in K and string types in V
 	template<typename M>
-	concept TargetIsForStringAndEnumMap =
-		TargetIsAnyMap<M>
+	concept AnyEnumAndStringMap =
+		AnyMap<M>
 		&& is_enum_v<typename M::key_type>
-		&& TargetIsAnyString<typename M::mapped_type>;
+		&& AnyString<typename M::mapped_type>;
 
 	//Converts string type to known enum type,
 	//assumes map or unordered map key is known enum type and value is string type,
 	//returns false if unsuccessful
-	template<TargetIsAnyString S, TargetIsForStringAndEnumMap M>
+	template<AnyString S, AnyEnumAndStringMap M>
 	inline constexpr bool StringToEnum(
 		S&& value,
 		const M& map,
@@ -136,7 +150,7 @@ namespace KalaHeaders::KalaString
 	//Converts known enum type to string_view,
 	//assumes map or unordered map key known enum type and value is string type,
 	//returns false if unsuccessful
-	template<TargetIsForStringAndEnumMap M>
+	template<AnyEnumAndStringMap M>
 	inline constexpr bool EnumToString(
 		typename M::key_type key,
 		const M& map,

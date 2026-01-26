@@ -5,9 +5,17 @@
 
 #include <unordered_map>
 
+#include "KalaHeaders/string_utils.hpp"
+
 #include "language/kma_language.hpp"
 
+using KalaHeaders::KalaString::StringToEnum;
+
 using std::unordered_map;
+
+#ifndef scast
+	#define scast static_cast
+#endif
 
 namespace KalaMake::Language
 {
@@ -26,4 +34,23 @@ namespace KalaMake::Language
 		{ CompilerType::C_GCC,      "gcc" },
 		{ CompilerType::C_GPP,      "g++" }
 	};
+
+	bool LanguageCore::IsMSVCCompiler(string_view value)
+	{
+		CompilerType type{};
+
+		return StringToEnum(value, compilerTypes, type)
+			&& (type == CompilerType::C_CLANG_CL
+			|| type == CompilerType::C_CL);
+	}
+	bool LanguageCore::IsGNUCompiler(string_view value)
+	{
+		CompilerType type{};
+
+		return StringToEnum(value, compilerTypes, type)
+			&& (type == CompilerType::C_CLANG
+			|| type == CompilerType::C_CLANGPP
+			|| type == CompilerType::C_GCC
+			|| type == CompilerType::C_GPP);
+	}
 }

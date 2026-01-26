@@ -10,12 +10,9 @@
 
 #include "core/kma_core.hpp"
 
-#ifndef scast
-	#define scast static_cast
-#endif
-
 namespace KalaMake::Language
 {
+	using KalaMake::Core::CompileData;
 	using KalaMake::Core::BinaryType;
 	using KalaMake::Core::WarningLevel;
 	using KalaMake::Core::CustomFlag;
@@ -25,34 +22,6 @@ namespace KalaMake::Language
 	using std::string_view;
 
 	using u8 = uint8_t;
-
-	constexpr string_view cl_ide_bat_2026 = "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
-	constexpr string_view cl_build_bat_2026 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
-	constexpr string_view cl_ide_bat_2022 = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
-	constexpr string_view cl_build_bat_2022 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
-
-	struct CompileData
-	{
-		string name{};
-		BinaryType type{};
-		string standard{};
-		string compiler{};
-		vector<string> sources{};
-
-		string buildPath{};
-		string objPath{};
-		vector<string> headers{};
-		vector<string> links{};
-		vector<string> debuglinks{};
-
-		WarningLevel warningLevel;
-		vector<string> defines{};
-		vector<string> extensions{};
-
-		vector<string> flags{};
-		vector<string> debugflags{};
-		vector<CustomFlag> customFlags{};
-	};
 
 	enum class CompileFlag : u8
 	{
@@ -97,6 +66,6 @@ namespace KalaMake::Language
 
 		virtual ~LanguageCore() = default;
 	protected:
-		CompileData data{};
+		CompileData compileData{};
 	};
 }
