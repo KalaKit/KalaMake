@@ -20,6 +20,7 @@
 
 #include "core/kma_core.hpp"
 
+using KalaHeaders::KalaCore::ContainsValue;
 using KalaHeaders::KalaCore::ContainsDuplicates;
 using KalaHeaders::KalaCore::RemoveDuplicates;
 
@@ -38,6 +39,8 @@ using KalaHeaders::KalaString::MakeViews;
 using KalaHeaders::KalaString::EndsWith;
 
 using KalaCLI::Core;
+
+using KalaMake::Core::KalaMakeCore;
 
 using std::string;
 using std::to_string;
@@ -58,29 +61,6 @@ using std::filesystem::directory_iterator;
 using std::filesystem::recursive_directory_iterator;
 using std::filesystem::is_regular_file;
 
-struct CompileData
-{
-	string name{};
-	string type{};
-	string standard{};
-	string compiler{};
-	vector<string> sources{};
-
-	string buildPath{};
-	string objPath{};
-	vector<string> headers{};
-	vector<string> links{};
-	vector<string> debuglinks{};
-
-	string warningLevel;
-	vector<string> defines{};
-	vector<string> extensions{};
-
-	vector<string> flags{};
-	vector<string> debugflags{};
-	vector<string> customFlags{};
-};
-
 //kma path is the root directory where the kma file is stored at
 static path kmaPath{};
 
@@ -89,198 +69,7 @@ static path defaultBuildPath = "build";
 //default object directory path relative to kmaPath if objpath is not added or filled
 static path defaultObjPath = "obj";
 
-constexpr string_view EXE_VERSION_NUMBER = "1.0";
-constexpr string_view KMA_VERSION_NUMBER = "1.0";
-constexpr string_view KMA_VERSION_NAME = "#KMA VERSION 1.0";
-
-constexpr string_view cl_ide_bat_2026 = "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
-constexpr string_view cl_build_bat_2026 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
-constexpr string_view cl_ide_bat_2022 = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
-constexpr string_view cl_build_bat_2022 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
-
 static path foundCLPath{};
-
-static const array<string_view, 16> actionTypes =
-{
-	"name",         //what is the name of the final file
-	"type",         //what is the target type of the final file
-	"compiler",     //what is used to compile this source code
-	"standard",     //what is the language standard
-	"sources",      //what source files are compiled
-	
-	//optional fields
-
-	"buildpath",    //where the binary will be built to
-	"objpath",      //where the object files live at when linked
-	"headers",      //what header files are included (for C and C++)
-	"links",     //what release libraries will be linked to the release binary
-	"debuglinks",     //what debug libraries will be linked to the debug binary
-	
-	"warninglevel", //what warning level should the compiler use, defaults to none if unset
-	"defines",      //what compile-time defines will be linked to the binary
-	"extensions",   //what language standard extensions will be used
-
-	"flags", //what flags will be passed to the compiler in any release build
-	"debugflags",   //what flags will be passed to the compiler in the debug build
-	"customflags"   //what KalaMake-specific flags will trigger extra actions
-};
-
-static const array<string_view, 6> supportedCompilers =
-{
-	"clang-cl", //windows only, MSVC-style flags
-	"cl",       //windows only, MSVC-style flags
-
-	"clang",    //windows + linux, GNU flags, defaults to C
-	"clang++",  //windows + linux, GNU flags, defaults to C++
-	"gcc",      //linux, GNU flags, defaults to C
-	"g++"       //linux, GNU flags, defaults to C++
-};
-
-static const array<string_view, 4> supportedTypes =
-{
-	//creates a runnable executable
-	"executable",
-
-	//creates a linkable .lib on windows,
-	//creates a linkable .a on linux
-	"link-only",
-
-	//creates a .dll on windows,
-	//creates a .so on linux
-	"runtime-only",
-
-	//creates a .dll and a linkable .lib on windows,
-	//creates a .so on linux, same as runtime-only
-	"link-runtime"
-};
-
-static const array<string_view, 6> supportedCStandards =
-{
-	"c89",
-	"c99",
-	"c11",
-	"c17",
-	"c23",
-	"clatest"
-};
-static const array<string_view, 7> supportedCPPStandards =
-{
-	"c++11",
-	"c++14",
-	"c++17",
-	"c++20",
-	"c++23",
-	"c++26",
-	"c++latest",
-};
-
-//same warning types are used for both Windows and Linux,
-//their true meanings change depending on which OS is used
-static const array<string_view, 6> supportedWarningTypes =
-{
-	//no warnings
-	//  Windows: /W0
-	//  Linux:   -w
-	"none",
-
-	//very basic warnings
-	//  Windows: /W1
-	//  Linux:   -Wall
-	"basic",
-
-	//common, useful warnings
-	//  Windows: /W2
-	//  Linux:   -Wall
-	//           -Wextra
-	"normal",
-
-	//strong warnings, recommended default
-	//  Windows: /W3
-	//  Linux:   -Wall
-	//           -Wextra
-	//           -Wpedantic
-	"strong",
-
-	//very strict, high signal warnings
-	//  Windows: /W4
-	//  Linux:   -Wall
-	//           -Wextra
-	//           -Wpedantic
-	//           -Wshadow
-	//           -Wconversion
-	//           -Wsign-conversion
-	"strict",
-
-	//everything
-	//  Windows: (cl + clang-cl):         /Wall
-	// 
-	//  Windows/Linux (clang + clang++):  -Wall
-	//                                    -Wextra
-	//                                    -Wpedantic
-	//                                    -Weverything
-	// 
-	//  Linux (GCC + G++):                -Wall
-	//                                    -Wextra
-	//                                    -Wpedantic
-	//                                    -Wshadow
-	//                                    -Wconversion
-	//                                    -Wsign-conversion
-	//                                    -Wcast-align
-	//                                    -Wnull-dereference
-	//                                    -Wdouble-promotion
-	//                                    -Wformat=2
-	"all"
-};
-
-static const array<string_view, 9> supportedCustomFlags =
-{
-	//works on clang and cl, uses the multithreaded benefits of ninja for faster compilation
-	"use-ninja",
-
-	//does not generate obj files for obj-compatible languages and compiles and links directly
-	"no-obj",
-
-	//fails the build if the compiler cannot support the requested standard
-	//  cl + clang-cl:               nothing
-	//  gcc + g++ + clang + clang++: nothing
-	"standard-required",
-
-	//treats all warnings as errors
-	//  cl + clang-cl:               /WX
-	//  gcc + g++ + clang + clang++: -Werror
-	"warnings-as-errors",
-
-	//used only for the --generate command in kalamake,
-	//exports the compilation commands to your solution file type you selected
-	"export-compile-commands",
-
-	//
-	// build types
-	//
-
-	//only create debug build
-	//  cl + clang-cl:               /Od /Zi
-	//  gcc + g++ + clang + clang++: -O0 -g
-	"debug",
-
-	//only create standard release build
-	//  cl + clang-cl:               /O2
-	//  gcc + g++ + clang + clang++: -O2
-	"release",
-
-	//only create release with debug symbols
-	//  cl + clang-cl:               /O2 /Zi
-	//  gcc + g++ + clang + clang++: -O2 -g
-	"reldebug",
-
-	//only create minimum size release build
-	//  cl + clang-cl:               /O1
-	//  gcc + g++ + clang + clang++: -Os
-	"minsizerel"
-};
-
-constexpr size_t MIN_NAME_LENGTH = 1;
-constexpr size_t MAX_NAME_LENGTH = 20;
 
 static void HandleProjectContent(const vector<string>& fileContent);
 
@@ -288,36 +77,96 @@ static void CompileProject(const CompileData& compileData);
 
 static void CompileStaticLib(const CompileData& compileData);
 
-static void PrintError(const string& message)
-{
-	Log::Print(
-		message,
-		"KALAMAKE",
-		LogType::LOG_ERROR,
-		2);
-}
-
 static bool IsCStandard(string_view value)
 {
 	return ContainsString(supportedCStandards, value);
-
-	return find(
-		supportedCStandards.begin(), 
-		supportedCStandards.end(), 
-		value) 
-		!= supportedCStandards.end();
 }
 static bool IsCPPStandard(string_view value)
 {
-	return find(
-		supportedCPPStandards.begin(),
-		supportedCPPStandards.end(),
-		value)
-		!= supportedCPPStandards.end();
+	
 }
 
 namespace KalaMake::Core
 {
+	struct ActionTypeHash
+	{
+		size_t operator()(ActionType a) const noexcept { return scast<size_t>(a); }
+	};
+
+	static const unordered_map<ActionType, string_view, ActionTypeHash> actionTypes =
+	{
+		{ ActionType::T_NAME,        "name" },
+		{ ActionType::T_BINARY_TYPE, "binarytype" },
+		{ ActionType::T_COMPILER,    "compiler" },
+		{ ActionType::T_STANDARD,    "standard" },
+		{ ActionType::T_SOURCES,     "sources" },
+
+		{ ActionType::T_BUILD_PATH,  "buildpath" },
+		{ ActionType::T_OBJ_PATH,    "objpath" },
+		{ ActionType::T_HEADERS,     "headers" },
+		{ ActionType::T_LINKS,       "links" },
+		{ ActionType::T_DEBUG_LINKS, "debuglinks" },
+
+		{ ActionType::T_WARNING_LEVEL, "warninglevel" },
+		{ ActionType::T_DEFINES,       "defines" },
+		{ ActionType::T_EXTENSIONS,    "extensions" },
+
+		{ ActionType::T_FLAGS,        "flags" },
+		{ ActionType::T_DEBUG_FLAGS,  "debugflags" },
+		{ ActionType::T_CUSTOM_FLAGS, "customflags" }
+	};
+
+	struct BinaryTypeHash
+	{
+		size_t operator()(BinaryType b) const noexcept { return scast<size_t>(b); }
+	};
+
+	static const unordered_map<BinaryType, string_view, BinaryTypeHash> binaryTypes =
+	{
+		{ BinaryType::B_EXECUTABLE,   "executable" },
+		{ BinaryType::B_LINK_ONLY,    "link-only" },
+		{ BinaryType::B_RUNTIME_ONLY, "runtime-only" },
+		{ BinaryType::B_LINK_RUNTIME, "link-runtime" }
+	};
+
+	struct WarningLevelHash
+	{
+		size_t operator()(WarningLevel w) const noexcept { return scast<size_t>(w); }
+	};
+
+	//Same warning types are used for both MSVC and GNU,
+	//their true meanings change depending on which OS is used
+	static const unordered_map<WarningLevel, string_view, WarningLevelHash> warningLevels =
+	{
+		{ WarningLevel::W_NONE,   "none" },
+		{ WarningLevel::W_BASIC,  "basic" },
+		{ WarningLevel::W_NORMAL, "normal" },
+		{ WarningLevel::W_STRONG, "strong" },
+		{ WarningLevel::W_STRICT, "strict" },
+		{ WarningLevel::W_ALL,    "all" }
+	};
+
+	struct CustomFlagHash
+	{
+		size_t operator()(CustomFlag c) const noexcept { return scast<size_t>(c); }
+	};
+
+	//Same warning types are used for both MSVC and GNU,
+	//their true meanings change depending on which OS is used
+	static const unordered_map<CustomFlag, string_view, CustomFlagHash> customFlags =
+	{
+		{ CustomFlag::F_USE_NINJA,               "use-ninja" },
+		{ CustomFlag::F_NO_OBJ,                  "no-obj" },
+		{ CustomFlag::F_STANDARD_REQUIRED,       "standard-required" },
+		{ CustomFlag::F_WARNINGS_AS_ERRORS,      "warnings-as-errors" },
+		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS, "export-compile-commands" },
+
+		{ CustomFlag::F_BUILD_DEBUG,      "build-debug" },
+		{ CustomFlag::F_BUILD_RELEASE,    "build-release" },
+		{ CustomFlag::F_BUILD_RELDEBUG,   "build-reldebug" },
+		{ CustomFlag::F_BUILD_MINSIZEREL, "build-minsizerel" }
+	};
+
 	void KalaMakeCore::Initialize(const vector<string>& params)
 	{
 		ostringstream details{};
@@ -337,7 +186,7 @@ namespace KalaMake::Core
 			{
 				if (is_directory(filePath))
 				{
-					PrintError("Failed to compile project because its path '" + filePath.string() + "' leads to a directory!");
+					KalaMakeCore::PrintError("Failed to compile project because its path '" + filePath.string() + "' leads to a directory!");
 
 					return;
 				}
@@ -345,7 +194,7 @@ namespace KalaMake::Core
 				if (!filePath.has_extension()
 					|| filePath.extension() != ".kma")
 				{
-					PrintError("Failed to compile project because its path '" + filePath.string() + "' has an incorrect extension!");
+					KalaMakeCore::PrintError("Failed to compile project because its path '" + filePath.string() + "' has an incorrect extension!");
 
 					return;
 				}
@@ -364,14 +213,14 @@ namespace KalaMake::Core
 
 				if (!result.empty())
 				{
-					PrintError("Failed to read project file '" + filePath.string() + "'! Reason: " + result);
+					KalaMakeCore::PrintError("Failed to read project file '" + filePath.string() + "'! Reason: " + result);
 
 					return;
 				}
 
 				if (content.empty())
 				{
-					PrintError("Failed to compile project at '" + filePath.string() + "' because it was empty!");
+					KalaMakeCore::PrintError("Failed to compile project at '" + filePath.string() + "' because it was empty!");
 
 					return;
 				}
@@ -391,7 +240,7 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			PrintError("Failed to compile project because partial path via '" + projectFile.string() + "' could not be resolved!");
+			KalaMakeCore::PrintError("Failed to compile project because partial path via '" + projectFile.string() + "' could not be resolved!");
 
 			return;
 		}
@@ -411,7 +260,7 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			PrintError("Failed to compile project because full path '" + projectFile.string() + "' could not be resolved!");
+			KalaMakeCore::PrintError("Failed to compile project because full path '" + projectFile.string() + "' could not be resolved!");
 
 			return;
 		}
@@ -423,7 +272,16 @@ namespace KalaMake::Core
 			return;
 		}
 
-		PrintError("Failed to compile project because its path '" + projectFile.string() + "' does not exist!");
+		KalaMakeCore::PrintError("Failed to compile project because its path '" + projectFile.string() + "' does not exist!");
+	}
+
+    void KalaMakeCore::PrintError(string_view message)
+	{
+		Log::Print(
+			message,
+			"KALAMAKE",
+			LogType::LOG_ERROR,
+			2);
 	}
 }
 
@@ -521,13 +379,13 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (value.size() < MIN_NAME_LENGTH)
 			{
-				PrintError("Failed to compile project because name is too short!");
+				KalaMakeCore::PrintError("Failed to compile project because name is too short!");
 
 				return false;
 			}
 			if (value.size() > MAX_NAME_LENGTH)
 			{
-				PrintError("Failed to compile project because name is too long!");
+				KalaMakeCore::PrintError("Failed to compile project because name is too long!");
 
 				return false;
 			}
@@ -544,7 +402,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 					continue;
 				}
 
-				PrintError("Failed to compile project because name contains illegal characters!");
+				KalaMakeCore::PrintError("Failed to compile project because name contains illegal characters!");
 
 				return false;
 			}
@@ -558,7 +416,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				if (value == t) return true;
 			}
 
-			PrintError("Failed to compile project because build type '" + string(value) + "' is not supported!");
+			KalaMakeCore::PrintError("Failed to compile project because build type '" + string(value) + "' is not supported!");
 
 			return false;
 		};
@@ -570,7 +428,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				return true;
 			}
 
-			PrintError("Failed to compile project because standard '" + string(value) + "' is not supported!");
+			KalaMakeCore::PrintError("Failed to compile project because standard '" + string(value) + "' is not supported!");
 
 			return false;
 		};
@@ -581,7 +439,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				if (value == e) return true;
 			}
 
-			PrintError("Failed to compile project because compiler '" + string(value) + "' is not supported!");
+			KalaMakeCore::PrintError("Failed to compile project because compiler '" + string(value) + "' is not supported!");
 
 			return false;
 		};
@@ -643,7 +501,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				//treat all extensionless values as dirs and return true
 				if (!value.has_extension()) return true;
 
-				PrintError("Failed to compile project because passed build path '" + value.string() + "' does not exist!");
+				KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' does not exist!");
 
 				return false;
 			}
@@ -660,7 +518,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 							|| compiler == "cl")
 							&& value.extension() != ".exe")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
 
 							return false;
 						}
@@ -672,14 +530,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 #ifdef _WIN32
 							if (value.extension() != ".exe")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
 
 								return false;
 							}
 #else
 							if (value.has_extension())
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' executable extension is not valid!");
 
 								return false;
 							}
@@ -692,7 +550,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 							|| compiler == "cl")
 							&& value.extension() != ".dll")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
 
 							return false;
 						}
@@ -704,14 +562,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 #ifdef _WIN32
 							if (value.extension() != ".dll")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
 
 								return false;
 							}
 #else
 							if (value.extension() != ".so")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' shared library extension is not valid!");
 
 								return false;
 							}
@@ -724,7 +582,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 							|| compiler == "cl")
 							&& value.extension() != ".lib")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
 
 							return false;
 						}
@@ -736,14 +594,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 #ifdef _WIN32
 							if (value.extension() != ".lib")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
 
 								return false;
 							}
 #else
 							if (value.extension() != ".a")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' static library extension is not valid!");
 
 								return false;
 							}
@@ -756,7 +614,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 							|| compiler == "cl")
 							&& value.extension() != ".dll")
 						{
-							PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
 
 							return false;
 						}
@@ -768,14 +626,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 #ifdef _WIN32
 							if (value.extension() != ".dll")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
 
 								return false;
 							}
 #else
 							if (value.extension() != ".so")
 							{
-								PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
+								KalaMakeCore::PrintError("Failed to compile project because passed build path '" + value.string() + "' runtime library extension is not valid!");
 
 								return false;
 							}
@@ -800,7 +658,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				//treat all extensionless values as dirs and return true
 				if (!value.has_extension()) return true;
 
-				PrintError("Failed to compile project because passed obj path '" + value.string() + "' does not exist!");
+				KalaMakeCore::PrintError("Failed to compile project because passed obj path '" + value.string() + "' does not exist!");
 
 				return false;
 			}
@@ -815,7 +673,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 						&& (compiler == "clang-cl"
 							|| compiler == "cl"))
 					{
-						PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
+						KalaMakeCore::PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
 
 						return false;
 					}
@@ -827,14 +685,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 #ifdef _WIN32
 						if (value.extension() != ".obj")
 						{
-							PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
 
 							return false;
 						}
 #else
 						if (value.extension() != ".o")
 						{
-							PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
+							KalaMakeCore::PrintError("Failed to compile project because passed obj path '" + value.string() + "' extension is not valid!");
 
 							return false;
 						}
@@ -896,7 +754,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				if (value == t) return true;
 			}
 
-			PrintError("Failed to compile project because warning level '" + string(value) + "' is not supported!");
+			KalaMakeCore::PrintError("Failed to compile project because warning level '" + string(value) + "' is not supported!");
 
 			return false;
 		};
@@ -907,14 +765,14 @@ void HandleProjectContent(const vector<string>& fileContent)
 				if (value == f) return true;
 			}
 
-			PrintError("Failed to compile project because custom flag '" + string(value) + "' is not supported!");
+			KalaMakeCore::PrintError("Failed to compile project because custom flag '" + string(value) + "' is not supported!");
 
 			return false;
 		};
 
 	if (fileContent[0] != KMA_VERSION_NAME)
 	{
-		PrintError("Failed to compile project because kma version field value is malformed!");
+		KalaMakeCore::PrintError("Failed to compile project because kma version field value is malformed!");
 
 		return;
 	}
@@ -939,7 +797,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!name.empty())
 			{
-				PrintError("Failed to compile project because more than one name line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one name line was passed!");
 
 				return;
 			}
@@ -948,7 +806,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because no name value was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because no name value was passed!");
 
 				return;
 			}
@@ -961,7 +819,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!type.empty())
 			{
-				PrintError("Failed to compile project because more than one type line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one type line was passed!");
 
 				return;
 			}
@@ -970,7 +828,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because no type value was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because no type value was passed!");
 
 				return;
 			}
@@ -983,7 +841,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!standard.empty())
 			{
-				PrintError("Failed to compile project because more than one standard line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one standard line was passed!");
 
 				return;
 			}
@@ -992,7 +850,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because no standard value was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because no standard value was passed!");
 
 				return;
 			}
@@ -1005,7 +863,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!compiler.empty())
 			{
-				PrintError("Failed to compile project because more than one compiler line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one compiler line was passed!");
 
 				return;
 			}
@@ -1014,7 +872,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because no compiler value was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because no compiler value was passed!");
 
 				return;
 			}
@@ -1029,7 +887,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 				else if (exists(cl_build_bat_2022)) foundCLPath = cl_build_bat_2022;
 				else
 				{
-					PrintError("Failed to compile project because no 'vcvars64.bat' for cl compiler was found!");
+					KalaMakeCore::PrintError("Failed to compile project because no 'vcvars64.bat' for cl compiler was found!");
 
 					return;
 				}
@@ -1041,7 +899,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!sources.empty())
 			{
-				PrintError("Failed to compile project because more than one sources line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one sources line was passed!");
 
 				return;
 			}
@@ -1050,7 +908,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 			if (value.empty())
 			{
-				PrintError("Failed to compile project because there were no sources passed!");
+				KalaMakeCore::PrintError("Failed to compile project because there were no sources passed!");
 
 				return;
 			}
@@ -1070,7 +928,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						if (!exists(sourcePath))
 						{
-							PrintError(
+							KalaMakeCore::PrintError(
 								"Failed to compile project because the source '" + sourcePath.string() 
 								+ "' was not found!");
 
@@ -1083,7 +941,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 						}
 						catch (const filesystem_error&)
 						{
-							PrintError(
+							KalaMakeCore::PrintError(
 								"Failed to compile project because the source path '" + sourcePath.string() 
 								+ "' could not be resolved!");
 
@@ -1106,7 +964,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 					}
 					catch (const filesystem_error&)
 					{
-						PrintError(
+						KalaMakeCore::PrintError(
 							"Failed to compile project because the source path '" + sourcePath.string()
 							+ "' could not be resolved!");
 
@@ -1136,7 +994,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!buildPath.empty())
 			{
-				PrintError("Failed to compile project because more than one build path line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one build path line was passed!");
 
 				return;
 			}
@@ -1159,7 +1017,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 			}
 			catch (const filesystem_error&)
 			{
-				PrintError("Failed to compile project because build path '" + value + "' could not be resolved!");
+				KalaMakeCore::PrintError("Failed to compile project because build path '" + value + "' could not be resolved!");
 			}
 
 			buildPath = value;
@@ -1168,7 +1026,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!objPath.empty())
 			{
-				PrintError("Failed to compile project because more than one obj path line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one obj path line was passed!");
 
 				return;
 			}
@@ -1191,7 +1049,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 			}
 			catch (const filesystem_error&)
 			{
-				PrintError("Failed to compile project because obj path '" + value + "' could not be resolved!");
+				KalaMakeCore::PrintError("Failed to compile project because obj path '" + value + "' could not be resolved!");
 			}
 
 			objPath = value;
@@ -1200,7 +1058,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!headers.empty())
 			{
-				PrintError("Failed to compile project because more than one headers line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one headers line was passed!");
 
 				return;
 			}
@@ -1225,7 +1083,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 						if (!exists(headerPath))
 						{
-							PrintError(
+							KalaMakeCore::PrintError(
 								"Failed to compile project because the header '" + headerPath.string()
 								+ "' was not found!");
 
@@ -1238,7 +1096,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 						}
 						catch (const filesystem_error&)
 						{
-							PrintError(
+							KalaMakeCore::PrintError(
 								"Failed to compile project because the header path '" + headerPath.string()
 								+ "' could not be resolved!");
 
@@ -1261,7 +1119,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 					}
 					catch (const filesystem_error&)
 					{
-						PrintError(
+						KalaMakeCore::PrintError(
 							"Failed to compile project because the header path '" + headerPath.string()
 							+ "' could not be resolved!");
 
@@ -1290,7 +1148,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!links.empty())
 			{
-				PrintError("Failed to compile project because more than one links line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one links line was passed!");
 
 				return;
 			}
@@ -1324,7 +1182,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 					}
 					catch (const filesystem_error&)
 					{
-						PrintError("Failed to compile project because reklink path '" + l + "' could not be resolved!");
+						KalaMakeCore::PrintError("Failed to compile project because reklink path '" + l + "' could not be resolved!");
 
 						failedLinkSearch = true;
 
@@ -1341,7 +1199,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!debuglinks.empty())
 			{
-				PrintError("Failed to compile project because more than one debuglinks line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one debuglinks line was passed!");
 
 				return;
 			}
@@ -1375,7 +1233,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 					}
 					catch (const filesystem_error&)
 					{
-						PrintError("Failed to compile project because deblink path '" + l + "' could not be resolved!");
+						KalaMakeCore::PrintError("Failed to compile project because deblink path '" + l + "' could not be resolved!");
 
 						failedLinkSearch = true;
 
@@ -1393,7 +1251,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!warningLevel.empty())
 			{
-				PrintError("Failed to compile project because more than one warning level line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one warning level line was passed!");
 
 				return;
 			}
@@ -1411,7 +1269,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!defines.empty())
 			{
-				PrintError("Failed to compile project because more than one defines line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one defines line was passed!");
 
 				return;
 			}
@@ -1429,7 +1287,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!extensions.empty())
 			{
-				PrintError("Failed to compile project because more than one extensions line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one extensions line was passed!");
 
 				return;
 			}
@@ -1448,7 +1306,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!flags.empty())
 			{
-				PrintError("Failed to compile project because more than one flags line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one flags line was passed!");
 
 				return;
 			}
@@ -1466,7 +1324,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!debugflags.empty())
 			{
-				PrintError("Failed to compile project because more than one debugflags line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one debugflags line was passed!");
 
 				return;
 			}
@@ -1484,7 +1342,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		{
 			if (!customFlags.empty())
 			{
-				PrintError("Failed to compile project because more than one customflags line was passed!");
+				KalaMakeCore::PrintError("Failed to compile project because more than one customflags line was passed!");
 
 				return;
 			}
@@ -1515,7 +1373,7 @@ void HandleProjectContent(const vector<string>& fileContent)
 		}
 		else
 		{
-			PrintError("Failed to compile project because unknown field '" + string(line) + "' was passed to the project file!");
+			KalaMakeCore::PrintError("Failed to compile project because unknown field '" + string(line) + "' was passed to the project file!");
 
 			return;
 		}
@@ -1628,31 +1486,31 @@ void HandleProjectContent(const vector<string>& fileContent)
 
 	if (compiler.empty())
 	{
-		PrintError("Failed to compile project because compiler has no value!");
+		KalaMakeCore::PrintError("Failed to compile project because compiler has no value!");
 
 		return;
 	}
 	if (cleanedSources.empty())
 	{
-		PrintError("Failed to compile project because sources have no value!");
+		KalaMakeCore::PrintError("Failed to compile project because sources have no value!");
 
 		return;
 	}
 	if (type.empty())
 	{
-		PrintError("Failed to compile project because type has no value!");
+		KalaMakeCore::PrintError("Failed to compile project because type has no value!");
 
 		return;
 	}
 	if (name.empty())
 	{
-		PrintError("Failed to compile project because name has no value!");
+		KalaMakeCore::PrintError("Failed to compile project because name has no value!");
 
 		return;
 	}
 	if (standard.empty())
 	{
-		PrintError("Failed to compile project because standard has no value!");
+		KalaMakeCore::PrintError("Failed to compile project because standard has no value!");
 
 		return;
 	}
@@ -2156,7 +2014,8 @@ void CompileProject(const CompileData& compileData)
 	for (const auto& f : compileData.customFlags)
 	{
 		if (f == "standard-required"
-			&& compileData.compiler == "cl")
+			&& (compileData.compiler == "cl"
+			|| compileData.compiler == "clang-cl"))
 		{
 			finalFlags.push_back("/permissive-");
 			finalDebugFlags.push_back("/permissive-");
@@ -2376,24 +2235,24 @@ void CompileProject(const CompileData& compileData)
 				|| compiler == "cl")
 			{
 				if (flagsType == "debug"
-					&& ContainsString(flags, "/Od")
-					&& ContainsString(flags, "/Zi"))
+					&& ContainsValue(flags, "/Od")
+					&& ContainsValue(flags, "/Zi"))
 				{
 					return "debug";
 				}
 
 				if (flagsType == "release")
 				{
-					if (ContainsString(flags, "/O2")
-						&& ContainsString(flags, "/Zi"))
+					if (ContainsValue(flags, "/O2")
+						&& ContainsValue(flags, "/Zi"))
 					{
 						return "reldebug";
 					}
-					else if (ContainsString(flags, "/O2"))
+					else if (ContainsValue(flags, "/O2"))
 					{
 						return "release";
 					}
-					else if (ContainsString(flags, "/O1"))
+					else if (ContainsValue(flags, "/O1"))
 					{
 						return "minsizerel";
 					}
@@ -2424,24 +2283,24 @@ void CompileProject(const CompileData& compileData)
 					 || compiler == "g++")
 			{
 				if (flagsType == "debug"
-					&& ContainsString(flags, "-O0")
-					&& ContainsString(flags, "-g"))
+					&& ContainsValue(flags, "-O0")
+					&& ContainsValue(flags, "-g"))
 				{
 					return "debug";
 				}
 
 				if (flagsType == "release")
 				{
-					if (ContainsString(flags, "-O2")
-						&& ContainsString(flags, "-g"))
+					if (ContainsValue(flags, "-O2")
+						&& ContainsValue(flags, "-g"))
 					{
 						return "reldebug";
 					}
-					else if (ContainsString(flags, "-O2"))
+					else if (ContainsValue(flags, "-O2"))
 					{
 						return "release";
 					}
-					else if (ContainsString(flags, "-Os"))
+					else if (ContainsValue(flags, "-Os"))
 					{
 						return "minsizerel";
 					}
@@ -2533,7 +2392,7 @@ void CompileProject(const CompileData& compileData)
 
 			if (system(finalValue.c_str()) != 0)
 			{
-				PrintError("Compilation failed!");
+				KalaMakeCore::PrintError("Compilation failed!");
 
 				Log::Print("\n==========================================================================================\n");
 
@@ -2565,7 +2424,7 @@ void CompileProject(const CompileData& compileData)
 
 			if (ContainsString(finalBuildPath, "Result: "))
 			{
-				PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+				KalaMakeCore::PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
 				return;
 			}
 
@@ -2576,19 +2435,19 @@ void CompileProject(const CompileData& compileData)
 				{
 					if (b == "release")
 					{
-						if (!ContainsString(finalFlags, "/O2")) finalFlags.push_back("/O2");
+						finalFlags.push_back("/O2");
 					}
 					else if (b == "reldebug")
 					{
-						if (!ContainsString(finalFlags, "/O2")) finalFlags.push_back("/O2");
-						if (!ContainsString(finalFlags, "/Zi")) finalFlags.push_back("/Zi");
+						finalFlags.push_back("/O2");
+						finalFlags.push_back("/Zi");
 					}
 					else if (b == "minsizerel")
 					{
-						if (!ContainsString(finalFlags, "/O1")) finalFlags.push_back("/O1");
+						finalFlags.push_back("/O1");
 					}
 
-					if (!ContainsString(finalFlags, "/MD")) finalFlags.push_back("/MD");
+					finalFlags.push_back("/MD");
 				}
 				else if (compileData.compiler == "clang"
 						 || compileData.compiler == "clang++"
@@ -2597,16 +2456,16 @@ void CompileProject(const CompileData& compileData)
 				{
 					if (b == "release")
 					{
-						if (!ContainsString(finalFlags, "-O2")) finalFlags.push_back("-O2");
+						finalFlags.push_back("-O2");
 					}
 					else if (b == "reldebug")
 					{
-						if (!ContainsString(finalFlags, "-O2")) finalFlags.push_back("-O2");
-						if (!ContainsString(finalFlags, "-g")) finalFlags.push_back("-g");
+						finalFlags.push_back("-O2");
+						finalFlags.push_back("-g");
 					}
 					else if (b == "minsizerel")
 					{
-						if (!ContainsString(finalFlags, "-Os")) finalFlags.push_back("-Os");
+						finalFlags.push_back("-Os");
 					}
 				}
 
@@ -2623,17 +2482,17 @@ void CompileProject(const CompileData& compileData)
 				if (compileData.compiler == "clang-cl"
 					|| compileData.compiler == "cl")
 				{
-					if (!ContainsString(finalDebugFlags, "/Od")) finalDebugFlags.push_back("/Od");
-					if (!ContainsString(finalDebugFlags, "/Zi")) finalDebugFlags.push_back("/Zi");
-					if (!ContainsString(finalDebugFlags, "/MDd")) finalDebugFlags.push_back("/MDd");
+					finalDebugFlags.push_back("/Od");
+					finalDebugFlags.push_back("/Zi");
+					finalDebugFlags.push_back("/MDd");
 				}
 				else if (compileData.compiler == "clang"
 						 || compileData.compiler == "clang++"
 						 || compileData.compiler == "gcc"
 						 || compileData.compiler == "g++")
 				{
-					if (!ContainsString(finalDebugFlags, "-O0")) finalDebugFlags.push_back("-O0");
-					if (!ContainsString(finalDebugFlags, "-g")) finalDebugFlags.push_back("-g");
+					finalDebugFlags.push_back("-O0");
+					finalDebugFlags.push_back("-g");
 				}
 
 				if (!build_project(
@@ -2664,7 +2523,7 @@ void CompileProject(const CompileData& compileData)
 
 			if (ContainsString(finalBuildPath, "Result: "))
 			{
-				PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+				KalaMakeCore::PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
 				return;
 			}
 
@@ -2695,7 +2554,7 @@ void CompileProject(const CompileData& compileData)
 
 				if (ContainsString(finalBuildPath, "Result: "))
 				{
-					PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
+					KalaMakeCore::PrintError("Failed to create new directory for compiled file target path missing parent path! " + finalBuildPath);
 					return;
 				}
 

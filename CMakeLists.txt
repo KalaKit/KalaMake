@@ -73,10 +73,11 @@ target_include_directories(KalaMake PRIVATE
 
 # Preprocessor Defines
 target_compile_definitions(KalaMake PRIVATE 
-	WIN32_LEAN_AND_MEAN # cleaner windows.h
-	NOMINMAX            # skips min/max windows macros in favor of the std variants
-	UNICODE             # selects wide api variants over ansi for UTF16 windows functions
-	_UNICODE            # uses wide text types in the C runtime layer
+	KS_CONTAINER_CONCEPTS # allow string_utils.hpp to enable string-enum conversion
+	WIN32_LEAN_AND_MEAN   # cleaner windows.h
+	NOMINMAX              # skips min/max windows macros in favor of the std variants
+	UNICODE               # selects wide api variants over ansi for UTF16 windows functions
+	_UNICODE              # uses wide text types in the C runtime layer
 )
 
 # Link libraries
