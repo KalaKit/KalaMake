@@ -3,15 +3,27 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
+#include <string>
+
 #include "language/kma_language_c_cpp.hpp"
 #include "core/kma_core.hpp"
 
 using KalaMake::Language::GlobalData;
+using KalaMake::Core::BinaryType;
+
+using std::string_view;
 
 static bool CompileLinkOnly(const GlobalData& data);
 
 namespace KalaMake::Language
 {
+	constexpr string_view cl_ide_bat_2026 = "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
+	constexpr string_view cl_build_bat_2026 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
+	constexpr string_view cl_ide_bat_2022 = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat";
+	constexpr string_view cl_build_bat_2022 = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat";
+
+	static path foundCLPath{};
+
 	unique_ptr<Language_C_CPP> Language_C_CPP::Initialize(GlobalData data)
 	{
 		return nullptr;

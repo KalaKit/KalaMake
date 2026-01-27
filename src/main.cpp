@@ -13,9 +13,22 @@ using KalaCLI::Command;
 using KalaCLI::CommandManager;
 
 using KalaMake::Core::KalaMakeCore;
+using KalaMake::Core::TargetState;
+
+using std::vector;
+using std::string;
 
 static void AddExternalCommands()
 {
+	auto compile = [](const vector<string>& params)
+		{
+			KalaMakeCore::OpenFile(params, TargetState::S_COMPILE);
+		};
+	auto generate = [](const vector<string>& params)
+		{
+			KalaMakeCore::OpenFile(params, TargetState::S_GENERATE);
+		};
+
 	CommandManager::AddCommand(
 		{
 			.primary = { "compile" },
@@ -23,7 +36,7 @@ static void AddExternalCommands()
 				"Compile a project from a kma file, "
 				"third parameter must be valid path to a .kma file.",
 			.paramCount = 2,
-			.targetFunction = KalaMakeCore::Initialize
+			.targetFunction = compile
 		});
 
 	CommandManager::AddCommand(
@@ -34,7 +47,7 @@ static void AddExternalCommands()
 				"third parameter must be valid path to a .kma file, "
 				"fourth parameter must be a solution type.",
 			.paramCount = 3,
-			.targetFunction = KalaMakeCore::Initialize
+			.targetFunction = generate
 		});
 }
 

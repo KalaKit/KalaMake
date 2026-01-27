@@ -7,16 +7,12 @@
 // Read LICENSE.md for more information.
 //
 // Provides:
-//   - Cross-platform export/import macro (LIB_API)
-//   - Win32 machine level function calling convenction (LIB_APIENTRY)
-//   - Function inlining control (FORCE_INLINE, NO_INLINE)
-//   - Deprecation marker (DEPRECATED)
-//   - Debug-only assertion (DEBUG_ASSERT)
-//   - Shorthands for casters
-//   - Common container concepts
-//   - Helpers for checking if raw array, array, vector, map or unordered map contains key or value
-//   - Helpers for removing duplicates from vector, map and unordered_map
-//   - Safe conversions between uintptr_t and pointers, integrals, enums
+//   - useful low level macros
+//   - common container concepts
+//   - helpers for getting enum or string from any enum to string or string to enum in any map or unordered map
+//   - helpers for checking if raw array, array, vector, map or unordered map contains key or value
+//   - helpers for removing duplicates from vector, map and unordered_map
+//   - safe conversions between uintptr_t and pointers, integrals, enums
 //------------------------------------------------------------------------------
 
 #pragma once

@@ -3,9 +3,9 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
-#include "language/kma_language.hpp"
+#include "generate/kma_generate_ninja.hpp"
 
-namespace KalaMake::Language
+namespace KalaMake::Generate
 {
-	
+
 }

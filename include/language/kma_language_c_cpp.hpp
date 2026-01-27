@@ -13,8 +13,6 @@ namespace KalaMake::Language
 {
 	using std::unique_ptr;
 
-	using u8 = uint8_t;
-
 	class Language_C_CPP : public LanguageCore
 	{
 	public:

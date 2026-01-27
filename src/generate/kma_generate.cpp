@@ -5,7 +5,26 @@
 
 #include "generate/kma_generate.hpp"
 
+using KalaHeaders::KalaCore::StringToEnum;
+
 namespace KalaMake::Generate
 {
+	static const unordered_map<GeneratorType, string_view, EnumHash<GeneratorType>> generatorTypes =
+	{
+		{ GeneratorType::G_VS,     "vs" },
+		{ GeneratorType::G_VSCODE, "vscode" },
+		{ GeneratorType::G_NINJA,  "ninja" }
+	};
 
+	bool GenerateCore::IsGeneratorType(string_view value)
+	{
+		GeneratorType type{};
+
+		return StringToEnum(value, generatorTypes, type)
+			&& (type == GeneratorType::G_VS
+			|| type == GeneratorType::G_VSCODE
+			|| type == GeneratorType::G_NINJA);
+	}
+
+	const unordered_map<GeneratorType, string_view, EnumHash<GeneratorType>>& GenerateCore::GetGeneratorTypes() { return generatorTypes; }
 }
