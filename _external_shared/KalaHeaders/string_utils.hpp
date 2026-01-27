@@ -12,18 +12,17 @@
 
 #pragma once
 
+#include <vector>
 #include <string>
 #include <cstring>
 #include <algorithm>
-#include <vector>
 
-//static_cast
+namespace KalaHeaders::KalaString
+{	
 #ifndef scast
 	#define scast static_cast
 #endif
 
-namespace KalaHeaders::KalaString
-{	
 	using std::stoi;
 	using std::stoll;
 	using std::stoul;
@@ -32,6 +31,7 @@ namespace KalaHeaders::KalaString
 	using std::stod;
 	using std::stold;
 
+	using std::vector;
 	using std::string;
 	using std::string_view;
 	using std::to_string;
@@ -43,16 +43,6 @@ namespace KalaHeaders::KalaString
 	using std::isspace;
 	using std::memcpy;
 	using std::memset;
-	using std::is_pointer_v;
-	using std::is_array_v;
-	using std::is_enum_v;
-	using std::same_as;
-	using std::remove_pointer_t;
-	using std::remove_cv_t;
-	using std::remove_cvref_t;
-	using std::remove_reference_t;
-	using std::remove_extent_t;
-	using std::vector;
 
 	//
 	// CONVERSION FUNCTIONS
@@ -78,90 +68,6 @@ namespace KalaHeaders::KalaString
 	template<> inline float              FromString<float>(string_view s) { return stof(string(s)); }                //Convert string to float
 	template<> inline double             FromString<double>(string_view s) { return stod(string(s)); }               //Convert string to double
 	template<> inline long double        FromString<long double>(string_view s) { return stold(string(s)); }         //Convert string to long double
-
-	//
-	// STRING-ENUM GETTERS
-	//
-
-	//Map or unordered map with key of type K and value of type V (map<K, V>/unordered_map<K, V>)
-	template<typename T>
-	concept AnyMap =
-		requires(
-	remove_cvref_t<T>&m,
-		typename remove_cvref_t<T>::key_type k)
-	{
-		typename remove_cvref_t<T>::key_type;
-		typename remove_cvref_t<T>::mapped_type;
-
-		{ m.find(k) };
-		{ m.end() };
-
-		{ m.begin()->second };
-	};
-
-	//String, string_view, char* or charArrayName[N]
-	template<typename T>
-	concept AnyString =
-		same_as<remove_cvref_t<T>, string>
-		|| same_as<remove_cvref_t<T>, string_view>
-		|| (is_pointer_v<remove_cvref_t<T>>
-			&& same_as
-			<
-				remove_cv_t<remove_pointer_t<remove_cvref_t<T>>>,
-				char
-			>)
-		|| (is_array_v<remove_reference_t<T>>
-			&& same_as
-			<
-				remove_cv_t<remove_extent_t<remove_reference_t<T>>>, 
-				char
-			>);
-
-	//Any map or unordered map that stores enums in K and string types in V
-	template<typename M>
-	concept AnyEnumAndStringMap =
-		AnyMap<M>
-		&& is_enum_v<typename M::key_type>
-		&& AnyString<typename M::mapped_type>;
-
-	//Converts string type to known enum type,
-	//assumes map or unordered map key is known enum type and value is string type,
-	//returns false if unsuccessful
-	template<AnyString S, AnyEnumAndStringMap M>
-	inline constexpr bool StringToEnum(
-		S&& value,
-		const M& map,
-		typename M::key_type& target)
-	{
-		string_view sv{ value };
-
-		for (const auto& [k, v] : map)
-		{
-			if (v == sv)
-			{
-				target = k;
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	//Converts known enum type to string_view,
-	//assumes map or unordered map key known enum type and value is string type,
-	//returns false if unsuccessful
-	template<AnyEnumAndStringMap M>
-	inline constexpr bool EnumToString(
-		typename M::key_type key,
-		const M& map,
-		string_view& out)
-	{
-		auto it = map.find(key);
-		if (it == map.end()) return false;
-
-		out = it->second;
-		return true;
-	}
 
 	//
 	// GENERAL FUNCTIONS
