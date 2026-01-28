@@ -35,20 +35,29 @@ namespace KalaMake::Core
 	constexpr size_t MIN_NAME_LENGTH = 1;
 	constexpr size_t MAX_NAME_LENGTH = 20;
 
+	enum class Version : u8
+	{
+		V_INVALID = 0,
+
+		V_1_0 = 1
+	};
+
 	//Allowed categories that can be added to any kmake file
 	enum class CategoryType : u8
 	{
+		C_INVALID = 0,
+
 		//required version category
-		C_VERSION,
+		C_VERSION = 1,
 
 		//optional include paths category
-		C_INCLUDE,
+		C_INCLUDE = 2,
 
 		//required global fields category
-		C_GLOBAL,
+		C_GLOBAL = 3,
 
 		//optional N amount of profile categories with custom names
-		C_PROFILE
+		C_PROFILE = 4
 	};
 
 	//Allowed field types that can be added to global and profile categories
@@ -220,6 +229,9 @@ namespace KalaMake::Core
 	//Overridable per-profile field definitions for kalamake action types
 	struct ProfileData
 	{
+		//what is the name of this profile
+		string profileName{};
+
 		//what is the target type of the binary
 		string overrideBinaryName{};
 		//which build type is the binary
@@ -307,22 +319,63 @@ namespace KalaMake::Core
 			const path& filePath,
 			const vector<string>& lines);
 
-		static bool IsCategoryType(string_view value);
+		static bool ResolveFieldReference(
+			const vector<path>& currentProjectIncludes,
+			const vector<ProfileData>& currentProjectProfiles,
+			string_view value);
+		static bool ResolveProfileReference(
+			const vector<path>& currentProjectIncludes,
+			const vector<ProfileData>& currentProjectProfiles, 
+			string_view value);
 
-		static bool IsFieldType(string_view value);
+		static bool IsValidVersion(string_view value);
 
-		static bool IsCStandard(string_view value);
-		static bool IsCPPStandard(string_view value);
+		static bool ResolveCategory(
+			string_view value, 
+			CategoryType& outValue);
 
-		static bool IsC_CPPCompiler(string_view value);
-		static bool IsMSVCCompiler(string_view value);
-		static bool IsGNUCompiler(string_view value);
+		static bool ResolveField(
+			string_view value, 
+			FieldType& outValue);
 
-		static bool IsBinaryType(string_view value);
+		static bool ResolveBinaryType(
+			string_view value, 
+			BinaryType& outValue);
+		static bool ResolveCompiler(
+			string_view value, 
+			CompilerType& outValue);
+		static bool ResolveStandard(
+			string_view value, 
+			StandardType& outStandard);
+		static bool IsValidTargetProfile(
+			string_view value,
+			const vector<string>& existingProfileNames);
 
-		static bool IsWarningLevel(string_view value);
-
-		static bool IsCustomFlag(string_view value);
+		static bool IsValidBinaryName(string_view value);
+		static bool ResolveBuildType(
+			string_view value, 
+			BuildType& outValue);
+		static bool ResolveBuildPath(
+			string_view value,
+			path& outValue);
+		static bool ResolveSources(
+			const vector<string>& value,
+			const vector<string>& correctExtensions,
+			vector<path>& outValues);
+		static bool ResolveHeaders(
+			const vector<string>& value,
+			const vector<string>& correctExtensions,
+			vector<path>& outValues);
+		static bool ResolveLinks(
+			const vector<string>& value,
+			const vector<string>& correctExtensions,
+			vector<path>& outValues);
+		static bool ResolveWarningLevel(
+			string_view value, 
+			WarningLevel& outValue);
+		static bool ResolveCustomFlags(
+			const vector<string>& value,
+			vector<CustomFlag>& outValues);
 
 		static const unordered_map<FieldType, string_view, EnumHash<FieldType>>& GetFieldTypes();
 		static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& GetCompilerTypes();

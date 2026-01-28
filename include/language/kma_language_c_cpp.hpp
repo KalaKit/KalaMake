@@ -5,20 +5,23 @@
 
 #pragma once
 
-#include <memory>
-
 #include "language/kma_language.hpp"
 
 namespace KalaMake::Language
 {
-	using std::unique_ptr;
-
 	class Language_C_CPP : public LanguageCore
 	{
 	public:
-		static unique_ptr<Language_C_CPP> Initialize(GlobalData data);
+		static Language_C_CPP* Initialize(GlobalData data);
 
-		bool Parse(const vector<string>& lines) override;
+		static bool IsValidC_CPPCompiler(string_view value);
+
 		bool Compile() override;
+
+		bool IsValidCompiler(CompilerType compiler) override;
+		bool IsValidStandard(StandardType standard) override;
+		bool AreValidSources(const vector<string>& sources) override;
+		bool AreValidHeaders(const vector<string>& headers) override;
+		bool AreValidLinks(const vector<string>& links) override;
 	};
 }

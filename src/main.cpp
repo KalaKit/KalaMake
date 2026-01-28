@@ -33,8 +33,8 @@ static void AddExternalCommands()
 		{
 			.primary = { "compile" },
 			.description =
-				"Compile a project from a kma file, "
-				"third parameter must be valid path to a .kma file.",
+				"Compile a project from a kalamake file, "
+				"third parameter must be valid path to a .kmake file.",
 			.paramCount = 2,
 			.targetFunction = compile
 		});
@@ -43,8 +43,8 @@ static void AddExternalCommands()
 		{
 			.primary = { "generate" },
 			.description =
-				"Generate a solution file from a kma file, "
-				"third parameter must be valid path to a .kma file, "
+				"Generate a solution file from a kalamake file, "
+				"third parameter must be valid path to a .kmake file, "
 				"fourth parameter must be a solution type.",
 			.paramCount = 3,
 			.targetFunction = generate

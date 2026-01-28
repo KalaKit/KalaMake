@@ -1,6 +1,6 @@
 # KalaMake
 
-**KalaMake** is an executable that uses `.kma` files that are designed as an alternative to CMake, Make and others of its kind with its own custom DSL and a simple CLI to compile libraries and software.
+**KalaMake** is an executable that uses `.kmake` files that are designed as an alternative to CMake, Make and others of its kind with its own custom DSL and a simple CLI to compile libraries and software.
 
 This cli was built with the help of the [KalaCLI](https://github.com/kalakit/kalacli) library.
 

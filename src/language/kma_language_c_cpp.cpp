@@ -4,6 +4,7 @@
 //Read LICENSE.md for more information.
 
 #include <string>
+#include <memory>
 
 #include "language/kma_language_c_cpp.hpp"
 #include "core/kma_core.hpp"
@@ -12,6 +13,8 @@ using KalaMake::Language::GlobalData;
 using KalaMake::Core::BinaryType;
 
 using std::string_view;
+using std::unique_ptr;
+using std::make_unique;
 
 static bool CompileLinkOnly(const GlobalData& data);
 
@@ -24,14 +27,15 @@ namespace KalaMake::Language
 
 	static path foundCLPath{};
 
-	unique_ptr<Language_C_CPP> Language_C_CPP::Initialize(GlobalData data)
-	{
-		return nullptr;
-	}
+	unique_ptr<Language_C_CPP> languageContext{};
 
-	bool Language_C_CPP::Parse(const vector<string>& lines)
+	Language_C_CPP* Language_C_CPP::Initialize(GlobalData data)
 	{
-		return false;
+		if (languageContext) languageContext = nullptr;
+
+		unique_ptr<Language_C_CPP> newLanguageContext = make_unique<Language_C_CPP>();
+
+		return nullptr;
 	}
 
 	bool Language_C_CPP::Compile()
@@ -45,6 +49,27 @@ namespace KalaMake::Language
 
 		vector<string> finalFlags = std::move(compileData.flags);
 
+		return false;
+	}
+
+	bool Language_C_CPP::IsValidCompiler(CompilerType compiler)
+	{
+		return false;
+	}
+	bool Language_C_CPP::IsValidStandard(StandardType standard)
+	{
+		return false;
+	}
+	bool Language_C_CPP::AreValidSources(const vector<string>& sources)
+	{
+		return false;
+	}
+	bool Language_C_CPP::AreValidHeaders(const vector<string>& headers)
+	{
+		return false;
+	}
+	bool Language_C_CPP::AreValidLinks(const vector<string>& links)
+	{
 		return false;
 	}
 }

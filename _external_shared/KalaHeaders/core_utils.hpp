@@ -18,7 +18,6 @@
 #pragma once
 
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include <unordered_map>
 #include <map>
@@ -104,7 +103,6 @@ namespace KalaHeaders::KalaCore
 
 	using std::string;
 	using std::string_view;
-	using std::unordered_set;
 	using std::vector;
 	using std::array;
 	using std::unordered_map;
@@ -112,6 +110,7 @@ namespace KalaHeaders::KalaCore
 	using std::tuple_size;
 	using std::false_type;
 	using std::true_type;
+	using std::assignable_from;
 	using std::is_pointer_v;
 	using std::is_integral_v;
 	using std::is_array_v;
@@ -133,9 +132,30 @@ namespace KalaHeaders::KalaCore
 	// CONCEPTS FOR COMMON CONTAINERS
 	//
 
+	template<typename T>
+	concept AnyEnum = is_enum_v<T>;
+
+	//String, string_view, char* or charArrayName[N]
+	template<typename T>
+	concept AnyString =
+		same_as<remove_cvref_t<T>, string>
+		|| same_as<remove_cvref_t<T>, string_view>
+		|| (is_pointer_v<remove_cvref_t<T>>
+			&& same_as
+			<
+				remove_cv_t<remove_pointer_t<remove_cvref_t<T>>>,
+				char
+			>)
+		|| (is_array_v<remove_reference_t<T>>
+			&& same_as
+			<
+				remove_cv_t<remove_extent_t<remove_reference_t<T>>>,
+				char
+			>);
+
 	//Enables enums to be used as keys in unordered containers
 	template<typename T>
-		requires is_enum_v<T>
+		requires AnyEnum<T>
 	struct EnumHash
 	{
 		constexpr size_t operator()(T e) const noexcept
@@ -149,6 +169,10 @@ namespace KalaHeaders::KalaCore
 	template<typename X, typename Y>
 	concept IsComparable = equality_comparable_with<X, Y>;
 
+	//Type X can be assigned as the value of type Y
+	template<typename X, typename Y>
+	concept IsAssignable = assignable_from<X, Y>;
+
 	//Type T supports equality comparison and hashing
 	template<typename T>
 	concept IsHashable =
@@ -157,24 +181,6 @@ namespace KalaHeaders::KalaCore
 	{
 		{ hash<T>{}(v) } -> convertible_to<size_t>;
 	};
-
-	//String, string_view, char* or charArrayName[N]
-	template<typename T>
-	concept AnyString =
-		same_as<remove_cvref_t<T>, string>
-		|| same_as<remove_cvref_t<T>, string_view>
-		|| (is_pointer_v<remove_cvref_t<T>>
-		&& same_as
-			<
-				remove_cv_t<remove_pointer_t<remove_cvref_t<T>>>,
-				char
-			>)
-		|| (is_array_v<remove_reference_t<T>>
-			&& same_as
-			<
-				remove_cv_t<remove_extent_t<remove_reference_t<T>>>,
-				char
-			>);
 
 	//Raw array of type T and size N (T arrayName[N])
 	template<typename T>
@@ -233,11 +239,11 @@ namespace KalaHeaders::KalaCore
 	template<typename M>
 	concept AnyEnumAndStringMap =
 		AnyMap<M>
-		&& is_enum_v<typename M::key_type>
+		&& AnyEnum<typename M::key_type>
 		&& AnyString<typename M::mapped_type>;
 
 	//
-	// CONTAINS ENUM OR STRING
+	// CONVERT BETWEEN ENUM AND STRING
 	//
 
 	//Converts string type to known enum type,
@@ -280,13 +286,58 @@ namespace KalaHeaders::KalaCore
 	}
 
 	//
+	// GET VALUE FROM MAP
+	//
+
+	//Get all keys by value from map or unordered_map,
+	//if append is true then the output vector won't be cleared
+	template<AnyMap T, typename K, typename V>
+		requires (
+		IsComparable<typename T::mapped_type, V>
+		&& IsAssignable<K&, typename T::key_type>)
+	bool GetMapKeys(
+		const T& map, 
+		const V& value, 
+		vector<K>& keys,
+		bool append = false)
+	{
+		if (!append) keys.clear();
+
+		for (const auto& [k, v] : map)
+		{
+			if (v == value) keys.push_back(k);
+		}
+
+		return !keys.empty();
+	}
+
+	//Get value by key from map or unordered_map
+	template<AnyMap T, typename K, typename V>
+		requires (
+			IsComparable<typename T::key_type, K>
+			&& IsAssignable<V&, typename T::mapped_type>)
+	bool GetMapValue(
+		const T& map, 
+		const K& key, 
+		V& value)
+	{
+		auto it = map.find(key);
+		if (it == map.end()) return false;
+
+		value = it->second;
+		return true;
+	}
+
+	//
 	// CHECK IF CONTAINER CONTAINS VALUE
 	//
 
 	//Returns true if raw array of type T contains the requested value 
 	template<AnyRawArray A, typename T>
 		requires IsComparable<AnyRawArrayElement<A>, T>
-	bool ContainsValue(const A& container, const T& value)
+	bool ContainsValue(
+		const A& container, 
+		const T& value)
 	{
 		using Element = AnyRawArrayElement<A>;
 
@@ -300,7 +351,9 @@ namespace KalaHeaders::KalaCore
 	//Returns true if array of type T contains the requested value 
 	template<AnyArray A, typename T>
 		requires IsComparable<typename A::value_type, T>
-	bool ContainsValue(const A& container, const T& value)
+	bool ContainsValue(
+		const A& container, 
+		const T& value)
 	{
 		using Element = A::value_type;
 
@@ -314,7 +367,9 @@ namespace KalaHeaders::KalaCore
 	//Returns true if vector of type T contains the requested value
 	template<AnyVector V, typename T>
 		requires IsComparable<typename V::value_type, T>
-	bool ContainsValue(const V& container, const T& value)
+	bool ContainsValue(
+		const V& container, 
+		const T& value)
 	{
 		using Element = V::value_type;
 
@@ -328,7 +383,9 @@ namespace KalaHeaders::KalaCore
 	//Returns true if map or unordered map with value of type T contains the requested key 
 	template<AnyMap M, typename T>
 		requires IsComparable<typename M::key_type, T>
-	bool ContainsKey(const M& container, const T& key)
+	bool ContainsKey(
+		const M& container, 
+		const T& key)
 	{
 		return container.contains(key);
 	}
@@ -336,52 +393,14 @@ namespace KalaHeaders::KalaCore
 	//Returns true if map or unordered map with value of type T contains the requested value 
 	template<AnyMap M, typename T>
 		requires IsComparable<typename M::mapped_type, T>
-	bool ContainsValue(const M& container, const T& value)
+	bool ContainsValue(
+		const M& container, 
+		const T& value)
 	{
 		for (const auto& [k, v] : container)
 		{
 			if (v == value) return true;
 		}
-		return false;
-	}
-
-	//
-	// CHECK IF CONTAINER HAS DUPLICATES
-	//
-
-	//Returns true if any value appears more than once in the vector
-	template <AnyVector T>
-		requires IsHashable<typename T::value_type>
-	inline constexpr bool ContainsDuplicates(const T& v)
-	{
-		if (v.size() < 2) return false;
-
-		unordered_set<typename T::value_type> seen{};
-		seen.reserve(v.size());
-
-		for (const auto& x : v)
-		{
-			if (!seen.insert(x).second) return true;
-		}
-
-		return false;
-	}
-
-	//Returns true if any value appears more than once in the map or unordered map
-	template <AnyMap T>
-		requires IsHashable<typename T::mapped_type>
-	inline constexpr bool ContainsDuplicates(const T& m)
-	{
-		if (m.size() < 2) return false;
-
-		unordered_set<typename T::mapped_type> seen{};
-		seen.reserve(m.size());
-
-		for (const auto& [key, value] : m)
-		{
-			if (!seen.insert(value).second) return true;
-		}
-
 		return false;
 	}
 
@@ -407,6 +426,8 @@ namespace KalaHeaders::KalaCore
 		for (const auto& x : v) if (counts[x] == 1) result.push_back(x);
 
 		v = std::move(result);
+
+		return;
 	}
 
 	//Remove all duplicate values from the map or unordered map that appear more than once, key order is preserved for maps
@@ -422,6 +443,7 @@ namespace KalaHeaders::KalaCore
 		if constexpr (IsUnorderedMap<remove_cvref_t<T>>::value)
 		{
 			unordered_map<Value, Count> counts{};
+			counts.reserve(m.size());
 
 			for (const auto& [k, v] : m) ++counts[v];
 
@@ -434,6 +456,7 @@ namespace KalaHeaders::KalaCore
 		else
 		{
 			map<Value, Count> counts{};
+			counts.reserve(m.size());
 
 			for (const auto& [k, v] : m) ++counts[v];
 
@@ -484,7 +507,7 @@ namespace KalaHeaders::KalaCore
 	//  - strongly typed API handles
 	template<typename T>
 	inline constexpr T ToVar(uintptr_t h)
-		requires is_enum_v<T>
+		requires AnyEnum<T>
 	{
 		return scast<T>(scast<underlying_type_t<T>>(h));
 	}
@@ -520,7 +543,7 @@ namespace KalaHeaders::KalaCore
 	//  - strongly typed API handles
 	template<typename T>
 	inline constexpr uint64_t FromVar(T h)
-		requires is_enum_v<T>
+		requires AnyEnum<T>
 	{
 		return scast<uint64_t>(scast<underlying_type_t<T>>(h));
 	}	

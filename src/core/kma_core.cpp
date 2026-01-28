@@ -5,20 +5,32 @@
 
 #include <sstream>
 #include <filesystem>
+#include <string>
+#include <vector>
 
+#include "KalaHeaders/core_utils.hpp"
 #include "KalaHeaders/log_utils.hpp"
 #include "KalaHeaders/file_utils.hpp"
+#include "KalaHeaders/string_utils.hpp"
 
 #include "core.hpp"
 
 #include "core/kma_core.hpp"
 
+using KalaHeaders::KalaCore::ContainsValue;
+using KalaHeaders::KalaCore::IsComparable;
+using KalaHeaders::KalaCore::IsAssignable;
+using KalaHeaders::KalaCore::AnyEnumAndStringMap;
+using KalaHeaders::KalaCore::AnyEnum;
+using KalaHeaders::KalaCore::StringToEnum;
+using KalaHeaders::KalaCore::RemoveDuplicates;
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
-
 using KalaHeaders::KalaFile::ReadLinesFromFile;
+using KalaHeaders::KalaString::ContainsString;
 
 using KalaCLI::Core;
+using KalaMake::Core::KalaMakeCore;
 
 using std::ostringstream;
 using std::filesystem::exists;
@@ -27,32 +39,195 @@ using std::filesystem::current_path;
 using std::filesystem::weakly_canonical;
 using std::filesystem::is_directory;
 using std::filesystem::filesystem_error;
+using std::string;
+using std::string_view;
+using std::vector;
+
+//kma path is the root directory where the kmake file is stored at
+static path kmaPath{};
+
+template<AnyEnumAndStringMap T>
+static bool EnumMapContainsValue(
+	const T& map,
+	string_view value,
+	string_view valueName)
+{
+	if (value.empty())
+	{
+		KalaMakeCore::PrintError(string(valueName) + " cannot be empty!");
+
+		return false;
+	}
+
+	typename T::key_type foundEnum{};
+
+	bool result = StringToEnum(
+		value,
+		map,
+		foundEnum);
+
+	if (!result)
+	{
+		KalaMakeCore::PrintError(string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
+
+		return false;
+	}
+
+	return true;
+}
+
+template<AnyEnumAndStringMap T, AnyEnum E>
+	requires (
+		IsComparable<typename T::mapped_type, string_view>
+		&& IsAssignable<E&, typename T::key_type>)
+static bool GetEnumFromMap(
+	const T& map, 
+	string_view value, 
+	string_view valueName,
+	E& outEnum)
+{
+	if (value.empty())
+	{
+		KalaMakeCore::PrintError(string(valueName) + " cannot be empty!");
+
+		return false;
+	}
+
+	E foundEnum{};
+
+	bool result = StringToEnum(
+		value,
+		map,
+		foundEnum);
+
+	if (!result)
+	{
+		KalaMakeCore::PrintError(string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
+
+		return false;
+	}
+
+	outEnum = foundEnum;
+	return true;
+}
+
+static bool ResolvePathVector(
+	const vector<string>& value,
+	string_view valueName,
+	const vector<string>& extensions,
+	vector<path>& outValues)
+{
+	auto path_exists = [&valueName, &extensions](string_view value, vector<path>& outValues) -> bool
+		{
+			if (value.empty())
+			{
+				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' cannot be empty!");
+
+				return false;
+			}
+
+			path p{ value };
+
+			if (!exists(p)) p = kmaPath / p;
+			if (!exists(p))
+			{
+				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
+
+				return false;
+			}
+
+			if (!is_regular_file(p))
+			{
+				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' is not a regular file so its extension can't be checked!");
+
+				return false;
+			}
+
+			if (!p.has_extension())
+			{
+				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' has no extension!");
+
+				return false;
+			}
+
+			string ext = p.extension().string();
+
+			if (!ContainsValue(extensions, ext))
+			{
+				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' has an unsupported extension '" + string(ext) + "'!");
+
+				return false;
+			}
+
+			try
+			{
+				p = weakly_canonical(p);
+			}
+			catch (const filesystem_error&)
+			{
+				KalaMakeCore::PrintError("Failed to resolve target path '" + string(value) + "'!");
+
+				return false;
+			}
+
+			outValues.push_back(p);
+
+			return true;
+		};
+
+	if (value.empty())
+	{
+		KalaMakeCore::PrintError(string(valueName) + " has no values!");
+
+		return false;
+	}
+
+	vector<path> cleanedValues{};
+
+	for (const auto& v : value) if (!path_exists(v, cleanedValues)) return false;
+
+	RemoveDuplicates(cleanedValues);
+
+	outValues = std::move(cleanedValues);
+
+	return true;
+}
 
 namespace KalaMake::Core
 {
 	constexpr string_view EXE_VERSION_NUMBER = "1.0";
 	constexpr string_view KMA_VERSION_NUMBER = "1.0";
 
-	//kma path is the root directory where the kma file is stored at
-	static path kmaPath{};
+	static const unordered_map<Version, string_view, EnumHash<Version>> versions =
+	{
+		{ Version::V_1_0, "1.0" }
+	};
+
+	static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>> categoryTypes =
+	{
+		{ CategoryType::C_VERSION, "#version " },
+		{ CategoryType::C_INCLUDE, "#include" },
+		{ CategoryType::C_GLOBAL,  "#global" },
+		{ CategoryType::C_PROFILE, "#profile " }
+	};
 
 	static const unordered_map<FieldType, string_view, EnumHash<FieldType>> fieldTypes =
 	{
-		{ FieldType::T_BINARY_TYPE,    "binarytype" },
-		{ FieldType::T_COMPILER,       "compiler" },
-		{ FieldType::T_STANDARD,       "standard" },
-		{ FieldType::T_TARGET_PROFILE, "targetprofile" },
+		{ FieldType::T_BINARY_TYPE,    "binarytype: " },
+		{ FieldType::T_COMPILER,       "compiler: " },
+		{ FieldType::T_STANDARD,       "standard: " },
+		{ FieldType::T_TARGET_PROFILE, "targetprofile: " },
 
-		{ FieldType::T_BINARY_NAME,   "binaryname" },
-		{ FieldType::T_BUILD_TYPE,    "buildtype" },
-		{ FieldType::T_BUILD_PATH,    "buildpath" },
-		{ FieldType::T_SOURCES,       "sources" },
-		{ FieldType::T_HEADERS,       "headers" },
-		{ FieldType::T_LINKS,         "links" },
-		{ FieldType::T_WARNING_LEVEL, "warninglevel" },
-		{ FieldType::T_DEFINES,       "defines" },
-		{ FieldType::T_FLAGS,         "flags" },
-		{ FieldType::T_CUSTOM_FLAGS,  "customflags" }
+		{ FieldType::T_BINARY_NAME,   "binaryname: " },
+		{ FieldType::T_BUILD_TYPE,    "buildtype: " },
+		{ FieldType::T_BUILD_PATH,    "buildpath: " },
+		{ FieldType::T_SOURCES,       "sources: " },
+		{ FieldType::T_HEADERS,       "headers: " },
+		{ FieldType::T_LINKS,         "links: " },
+		{ FieldType::T_WARNING_LEVEL, "warninglevel: " },
+		{ FieldType::T_DEFINES,       "defines: " },
+		{ FieldType::T_FLAGS,         "flags: " },
+		{ FieldType::T_CUSTOM_FLAGS,  "customflags: " }
 	};
 
 	static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>> compilerTypes =
@@ -82,6 +257,14 @@ namespace KalaMake::Core
 		{ StandardType::CPP_23,     "c++23" },
 		{ StandardType::CPP_26,     "c++26" },
 		{ StandardType::CPP_LATEST, "c++latest" }
+	};
+
+	static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
+	{
+		{ BuildType::B_DEBUG,      "debug" },
+		{ BuildType::B_RELEASE,    "release" },
+		{ BuildType::B_RELDEBUG,   "reldebug" },
+		{ BuildType::B_MINSIZEREL, "minsizerel" }
 	};
 
 	static const unordered_map<BinaryType, string_view, EnumHash<BinaryType>> binaryTypes =
@@ -231,7 +414,7 @@ namespace KalaMake::Core
 		const vector<string>& lines)
 	{
 		Log::Print(
-			"Starting to parse the kma file '" + filePath.string() + "'"
+			"Starting to parse the kalamake file '" + filePath.string() + "'"
 			"\n\n==========================================================================================\n",
 			"KALAMAKE",
 			LogType::LOG_INFO);
@@ -242,87 +425,219 @@ namespace KalaMake::Core
 		const vector<string>& lines)
 	{
 		Log::Print(
-			"Starting to generate a solution from the kma file '" + filePath.string() + "'"
+			"Starting to generate a solution from the kalamake file '" + filePath.string() + "'"
 			"\n\n==========================================================================================\n",
 			"KALAMAKE",
 			LogType::LOG_INFO);
 	}
 
-	bool KalaMakeCore::IsFieldType(string_view value)
+	bool KalaMakeCore::ResolveFieldReference(
+		const vector<path>& currentProjectIncludes,
+		const vector<ProfileData>& currentProjectProfiles,
+		string_view value)
 	{
-		return ContainsValue(fieldTypes, value);
+		//TODO: fill
+
+		return true;
 	}
 
-	bool KalaMakeCore::IsCStandard(string_view value)
+	bool KalaMakeCore::ResolveProfileReference(
+		const vector<path>& currentProjectIncludes,
+		const vector<ProfileData>& currentProjectProfiles,
+		string_view value)
 	{
-		StandardType type{};
+		//TODO: fill
 
-		return StringToEnum(value, standardTypes, type)
-			&& (type == StandardType::C_89
-				|| type == StandardType::C_99
-				|| type == StandardType::C_11
-				|| type == StandardType::C_17
-				|| type == StandardType::C_23
-				|| type == StandardType::C_LATEST);
-	}
-	bool KalaMakeCore::IsCPPStandard(string_view value)
-	{
-		StandardType type{};
-
-		return StringToEnum(value, standardTypes, type)
-			&& (type == StandardType::CPP_11
-				|| type == StandardType::CPP_14
-				|| type == StandardType::CPP_17
-				|| type == StandardType::CPP_20
-				|| type == StandardType::CPP_23
-				|| type == StandardType::CPP_26
-				|| type == StandardType::CPP_LATEST);
+		return true;
 	}
 
-	bool KalaMakeCore::IsC_CPPCompiler(string_view value)
-	{
-		CompilerType type{};
+	bool KalaMakeCore::IsValidVersion(string_view value) { return EnumMapContainsValue(versions, value, "Version"); }
 
-		return StringToEnum(value, compilerTypes, type)
-			&& (type == CompilerType::C_CLANG_CL
-				|| type == CompilerType::C_CL
-				|| type == CompilerType::C_CLANG
-				|| type == CompilerType::C_CLANGPP
-				|| type == CompilerType::C_GCC
-				|| type == CompilerType::C_GPP);
-	}
-	bool KalaMakeCore::IsMSVCCompiler(string_view value)
-	{
-		CompilerType type{};
-
-		return StringToEnum(value, compilerTypes, type)
-			&& (type == CompilerType::C_CLANG_CL
-				|| type == CompilerType::C_CL);
-	}
-	bool KalaMakeCore::IsGNUCompiler(string_view value)
-	{
-		CompilerType type{};
-
-		return StringToEnum(value, compilerTypes, type)
-			&& (type == CompilerType::C_CLANG
-				|| type == CompilerType::C_CLANGPP
-				|| type == CompilerType::C_GCC
-				|| type == CompilerType::C_GPP);
+	bool KalaMakeCore::ResolveCategory(
+		string_view value,
+		CategoryType& outValue) 
+	{ 
+		return GetEnumFromMap(categoryTypes, value, "Category", outValue);
 	}
 
-	bool KalaMakeCore::IsBinaryType(string_view value)
-	{
-		return ContainsValue(binaryTypes, value);
+	bool KalaMakeCore::ResolveField(
+		string_view value,
+		FieldType& outValue) 
+	{ 
+		return GetEnumFromMap(fieldTypes, value, "Field", outValue);
 	}
 
-	bool KalaMakeCore::IsWarningLevel(string_view value)
+	bool KalaMakeCore::ResolveBinaryType(
+		string_view value,
+		BinaryType& outValue)
+	{ 
+		return GetEnumFromMap(binaryTypes, value, "Binary type", outValue);
+	}
+	bool KalaMakeCore::ResolveCompiler(
+		string_view value,
+		CompilerType& outValue)
 	{
-		return ContainsValue(warningLevels, value);
+		return GetEnumFromMap(compilerTypes, value, "Compiler", outValue);
+	}
+	bool KalaMakeCore::ResolveStandard(
+		string_view value,
+		StandardType& outValue)
+	{
+		return GetEnumFromMap(standardTypes, value, "Standard", outValue);
+	}
+	bool KalaMakeCore::IsValidTargetProfile(
+		string_view value,
+		const vector<string>& targetProfiles)
+	{
+		if (value.empty())
+		{
+			KalaMakeCore::PrintError("Target profile list has no values!");
+
+			return false;
+		}
+
+		//TODO: fill out
+
+		return false;
 	}
 
-	bool KalaMakeCore::IsCustomFlag(string_view value)
+	bool KalaMakeCore::IsValidBinaryName(string_view value)
 	{
-		return ContainsValue(customFlags, value);
+		if (value.empty())
+		{
+			KalaMakeCore::PrintError("Binary name cannot be empty!");
+
+			return false;
+		}
+
+		if (value.size() < MIN_NAME_LENGTH)
+		{
+			KalaMakeCore::PrintError("Binary name length is too short!");
+
+			return false;
+		}
+		if (value.size() > MAX_NAME_LENGTH)
+		{
+			KalaMakeCore::PrintError("Binary name length is too long!");
+
+			return false;
+		}
+
+		return true;
+	}
+	bool KalaMakeCore::ResolveBuildType(
+		string_view value,
+		BuildType& outValue)
+	{
+		return GetEnumFromMap(buildTypes, value, "Build type", outValue);
+	}
+	bool KalaMakeCore::ResolveBuildPath(
+		string_view value,
+		path& outValue)
+	{
+		if (value.empty())
+		{
+			KalaMakeCore::PrintError("Build path cannot be empty!");
+
+			return false;
+		}
+
+		if (ContainsString(value, "*")
+			|| ContainsString(value, "**"))
+		{
+			KalaMakeCore::PrintError("Build path '" + string(value) + "' is not allowed to use wildcards!");
+
+			return false;
+		}
+
+		path p{ value };
+
+		if (!exists(p)) p = kmaPath / p;
+		if (!exists(p))
+		{
+			KalaMakeCore::PrintError("Build path '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
+
+			return false;
+		}
+
+		if (!is_directory(p))
+		{
+			KalaMakeCore::PrintError("Build path '" + string(value) + "' must lead to a directory!");
+
+			return false;
+		}
+
+		try
+		{
+			p = weakly_canonical(p);
+		}
+		catch (const filesystem_error&)
+		{
+			KalaMakeCore::PrintError("Failed to resolve build path '" + string(value)  + "'!");
+
+			return false;
+		}
+
+		outValue = p;
+
+		return true;
+	}
+	bool KalaMakeCore::ResolveSources(
+		const vector<string>& value,
+		const vector<string>& correctExtensions,
+		vector<path>& outValues)
+	{
+		return ResolvePathVector(
+			value,
+			"Source scripts list",
+			correctExtensions,
+			outValues);
+	}
+	bool KalaMakeCore::ResolveHeaders(
+		const vector<string>& value,
+		const vector<string>& correctExtensions,
+		vector<path>& outValues)
+	{
+		return ResolvePathVector(
+			value,
+			"Header scripts list",
+			correctExtensions,
+			outValues);
+	}
+	bool KalaMakeCore::ResolveLinks(
+		const vector<string>& value,
+		const vector<string>& correctExtensions,
+		vector<path>& outValues)
+	{
+		return ResolvePathVector(
+			value,
+			"Link list",
+			correctExtensions,
+			outValues);
+	}
+	bool KalaMakeCore::ResolveWarningLevel(
+		string_view value,
+		WarningLevel& outValue)
+	{ 
+		return GetEnumFromMap(warningLevels, value, "Warning level", outValue);
+	}
+	bool KalaMakeCore::ResolveCustomFlags(
+		const vector<string>& value,
+		vector<CustomFlag>& outValues)
+	{
+		vector<CustomFlag> foundValues{};
+
+		for (const auto& v : value)
+		{
+			CustomFlag f{};
+
+			if (!GetEnumFromMap(customFlags, v, "Custom flag list", f)) return false;
+
+			foundValues.push_back(f);
+		}
+
+		outValues = std::move(foundValues);
+		return true;
 	}
 
 	const unordered_map<FieldType, string_view, EnumHash<FieldType>>& KalaMakeCore::GetFieldTypes() { return fieldTypes; }
