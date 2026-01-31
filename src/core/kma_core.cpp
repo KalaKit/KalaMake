@@ -29,7 +29,6 @@ using KalaHeaders::KalaLog::LogType;
 using KalaHeaders::KalaFile::ReadLinesFromFile;
 using KalaHeaders::KalaString::ContainsString;
 
-using KalaCLI::Core;
 using KalaMake::Core::KalaMakeCore;
 
 using std::ostringstream;

@@ -9,7 +9,6 @@
 #include "core/kma_core.hpp"
 
 using KalaCLI::Core;
-using KalaCLI::Command;
 using KalaCLI::CommandManager;
 
 using KalaMake::Core::KalaMakeCore;

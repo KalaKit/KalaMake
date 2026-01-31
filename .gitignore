@@ -2,8 +2,9 @@
 out/
 build/
 .vs/
-*.kdev4
-.kdev4/
+.vscode/
+.cache/
+compile_commands.json
 
 # Release and Debug in root folder
 /release/

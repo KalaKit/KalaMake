@@ -3,7 +3,6 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
-#include <string>
 #include <memory>
 
 #include "language/kma_language_c_cpp.hpp"
