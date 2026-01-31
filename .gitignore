@@ -1,7 +1,9 @@
-# Default VS stuff
+# Default IDE stuff
 out/
 build/
 .vs/
+*.kdev4
+.kdev4/
 
 # Release and Debug in root folder
 /release/

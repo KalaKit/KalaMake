@@ -1,5 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.29.2)
 
+set(PROGRAM_VERSION "KalaMake")
 set(PROGRAM_VERSION_NUMBER 1.0.0.0)
 
 project("KalaMake" VERSION ${PROGRAM_VERSION_NUMBER} LANGUAGES C CXX)
@@ -8,11 +9,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Runtime lib handling for MSVC
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
+
 # Platform Detection
 if (WIN32)
     message(STATUS "[KALAMAKE] Platform = Windows")
+elseif(UNIX)
+	message(STATUS "[KALAMAKE] Platform = Unix")
 else()
-    message(FATAL_ERROR "[KALAMAKE] Unsupported platform. Only Windows is supported.")
+    message(FATAL_ERROR "[KALAMAKE] Unsupported platform. Only Windows and Unix are supported.")
 endif()
 
 # Build Type Detection
@@ -24,22 +32,26 @@ else()
     message(FATAL_ERROR "Unknown CMAKE_BUILD_TYPE: '${CMAKE_BUILD_TYPE}'! Must be Debug, Release, or RelWithDebInfo.")
 endif()
 
-# Runtime lib handling for MSVC
-if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-endif()
-
 # Directory Setup
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 set(EXT_SHARED_DIR "${CMAKE_SOURCE_DIR}/_external_shared")
 
 set(EXT_CLI_DIR "${EXT_SHARED_DIR}/KalaCLI")
 
-# Library Paths
-if(IS_RELEASE)
-    set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/release/KalaCLI1.lib")
+if (WIN32)
+	# Library Paths
+	if(IS_RELEASE)
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/release/KalaCLI1.lib")
+	else()
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/debug/KalaCLI1d.lib")
+	endif()
 else()
-    set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/debug/KalaCLI1d.lib")
+	# Library Paths
+	if(IS_RELEASE)
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/release/libKalaCLI1.so")
+	else()
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/debug/libKalaCLI1d.so")
+	endif()
 endif()
 
 # Source Files
@@ -103,15 +115,27 @@ else()
 	set(BIN_KALACLI "${EXT_CLI_DIR}/debug")
 endif()
 
-if (IS_RELEASE)
-	file(GLOB BIN_FILES
-		"${BIN_KALACLI}/*.dll"
-	)
+if (WIN32)
+	if (IS_RELEASE)
+		file(GLOB BIN_FILES
+			"${BIN_KALACLI}/*.dll"
+		)
+	else()
+		file(GLOB BIN_FILES
+			"${BIN_KALACLI}/*.dll"
+			"${BIN_KALACLI}/*.pdb"
+		)
+	endif()
 else()
-	file(GLOB BIN_FILES
-		"${BIN_KALACLI}/*.dll"
-		"${BIN_KALACLI}/*.pdb"
-	)
+	if (IS_RELEASE)
+		file(GLOB BIN_FILES
+			"${BIN_KALACLI}/*.so"
+		)
+	else()
+		file(GLOB BIN_FILES
+			"${BIN_KALACLI}/*.so"
+		)
+	endif()
 endif()
 
 set(BIN_TARGET_DIR "$<TARGET_FILE_DIR:KalaMake>")

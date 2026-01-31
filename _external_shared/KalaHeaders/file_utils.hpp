@@ -27,15 +27,18 @@
 #include <concepts>
 #include <type_traits>
 
-namespace KalaHeaders::KalaFile
-{	
+//reinterpret_cast
 #ifndef rcast
 	#define rcast reinterpret_cast
 #endif
+
+//static_cast
 #ifndef scast
 	#define scast static_cast
 #endif
 
+namespace KalaHeaders::KalaFile
+{	
 	using std::exception;
 	using std::string;
 	using std::string_view;
@@ -124,17 +127,17 @@ namespace KalaHeaders::KalaFile
 		same_as<remove_cvref_t<T>, string>
 		|| same_as<remove_cvref_t<T>, string_view>
 		|| (is_pointer_v<remove_cvref_t<T>>
-			&& same_as
-			<
+		&& same_as
+		<
 			remove_cv_t<remove_pointer_t<remove_cvref_t<T>>>,
 			char
-			>)
+		>)
 		|| (is_array_v<remove_reference_t<T>>
-			&& same_as
-			<
+		&& same_as
+		<
 			remove_cv_t<remove_extent_t<remove_reference_t<T>>>,
 			char
-			>);
+		>);
 
 	//Path, string, string_view, char* or charArrayName[N]
 	template<typename T>
@@ -151,35 +154,35 @@ namespace KalaHeaders::KalaFile
 		bool recursive = false)
 	{
 		auto get_extension = [](string_view f) -> string_view
-			{
-				auto pos = f.rfind('.');
+		{
+			auto pos = f.rfind('.');
 
-				//return empty extension, valid for GNU
-				if (pos == string_view::npos) return{};
-				//returns found extension
-				return f.substr(pos);
-			};
+			//return empty extension, valid for GNU
+			if (pos == string_view::npos) return{};
+			//returns found extension
+			return f.substr(pos);
+		};
 
 		auto get_valid_file = [](
 			const path& file,
 			string_view ext,
 			vector<path>& output)
+		{
+			bool hasValidExtension =
+				file.has_extension()
+				&& file.extension() == ext;
+
+			bool hasNoExtension =
+				!file.has_extension()
+				&& ext.empty();
+
+			if (is_regular_file(file)
+				&& (hasValidExtension
+				|| hasNoExtension))
 			{
-				bool hasValidExtension = 
-					file.has_extension()
-					&& file.extension() == ext;
-
-				bool hasNoExtension = 
-					!file.has_extension() 
-					&& ext.empty();
-
-				if (is_regular_file(file)
-					&& (hasValidExtension
-					|| hasNoExtension))
-				{
-					output.push_back(file);
-				}
-			};
+				output.push_back(file);
+			}
+		};
 
 		path p{ filePath };
 
@@ -189,21 +192,21 @@ namespace KalaHeaders::KalaFile
 		if (p.empty()) return "Failed to get files with wild card because the file path is empty!";
 
 		string fullFileName = recursive
-			? "**" + string(ext)
-			: "*" + string(ext);
+		? "**" + string(ext)
+		: "*" + string(ext);
 
 		if (filename != fullFileName)
 		{
-			return 
-				"Failed to get files with wild card because the file path "
-				"'" + p.string() + "' does not match any known wildcard pattern!";
+			return
+			"Failed to get files with wild card because the file path "
+			"'" + p.string() + "' does not match any known wildcard pattern!";
 		}
 
 		vector<path> tempOutFilePaths{};
 
 		path baseDir = p.parent_path().empty()
-			? "."
-			: p.parent_path();
+		? "."
+		: p.parent_path();
 
 		if (!recursive)
 		{
@@ -213,8 +216,8 @@ namespace KalaHeaders::KalaFile
 
 				get_valid_file(
 					fpath,
-					ext,
-					tempOutFilePaths);
+				   ext,
+				   tempOutFilePaths);
 			}
 		}
 		else
@@ -225,8 +228,8 @@ namespace KalaHeaders::KalaFile
 
 				get_valid_file(
 					fpath,
-					ext,
-					tempOutFilePaths);
+				   ext,
+				   tempOutFilePaths);
 			}
 		}
 
@@ -247,14 +250,14 @@ namespace KalaHeaders::KalaFile
 		if (p.empty()) return "Failed to get directories with wild card because the directory path is empty!";
 
 		string fullDirName = recursive
-			? "**"
-			: "*";
+		? "**"
+		: "*";
 
 		if (p.filename().string() != fullDirName)
 		{
-			return 
-				"Failed to get directories with wild card because the directory path "
-				"'" + p.string() + "' does not match any known wildcard pattern!";
+			return
+			"Failed to get directories with wild card because the directory path "
+			"'" + p.string() + "' does not match any known wildcard pattern!";
 		}
 
 		vector<path> tempOutDirPaths{};
@@ -454,11 +457,11 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
+		
 		path baseDir = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-		
+
 		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
@@ -691,7 +694,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -764,11 +771,11 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
+		
 		path baseDir = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-		
+
 		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
@@ -787,7 +794,7 @@ namespace KalaHeaders::KalaFile
 
 		try
 		{
-			path newTarget = baseDir / newName;
+			path newTarget = target.parent_path() / newName;
 			rename(target, newTarget);
 		}
 		catch (exception& e)
@@ -814,11 +821,11 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
+		
 		path baseDir = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-		
+
 		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
@@ -895,12 +902,12 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
-		path originBaseDir = origin.parent_path().empty()
+		
+		path baseDirOrigin = origin.parent_path().empty()
 			? "."
 			: origin.parent_path();
-		
-		auto fileStatusOrigin = status(originBaseDir);
+
+		auto fileStatusOrigin = status(baseDirOrigin);
 		auto filePermsOrigin = fileStatusOrigin.permissions();
 		
 		bool canWriteOrigin = (filePermsOrigin & (
@@ -915,12 +922,12 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
-		path targetBaseDir = target.parent_path().empty()
+		
+		path baseDirTarget = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-		
-		auto fileStatusTarget = status(targetBaseDir);
+
+		auto fileStatusTarget = status(baseDirTarget);
 		auto filePermsTarget = fileStatusTarget.permissions();
 		
 		bool canWriteTarget = (filePermsTarget & (
@@ -1013,12 +1020,8 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
-		path originBaseDir = origin.parent_path().empty()
-			? "."
-			: origin.parent_path();
 		
-		auto fileStatusOrigin = status(originBaseDir);
+		auto fileStatusOrigin = status(origin.parent_path());
 		auto filePermsOrigin = fileStatusOrigin.permissions();
 		
 		bool canWriteOrigin = (filePermsOrigin & (
@@ -1033,12 +1036,12 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-		
-		path targetBaseDir = target.parent_path().empty()
+
+		path baseDirTarget = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-
-		auto fileStatusTarget = status(targetBaseDir);
+		
+		auto fileStatusTarget = status(baseDirTarget);
 		auto filePermsTarget = fileStatusTarget.permissions();
 		
 		bool canWriteTarget = (filePermsTarget & (
@@ -1093,11 +1096,11 @@ namespace KalaHeaders::KalaFile
 
 			return oss.str();
 		}
-
+		
 		path baseDir = target.parent_path().empty()
 			? "."
 			: target.parent_path();
-		
+
 		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
@@ -1149,7 +1152,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -1218,7 +1225,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -1246,7 +1257,11 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to get target '" << target
 					<< "' line count because it couldn't be opened! "
@@ -1302,7 +1317,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canWrite = (filePerms & (
@@ -1375,7 +1394,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canWrite = (filePerms & (
@@ -1416,7 +1439,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to write text to target '" << target
 					<< "' because it couldn't be opened! "
@@ -1459,7 +1487,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -1487,7 +1519,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to read text from target '" << target
 					<< "' because it couldn't be opened! "
@@ -1546,7 +1583,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canWrite = (filePerms & (
@@ -1587,7 +1628,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to write lines to target '" << target
 					<< "' because it couldn't be opened! "
@@ -1637,7 +1683,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -1665,7 +1715,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to read lines from target '" << target
 					<< "' because it couldn't be opened! "
@@ -1801,7 +1856,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canWrite = (filePerms & (
@@ -1844,7 +1903,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to write binary lines to target '" << target
 					<< "' because it couldn't be opened! "
@@ -1863,7 +1927,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to write binary lines to target '" << target
 					<< "' because it couldn't be opened! "
@@ -1908,7 +1977,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -1937,7 +2010,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to read binary lines from target '" << target
 					<< "' because it couldn't be opened! "
@@ -2011,7 +2089,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to read binary lines from target '" << target
 					<< "' because it couldn't be opened! "
@@ -2316,7 +2399,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -2344,7 +2431,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to get ragge by value from target '" << target
 					<< "' because it couldn't be opened! "
@@ -2414,7 +2506,12 @@ namespace KalaHeaders::KalaFile
 					int err = errno;
 
 					char errbuf[256]{};
+
+#ifdef _WIN32
 					strerror_s(errbuf, sizeof(errbuf), err);
+#else
+					strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 					oss << "Failed to get range by value from target '" << target
 						<< "' because it couldn't be opened! "
@@ -2490,7 +2587,11 @@ namespace KalaHeaders::KalaFile
 			return oss.str();
 		}
 		
-		auto fileStatus = status(target);
+		path baseDir = target.parent_path().empty()
+			? "."
+			: target.parent_path();
+
+		auto fileStatus = status(baseDir);
 		auto filePerms = fileStatus.permissions();
 		
 		bool canRead = (filePerms & (
@@ -2518,7 +2619,12 @@ namespace KalaHeaders::KalaFile
 				int err = errno;
 
 				char errbuf[256]{};
+
+#ifdef _WIN32
 				strerror_s(errbuf, sizeof(errbuf), err);
+#else
+				strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 				oss << "Failed to get range by value from target '" << target
 					<< "' because it couldn't be opened! "
@@ -2588,7 +2694,12 @@ namespace KalaHeaders::KalaFile
 					int err = errno;
 
 					char errbuf[256]{};
+
+#ifdef _WIN32
 					strerror_s(errbuf, sizeof(errbuf), err);
+#else
+					strerror_r(err, errbuf, sizeof(errbuf));
+#endif
 
 					oss << "Failed to get range by value from target '" << target
 						<< "' because it couldn't be opened! "
