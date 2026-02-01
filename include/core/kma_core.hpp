@@ -299,7 +299,7 @@ namespace KalaMake::Core
 		vector<CustomFlag> customFlags{};
 
 		//what profiles are included in this kalamake project
-		vector<ProfileData> projects{};
+		vector<ProfileData> profiles{};
 		//what includes are included in this kalamake project
 		vector<string> includes{};
 	};
@@ -377,6 +377,8 @@ namespace KalaMake::Core
 			const vector<string>& value,
 			vector<CustomFlag>& outValues);
 
+		static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& GetCategoryTypes();
+		static const unordered_map<Version, string_view, EnumHash<Version>>& GetVersions();
 		static const unordered_map<FieldType, string_view, EnumHash<FieldType>>& GetFieldTypes();
 		static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& GetCompilerTypes();
 		static const unordered_map<StandardType, string_view, EnumHash<StandardType>>& GetStandardTypes();

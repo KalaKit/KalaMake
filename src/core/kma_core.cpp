@@ -6,7 +6,9 @@
 #include <sstream>
 #include <filesystem>
 #include <string>
+#include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "KalaHeaders/core_utils.hpp"
 #include "KalaHeaders/log_utils.hpp"
@@ -17,6 +19,7 @@
 
 #include "core/kma_core.hpp"
 
+using KalaHeaders::KalaCore::EnumHash;
 using KalaHeaders::KalaCore::ContainsValue;
 using KalaHeaders::KalaCore::IsComparable;
 using KalaHeaders::KalaCore::IsAssignable;
@@ -24,12 +27,20 @@ using KalaHeaders::KalaCore::AnyEnumAndStringMap;
 using KalaHeaders::KalaCore::AnyEnum;
 using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaCore::RemoveDuplicates;
+using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 using KalaHeaders::KalaFile::ReadLinesFromFile;
+using KalaHeaders::KalaFile::ResolveAnyPath;
 using KalaHeaders::KalaString::ContainsString;
+using KalaHeaders::KalaString::ReplaceAfter;
+using KalaHeaders::KalaString::TrimString;
 
 using KalaMake::Core::KalaMakeCore;
+using KalaMake::Core::GlobalData;
+using KalaMake::Core::ProfileData;
+using KalaMake::Core::CategoryType;
+using KalaMake::Core::Version;
 
 using std::ostringstream;
 using std::filesystem::exists;
@@ -41,9 +52,14 @@ using std::filesystem::filesystem_error;
 using std::string;
 using std::string_view;
 using std::vector;
+using std::unordered_map;
 
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
+
+static bool foundVersion{};
+static bool foundGlobal{};
+static bool foundInclude{};
 
 template<AnyEnumAndStringMap T>
 static bool EnumMapContainsValue(
@@ -107,6 +123,68 @@ static bool GetEnumFromMap(
 	}
 
 	outEnum = foundEnum;
+	return true;
+}
+
+static bool ExtractCategoryData(
+	const string& line,
+	string& outCategoryName,
+	string& outCategoryValue)
+{
+	string newLine = line;
+	newLine.erase(0,  1);
+	if (newLine.empty())
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve category '" + line + "' because it had no field name");
+
+		return false;
+	}
+
+	//fast exit for include and global category
+	if (newLine == "include"
+		|| newLine == "global")
+	{
+		outCategoryName = std::move(newLine);
+
+		return true;
+	}
+
+	size_t spacePos = newLine.find(' ');
+	if (spacePos == string::npos)
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve category '" + line + "' because its type had no value!");
+
+		return false;
+	}
+
+	string name = newLine.substr(0, spacePos);
+
+	CategoryType type{};
+	if (!KalaMakeCore::ResolveCategory(name, type)
+		|| type == CategoryType::C_INVALID)
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve category '" + line + "' because its type '" + name + "' was not found!");
+
+		return false;
+	}
+
+	size_t valueStart = newLine.find_first_not_of(' ', spacePos + 1);
+	if (valueStart == string::npos)
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve category '" + line + "' because its type had no value!");
+
+		return false;
+	}
+	
+	string value = newLine.substr(valueStart);
+
+	outCategoryName = std::move(name);
+	outCategoryValue = std::move(value);
+
 	return true;
 }
 
@@ -192,6 +270,8 @@ static bool ResolvePathVector(
 	return true;
 }
 
+static GlobalData FirstParse(const vector<string>& lines);
+
 namespace KalaMake::Core
 {
 	constexpr string_view EXE_VERSION_NUMBER = "1.0";
@@ -206,7 +286,7 @@ namespace KalaMake::Core
 	{
 		{ CategoryType::C_VERSION, "#version " },
 		{ CategoryType::C_INCLUDE, "#include" },
-		{ CategoryType::C_GLOBAL,  "#global" },
+		{ CategoryType::C_GLOBAL, "#global" },
 		{ CategoryType::C_PROFILE, "#profile " }
 	};
 
@@ -417,6 +497,8 @@ namespace KalaMake::Core
 			"\n\n==========================================================================================\n",
 			"KALAMAKE",
 			LogType::LOG_INFO);
+
+		GlobalData data = FirstParse(lines);
 	}
 
 	void KalaMakeCore::Generate(
@@ -428,6 +510,8 @@ namespace KalaMake::Core
 			"\n\n==========================================================================================\n",
 			"KALAMAKE",
 			LogType::LOG_INFO);
+
+		GlobalData data = FirstParse(lines);
 	}
 
 	bool KalaMakeCore::ResolveFieldReference(
@@ -639,6 +723,8 @@ namespace KalaMake::Core
 		return true;
 	}
 
+	const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& KalaMakeCore::GetCategoryTypes() { return categoryTypes; }
+	const unordered_map<Version, string_view, EnumHash<Version>>& KalaMakeCore::GetVersions() { return versions; }
 	const unordered_map<FieldType, string_view, EnumHash<FieldType>>& KalaMakeCore::GetFieldTypes() { return fieldTypes; }
 	const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& KalaMakeCore::GetCompilerTypes() { return compilerTypes; }
 	const unordered_map<StandardType, string_view, EnumHash<StandardType>>& KalaMakeCore::GetStandardTypes() { return standardTypes; }
@@ -654,4 +740,209 @@ namespace KalaMake::Core
 			LogType::LOG_ERROR,
 			2);
 	}
+}
+
+GlobalData FirstParse(const vector<string>& lines)
+{
+	GlobalData data{};
+
+	auto get_all_category_content = [&lines](
+		string_view categoryName,
+		string_view categoryValue = {}) -> vector<string>
+		{
+			bool collecting{};
+			vector<string> collected{};
+
+			for (const string& li : lines)
+			{
+				if (li.empty()
+					|| li.starts_with("//"))
+				{
+					continue;
+				}
+
+				string cli = TrimString(ReplaceAfter(li, "//"));
+				if (cli.empty()) continue;
+
+				if (!collecting)
+				{
+					if (categoryValue.empty())
+					{
+						if (cli == "#" + string(categoryName)) collecting = true;
+					}
+					else if (cli == "#" + string(categoryName) + " " + string(categoryValue)) collecting = true;
+					
+					continue;
+				}
+
+				if (cli[0] == '#') break;
+
+				collected.push_back(cli);
+			}
+
+			return collected;
+		};
+
+	for (const string& l : lines)
+	{
+		if (l.empty()
+			|| l.starts_with("//"))
+		{
+			continue;
+		}
+
+		if (!l.starts_with('#')) continue;
+
+		string cleanedLine = TrimString(ReplaceAfter(l, "//"));
+		
+		string categoryName{};
+		string categoryValue{};
+
+		if (!ExtractCategoryData(
+			cleanedLine, 
+			categoryName,
+			categoryValue))
+		{
+			exit(1);
+		}
+
+		const unordered_map<
+			CategoryType, 
+			string_view, 
+			EnumHash<CategoryType>>& categoryTypes 
+			= KalaMakeCore::GetCategoryTypes();
+
+		CategoryType categoryType{};
+		bool convertCategory = StringToEnum(
+			categoryName, 
+			categoryTypes, 
+			categoryType);
+
+		if (!convertCategory
+			|| categoryType == CategoryType::C_INVALID)
+		{
+			KalaMakeCore::PrintError(
+				"Failed to compile project because category type '" + categoryName  + "' is invalid!");
+			
+			exit(1);
+		}
+
+		if (categoryType == CategoryType::C_VERSION)
+		{
+			if (foundVersion)
+			{
+				KalaMakeCore::PrintError(
+					"Failed to compile project because version category was passed more than once!");
+
+				exit(1);
+			}
+
+			const unordered_map<
+				Version, 
+				string_view, 
+				EnumHash<Version>>& versions 
+				= KalaMakeCore::GetVersions();
+
+			Version v{};
+			bool convertVersion = StringToEnum(
+				categoryValue, 
+				versions, 
+				v);
+
+			if (!convertVersion
+				|| v == Version::V_INVALID)
+			{
+				KalaMakeCore::PrintError(
+					"Failed to compile project because version '" + categoryValue  + "' is invalid!");
+
+				exit(1);
+			}
+
+			foundVersion = true;
+			continue;
+		}
+		else if (categoryType == CategoryType::C_INCLUDE)
+		{
+			if (foundInclude)
+			{
+				KalaMakeCore::PrintError(
+					"Failed to compile project because include category was used more than once!");
+
+				exit(1);
+			}
+
+			foundInclude = true;
+
+			vector<string> content = get_all_category_content(categoryName);
+
+			vector<path> resolvedIncludes{};
+			
+			for (const string& c : content)
+			{
+				vector<path> foundIncludes{};
+				string result = ResolveAnyPath(c, ".", foundIncludes);
+
+				if (!result.empty())
+				{
+					KalaMakeCore::PrintError(
+					"Failed to compile project because include path '" + c + "' could not be resolved! Reason: " + result);
+
+					exit(1);
+				}
+				
+				resolvedIncludes.insert(
+					resolvedIncludes.end(),
+					make_move_iterator(foundIncludes.begin()),
+					make_move_iterator(foundIncludes.end()));
+			}
+
+			RemoveDuplicates(resolvedIncludes);
+
+			data.includes.insert(
+				data.includes.end(),
+				make_move_iterator(resolvedIncludes.begin()),
+				make_move_iterator(resolvedIncludes.end()));
+		}
+		else if (categoryType == CategoryType::C_GLOBAL)
+		{
+			if (foundGlobal)
+			{
+				KalaMakeCore::PrintError(
+					"Failed to compile project because global category was used more than once!");
+
+				exit(1);
+			}
+
+			foundGlobal = true;
+
+			vector<string> content = get_all_category_content(categoryName);
+
+			data.profiles.push_back(
+				{
+					.profileName = categoryValue
+				});
+		}
+		else if (categoryType == CategoryType::C_PROFILE)
+		{
+			for (const ProfileData& p : data.profiles)
+			{
+				if (p.profileName == categoryValue)
+				{
+					KalaMakeCore::PrintError(
+					"Failed to compile project because profile name '" + categoryValue  + "' was used more than once!");
+
+					exit(1);
+				}
+			}
+
+			vector<string> content = get_all_category_content(categoryName, categoryValue);
+
+			data.profiles.push_back(
+				{
+					.profileName = categoryValue
+				});
+		}
+	}
+
+	return data;
 }

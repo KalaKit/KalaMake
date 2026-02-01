@@ -360,6 +360,76 @@ namespace KalaHeaders::KalaString
 		return result;
 	}
 
+	//Replaces everything after the start of target with replacer and returns the result
+	inline constexpr string ReplaceAfter(
+		string_view origin, 
+		string_view target, 
+		string_view replacer = {})
+	{
+		if (origin.empty()) return {};
+		if (target.empty()) return string(origin);
+
+		size_t pos = origin.find(target);
+		if (pos == string_view::npos) return string(origin);
+
+		string result{};
+		result.reserve(pos + replacer.size());
+
+		result.append(origin.substr(0, pos));
+		result.append(replacer);
+
+		return result;
+	}
+
+	//Replaces everything before the end of target with replacer and returns the result
+	inline constexpr string ReplaceBefore(
+		string_view origin, 
+		string_view target,
+		string_view replacer = {})
+	{
+		if (origin.empty()) return {};
+		if (target.empty()) return string(origin);
+
+		size_t pos = origin.find(target);
+		if (pos == string_view::npos) return string(origin);
+
+		string result{};
+		result.reserve(replacer.size() + origin.size() - pos - target.size());
+
+		result.append(replacer);
+		result.append(origin.substr(pos + target.size()));
+
+		return result;
+	}
+
+	//Returns everything after the start of target
+	inline constexpr string GetAfter(
+		string_view origin, 
+		string_view target)
+	{
+		if (origin.empty()) return {};
+		if (target.empty()) return string(origin);
+
+		size_t pos = origin.find(target);
+		if (pos == string_view::npos) return string(origin);
+
+		return string(origin.substr(pos + target.size()));
+	}
+
+	//Returns everything before the end of target
+	inline constexpr string GetBefore(
+		string_view origin, 
+		string_view target)
+	{
+		if (origin.empty()) return {};
+		if (target.empty()) return string(origin);
+
+		size_t pos = origin.find(target);
+		if (pos == string_view::npos) return string(origin);
+
+		return string(origin.substr(0, pos));
+	}
+
 	//Set all letters of this string to uppercase letters
 	inline constexpr string ToUpperString(string_view origin)
 	{
@@ -418,45 +488,5 @@ namespace KalaHeaders::KalaString
 		for (unsigned char c : origin) if (isspace(c)) return true;
 		
 		return false;
-	}
-
-	//Check if origin starts with target
-	inline constexpr bool StartsWith(
-		string_view origin,
-		string_view target)
-	{
-		//an empty origin does not make sense to be checked
-		if (origin.empty()) return false;
-
-		//an empty target always matches
-		if (target.empty()) return true;
-
-		//can't start with something longer than itself
-		if (target.size() > origin.size()) return false;
-
-		return origin.compare(
-			0,
-			target.size(),
-			target) == 0;
-	}
-
-	//Check if origin ends with target
-	inline constexpr bool EndsWith(
-		string_view origin,
-		string_view target)
-	{
-		//an empty origin does not make sense to be checked
-		if (origin.empty()) return false;
-
-		//an empty target always matches
-		if (target.empty()) return true;
-
-		//can't end with something longer than itself
-		if (target.size() > origin.size()) return false;
-
-		return origin.compare(
-			origin.size() - target.size(),
-			target.size(),
-			target) == 0;
 	}
 }
