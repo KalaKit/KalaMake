@@ -57,7 +57,10 @@ namespace KalaMake::Core
 		C_GLOBAL = 3,
 
 		//optional N amount of profile categories with custom names
-		C_PROFILE = 4
+		C_PROFILE = 4,
+
+		//optional post-build commands
+		C_POST_BUILD = 5
 	};
 
 	//Allowed field types that can be added to global and profile categories
@@ -97,7 +100,18 @@ namespace KalaMake::Core
 		//what flags will be passed to the compiler
 		T_FLAGS = 13u,
 		//what kalamake-specific flags will trigger extra actions
-		T_CUSTOM_FLAGS = 14u
+		T_CUSTOM_FLAGS = 14u,
+
+		//where a file or folder is moved
+		T_MOVE = 15u,
+		//where a file or folder is copied
+		T_COPY = 16u,
+		//where a file or folder is copied and overridden if it already exists
+		T_FORCECOPY = 17u,
+		//where a new folder is created
+		T_CREATE_DIR = 18u,
+		//where a file or folder is deleted
+		T_DELETE = 19u
 	};
 
 	//Allowed compiler types that can be added to the compiler field
@@ -132,13 +146,15 @@ namespace KalaMake::Core
 		C_23 = 5,
 		C_LATEST = 6,
 
-		CPP_11 = 7,
-		CPP_14 = 8,
-		CPP_17 = 9,
-		CPP_20 = 10,
-		CPP_23 = 11,
-		CPP_26 = 12,
-		CPP_LATEST = 13
+		CPP_98 = 7,
+		CPP_03 = 8,
+		CPP_11 = 9,
+		CPP_14 = 10,
+		CPP_17 = 11,
+		CPP_20 = 12,
+		CPP_23 = 13,
+		CPP_26 = 14,
+		CPP_LATEST = 15
 	};
 
 	//Allowed build types that can be added to the buildtype field

@@ -54,12 +54,95 @@ using std::string_view;
 using std::vector;
 using std::unordered_map;
 
+constexpr string_view version_1_0 = "1.0";
+
+constexpr string_view category_version   = "version";
+constexpr string_view category_include   = "include";
+constexpr string_view category_global    = "global";
+constexpr string_view category_profile   = "profile";
+constexpr string_view category_postbuild = "postbuild";
+
+constexpr string_view field_binary_type    = "binarytype";
+constexpr string_view field_compiler       = "compiler";
+constexpr string_view field_standard       = "standard";
+constexpr string_view field_target_profile = "targetprofile";
+constexpr string_view field_binary_name    = "binaryname";
+constexpr string_view field_build_type     = "buildtype";
+constexpr string_view field_build_path     = "buildpath";
+constexpr string_view field_sources        = "sources";
+constexpr string_view field_headers        = "headers";
+constexpr string_view field_links          = "links";
+constexpr string_view field_warning_level  = "warninglevel";
+constexpr string_view field_defines        = "defines";
+constexpr string_view field_flags          = "flags";
+constexpr string_view field_custom_flags   = "customflags";
+constexpr string_view field_move           = "move";
+constexpr string_view field_copy           = "copy";
+constexpr string_view field_force_copy     = "forcecopy";
+constexpr string_view field_create_dir     = "createdir";
+constexpr string_view field_delete         = "delete";
+
+constexpr string_view compiler_clang_cl = "clang-cl";
+constexpr string_view compiler_cl       = "cl";
+constexpr string_view compiler_clang    = "clang";
+constexpr string_view compiler_clangpp  = "clang++";
+constexpr string_view compiler_gcc      = "gcc";
+constexpr string_view compiler_gpp      = "g++";
+
+constexpr string_view standard_c89        = "c89";
+constexpr string_view standard_c99        = "c99";
+constexpr string_view standard_c11        = "c11";
+constexpr string_view standard_c17        = "c17";
+constexpr string_view standard_c23        = "c23";
+constexpr string_view standard_c_latest   = "clatest";
+constexpr string_view standard_cpp98      = "c++98";
+constexpr string_view standard_cpp03      = "c++03";
+constexpr string_view standard_cpp11      = "c++11";
+constexpr string_view standard_cpp14      = "c++14";
+constexpr string_view standard_cpp17      = "c++17";
+constexpr string_view standard_cpp20      = "c++20";
+constexpr string_view standard_cpp23      = "c++23";
+constexpr string_view standard_cpp26      = "c++26";
+constexpr string_view standard_cpp_latest = "c++latest";
+
+constexpr string_view build_type_debug      = "debug";
+constexpr string_view build_type_release    = "release";
+constexpr string_view build_type_reldebug   = "reldebug";
+constexpr string_view build_type_minsizerel = "minsizerel";
+
+constexpr string_view binary_type_executable   = "executable";
+constexpr string_view binary_type_link_only    = "link-only";
+constexpr string_view binary_type_runtime_only = "runtime-only";
+constexpr string_view binary_type_link_runtime = "link-runtime";
+
+constexpr string_view warning_level_none   = "none";
+constexpr string_view warning_level_basic  = "basic";
+constexpr string_view warning_level_normal = "normal";
+constexpr string_view warning_level_strong = "strong";
+constexpr string_view warning_level_strict = "strict";
+constexpr string_view warning_level_all    = "all";
+
+constexpr string_view custom_flag_use_ninja        = "use-ninja";
+constexpr string_view custom_flag_no_obj           = "no-obj";
+constexpr string_view custom_flag_standard_req     = "standard-required";
+constexpr string_view custom_warnings_as_err       = "warnings-as-errors";
+constexpr string_view custom_flag_export_comp_comm = "export-compile-commands";
+
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
 
 static bool foundVersion{};
-static bool foundGlobal{};
 static bool foundInclude{};
+static bool foundGlobal{};
+static bool foundPostBuild{};
+
+static void CleanFoundFlags()
+{
+	foundVersion = false;
+	foundInclude = false;
+	foundGlobal = false;
+	foundPostBuild = false;
+}
 
 template<AnyEnumAndStringMap T>
 static bool EnumMapContainsValue(
@@ -136,25 +219,42 @@ static bool ExtractCategoryData(
 	if (newLine.empty())
 	{
 		KalaMakeCore::PrintError(
-			"Failed to resolve category '" + line + "' because it had no field name");
+			"Failed to resolve category '" + line + "' because it had no type or value!");
 
 		return false;
 	}
 
-	//fast exit for include and global category
-	if (newLine == "include"
-		|| newLine == "global")
+	if (newLine == category_include)
 	{
-		outCategoryName = std::move(newLine);
-
+		outCategoryName = category_include;
 		return true;
+	}
+	if (newLine == category_global)
+	{
+		outCategoryName = category_global;
+		return true;
+	}
+	if (newLine == category_postbuild)
+	{
+		outCategoryName = category_postbuild;
+		return true;
+	}
+
+	if (newLine.starts_with(category_include)
+		|| newLine.starts_with(category_global)
+		|| newLine.starts_with(category_postbuild))
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve category line '" + line + "' because it is not allowed to have a value after its name!");
+
+		return false;
 	}
 
 	size_t spacePos = newLine.find(' ');
 	if (spacePos == string::npos)
 	{
 		KalaMakeCore::PrintError(
-			"Failed to resolve category '" + line + "' because its type had no value!");
+			"Failed to resolve category line '" + line + "' because its value was empty!");
 
 		return false;
 	}
@@ -166,7 +266,7 @@ static bool ExtractCategoryData(
 		|| type == CategoryType::C_INVALID)
 	{
 		KalaMakeCore::PrintError(
-			"Failed to resolve category '" + line + "' because its type '" + name + "' was not found!");
+			"Failed to resolve category line '" + line + "' because its type '" + name + "' was not found!");
 
 		return false;
 	}
@@ -175,15 +275,15 @@ static bool ExtractCategoryData(
 	if (valueStart == string::npos)
 	{
 		KalaMakeCore::PrintError(
-			"Failed to resolve category '" + line + "' because its type had no value!");
+			"Failed to resolve category line '" + line + "' because its value was empty!");
 
 		return false;
 	}
 	
 	string value = newLine.substr(valueStart);
 
-	outCategoryName = std::move(name);
-	outCategoryValue = std::move(value);
+	outCategoryName = name;
+	outCategoryValue = value;
 
 	return true;
 }
@@ -279,63 +379,72 @@ namespace KalaMake::Core
 
 	static const unordered_map<Version, string_view, EnumHash<Version>> versions =
 	{
-		{ Version::V_1_0, "1.0" }
+		{ Version::V_1_0, version_1_0 }
 	};
 
 	static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>> categoryTypes =
 	{
-		{ CategoryType::C_VERSION, "#version " },
-		{ CategoryType::C_INCLUDE, "#include" },
-		{ CategoryType::C_GLOBAL, "#global" },
-		{ CategoryType::C_PROFILE, "#profile " }
+		{ CategoryType::C_VERSION, category_version },
+		{ CategoryType::C_INCLUDE, category_include },
+		{ CategoryType::C_GLOBAL, category_global },
+		{ CategoryType::C_PROFILE, category_profile },
+		{ CategoryType::C_POST_BUILD, category_postbuild }
 	};
 
 	static const unordered_map<FieldType, string_view, EnumHash<FieldType>> fieldTypes =
 	{
-		{ FieldType::T_BINARY_TYPE,    "binarytype: " },
-		{ FieldType::T_COMPILER,       "compiler: " },
-		{ FieldType::T_STANDARD,       "standard: " },
-		{ FieldType::T_TARGET_PROFILE, "targetprofile: " },
+		{ FieldType::T_BINARY_TYPE,    field_binary_type },
+		{ FieldType::T_COMPILER,       field_compiler },
+		{ FieldType::T_STANDARD,       field_standard },
+		{ FieldType::T_TARGET_PROFILE, field_target_profile },
 
-		{ FieldType::T_BINARY_NAME,   "binaryname: " },
-		{ FieldType::T_BUILD_TYPE,    "buildtype: " },
-		{ FieldType::T_BUILD_PATH,    "buildpath: " },
-		{ FieldType::T_SOURCES,       "sources: " },
-		{ FieldType::T_HEADERS,       "headers: " },
-		{ FieldType::T_LINKS,         "links: " },
-		{ FieldType::T_WARNING_LEVEL, "warninglevel: " },
-		{ FieldType::T_DEFINES,       "defines: " },
-		{ FieldType::T_FLAGS,         "flags: " },
-		{ FieldType::T_CUSTOM_FLAGS,  "customflags: " }
+		{ FieldType::T_BINARY_NAME,    field_binary_name },
+		{ FieldType::T_BUILD_TYPE,     field_build_type },
+		{ FieldType::T_BUILD_PATH,     field_build_path },
+		{ FieldType::T_SOURCES,        field_sources },
+		{ FieldType::T_HEADERS,        field_headers },
+		{ FieldType::T_LINKS,          field_links },
+		{ FieldType::T_WARNING_LEVEL, field_warning_level },
+		{ FieldType::T_DEFINES,       field_defines },
+		{ FieldType::T_FLAGS,         field_flags },
+		{ FieldType::T_CUSTOM_FLAGS,  field_custom_flags },
+
+		{ FieldType::T_MOVE,       field_move },
+		{ FieldType::T_COPY,       field_copy },
+		{ FieldType::T_FORCECOPY,  field_force_copy },
+		{ FieldType::T_CREATE_DIR, field_create_dir },
+		{ FieldType::T_DELETE,     field_delete }
 	};
 
 	static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>> compilerTypes =
 	{
-		{ CompilerType::C_CLANG_CL, "clang-cl" },
-		{ CompilerType::C_CL,       "cl" },
+		{ CompilerType::C_CLANG_CL, compiler_clang_cl },
+		{ CompilerType::C_CL,       compiler_cl },
 
-		{ CompilerType::C_CLANG,    "clang" },
-		{ CompilerType::C_CLANGPP,  "clang++" },
-		{ CompilerType::C_GCC,      "gcc" },
-		{ CompilerType::C_GPP,      "g++" }
+		{ CompilerType::C_CLANG,    compiler_clang },
+		{ CompilerType::C_CLANGPP,  compiler_clangpp },
+		{ CompilerType::C_GCC,      compiler_gcc },
+		{ CompilerType::C_GPP,      compiler_gpp }
 	};
 
 	static const unordered_map<StandardType, string_view, EnumHash<StandardType>> standardTypes =
 	{
-		{ StandardType::C_89,     "c89" },
-		{ StandardType::C_99,     "c99" },
-		{ StandardType::C_11,     "c11" },
-		{ StandardType::C_17,     "c17" },
-		{ StandardType::C_23,     "c23" },
-		{ StandardType::C_LATEST, "clatest" },
+		{ StandardType::C_89,     standard_c89 },
+		{ StandardType::C_99,     standard_c99 },
+		{ StandardType::C_11,     standard_c11 },
+		{ StandardType::C_17,     standard_c17 },
+		{ StandardType::C_23,     standard_c23 },
+		{ StandardType::C_LATEST, standard_c_latest },
 
-		{ StandardType::CPP_11,     "c++11" },
-		{ StandardType::CPP_14,     "c++14" },
-		{ StandardType::CPP_17,     "c++17" },
-		{ StandardType::CPP_20,     "c++20" },
-		{ StandardType::CPP_23,     "c++23" },
-		{ StandardType::CPP_26,     "c++26" },
-		{ StandardType::CPP_LATEST, "c++latest" }
+		{ StandardType::CPP_98,      standard_cpp98 },
+		{ StandardType::CPP_03,      standard_cpp03 },
+		{ StandardType::CPP_11,      standard_cpp11 },
+		{ StandardType::CPP_14,      standard_cpp14 },
+		{ StandardType::CPP_17,     standard_cpp17 },
+		{ StandardType::CPP_20,     standard_cpp20 },
+		{ StandardType::CPP_23,     standard_cpp23 },
+		{ StandardType::CPP_26,     standard_cpp26 },
+		{ StandardType::CPP_LATEST, standard_cpp_latest }
 	};
 
 	static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
@@ -398,7 +507,7 @@ namespace KalaMake::Core
 			{
 				if (is_directory(filePath))
 				{
-					KalaMakeCore::PrintError("Failed to compile project because its path '" + filePath.string() + "' leads to a directory!");
+					KalaMakeCore::PrintError("its path '" + filePath.string() + "' leads to a directory!");
 
 					return;
 				}
@@ -406,7 +515,7 @@ namespace KalaMake::Core
 				if (!filePath.has_extension()
 					|| filePath.extension() != ".kmake")
 				{
-					KalaMakeCore::PrintError("Failed to compile project because its path '" + filePath.string() + "' has an incorrect extension!");
+					KalaMakeCore::PrintError("its path '" + filePath.string() + "' has an incorrect extension!");
 
 					return;
 				}
@@ -453,7 +562,7 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			KalaMakeCore::PrintError("Failed to compile project because partial path via '" + projectFile.string() + "' could not be resolved!");
+			KalaMakeCore::PrintError("partial path via '" + projectFile.string() + "' could not be resolved!");
 
 			return;
 		}
@@ -473,7 +582,7 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			KalaMakeCore::PrintError("Failed to compile project because full path '" + projectFile.string() + "' could not be resolved!");
+			KalaMakeCore::PrintError("full path '" + projectFile.string() + "' could not be resolved!");
 
 			return;
 		}
@@ -485,7 +594,7 @@ namespace KalaMake::Core
 			return;
 		}
 
-		KalaMakeCore::PrintError("Failed to compile project because its path '" + projectFile.string() + "' does not exist!");
+		KalaMakeCore::PrintError("its path '" + projectFile.string() + "' does not exist!");
 	}
 
 	void KalaMakeCore::Compile(
@@ -499,6 +608,8 @@ namespace KalaMake::Core
 			LogType::LOG_INFO);
 
 		GlobalData data = FirstParse(lines);
+
+		CleanFoundFlags();
 	}
 
 	void KalaMakeCore::Generate(
@@ -512,6 +623,8 @@ namespace KalaMake::Core
 			LogType::LOG_INFO);
 
 		GlobalData data = FirstParse(lines);
+
+		CleanFoundFlags();
 	}
 
 	bool KalaMakeCore::ResolveFieldReference(
@@ -783,6 +896,41 @@ GlobalData FirstParse(const vector<string>& lines)
 			return collected;
 		};
 
+	auto remove_quotes = [](const string& input) -> string
+		{
+			if (input.empty())
+			{
+				KalaMakeCore::PrintError("Failed to parse path! Cannot remove '\"' from empty path.");
+			
+				exit(1);
+			}
+
+			if (input.size() <= 2)
+			{
+				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' was too small.");
+			
+				exit(1);
+			}
+
+			if (input.front() != '"'
+				|| input.back() != '"')
+			{
+				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' did not have the '\"' symbol at the front or back.");
+			
+				exit(1);
+			}
+
+			string result = input;
+
+			result.erase(0, 1);
+			result.pop_back();
+
+			return result;
+		};
+
+	const auto& categoryTypes = KalaMakeCore::GetCategoryTypes();
+	const auto& versions = KalaMakeCore::GetVersions();
+
 	for (const string& l : lines)
 	{
 		if (l.empty()
@@ -806,12 +954,6 @@ GlobalData FirstParse(const vector<string>& lines)
 			exit(1);
 		}
 
-		const unordered_map<
-			CategoryType, 
-			string_view, 
-			EnumHash<CategoryType>>& categoryTypes 
-			= KalaMakeCore::GetCategoryTypes();
-
 		CategoryType categoryType{};
 		bool convertCategory = StringToEnum(
 			categoryName, 
@@ -821,8 +963,7 @@ GlobalData FirstParse(const vector<string>& lines)
 		if (!convertCategory
 			|| categoryType == CategoryType::C_INVALID)
 		{
-			KalaMakeCore::PrintError(
-				"Failed to compile project because category type '" + categoryName  + "' is invalid!");
+			KalaMakeCore::PrintError("Category type at line '" + cleanedLine  + "' is invalid!");
 			
 			exit(1);
 		}
@@ -831,17 +972,10 @@ GlobalData FirstParse(const vector<string>& lines)
 		{
 			if (foundVersion)
 			{
-				KalaMakeCore::PrintError(
-					"Failed to compile project because version category was passed more than once!");
+				KalaMakeCore::PrintError("Version category was passed more than once!");
 
 				exit(1);
 			}
-
-			const unordered_map<
-				Version, 
-				string_view, 
-				EnumHash<Version>>& versions 
-				= KalaMakeCore::GetVersions();
 
 			Version v{};
 			bool convertVersion = StringToEnum(
@@ -852,8 +986,7 @@ GlobalData FirstParse(const vector<string>& lines)
 			if (!convertVersion
 				|| v == Version::V_INVALID)
 			{
-				KalaMakeCore::PrintError(
-					"Failed to compile project because version '" + categoryValue  + "' is invalid!");
+				KalaMakeCore::PrintError("Version '" + categoryValue  + "' is invalid!");
 
 				exit(1);
 			}
@@ -865,8 +998,7 @@ GlobalData FirstParse(const vector<string>& lines)
 		{
 			if (foundInclude)
 			{
-				KalaMakeCore::PrintError(
-					"Failed to compile project because include category was used more than once!");
+				KalaMakeCore::PrintError("Include category was used more than once!");
 
 				exit(1);
 			}
@@ -879,13 +1011,14 @@ GlobalData FirstParse(const vector<string>& lines)
 			
 			for (const string& c : content)
 			{
-				vector<path> foundIncludes{};
-				string result = ResolveAnyPath(c, ".", foundIncludes);
+				string cleanedLine = remove_quotes(c);
 
-				if (!result.empty())
+				vector<path> foundIncludes{};
+				string errorMsg = ResolveAnyPath(cleanedLine, kmaPath.string(), foundIncludes);
+
+				if (!errorMsg.empty())
 				{
-					KalaMakeCore::PrintError(
-					"Failed to compile project because include path '" + c + "' could not be resolved! Reason: " + result);
+					KalaMakeCore::PrintError("Include path '" + c + "' could not be resolved! Reason: " + errorMsg);
 
 					exit(1);
 				}
@@ -907,8 +1040,7 @@ GlobalData FirstParse(const vector<string>& lines)
 		{
 			if (foundGlobal)
 			{
-				KalaMakeCore::PrintError(
-					"Failed to compile project because global category was used more than once!");
+				KalaMakeCore::PrintError("Global category was used more than once!");
 
 				exit(1);
 			}
@@ -928,8 +1060,7 @@ GlobalData FirstParse(const vector<string>& lines)
 			{
 				if (p.profileName == categoryValue)
 				{
-					KalaMakeCore::PrintError(
-					"Failed to compile project because profile name '" + categoryValue  + "' was used more than once!");
+					KalaMakeCore::PrintError("Profile name '" + categoryValue  + "' was used more than once!");
 
 					exit(1);
 				}
@@ -941,6 +1072,19 @@ GlobalData FirstParse(const vector<string>& lines)
 				{
 					.profileName = categoryValue
 				});
+		}
+		else if (categoryType == CategoryType::C_POST_BUILD)
+		{
+			if (foundPostBuild)
+			{
+				KalaMakeCore::PrintError("Post build category was used more than once!");
+
+				exit(1);
+			}
+
+			foundPostBuild = true;
+
+			vector<string> content = get_all_category_content(categoryName, categoryValue);
 		}
 	}
 
