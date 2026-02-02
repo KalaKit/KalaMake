@@ -72,6 +72,9 @@ namespace KalaHeaders::KalaFile
 	using std::is_pointer_v;
 	using std::is_array_v;
 	using std::same_as;
+	using std::equality_comparable_with;
+	using std::assignable_from;
+	using std::constructible_from;
 	using std::remove_cv_t;
 	using std::remove_cvref_t;
 	using std::remove_pointer_t;
@@ -119,7 +122,7 @@ namespace KalaHeaders::KalaFile
 	};
 
 	//
-	// WILDCARDS
+	// COMMON CONCEPTS
 	//
 
 	//String, string_view, char* or charArrayName[N]
@@ -145,6 +148,28 @@ namespace KalaHeaders::KalaFile
 	concept AnyPath =
 		same_as<remove_cvref_t<T>, path>
 		|| AnyString<T>;
+
+	//Vector of type T (vector<T>)
+	template<typename T>
+	concept AnyVector =
+		same_as<remove_cvref_t<T>,
+		vector<typename remove_cvref_t<T>::value_type>>;
+
+	//Type X and Y can be compared with each other
+	template<typename X, typename Y>
+	concept IsComparable = equality_comparable_with<X, Y>;
+
+	//Type X can be assigned as the value of type Y
+	template<typename X, typename Y>
+	concept IsAssignable = assignable_from<X, Y>;
+
+	//Type X can be constructoed to type Y
+	template<typename X, typename Y>
+	concept IsConstrutible = constructible_from<X, Y>;
+
+	//
+	// WILDCARDS
+	//
 
 	enum class PathTarget : u8
 	{
@@ -527,6 +552,40 @@ namespace KalaHeaders::KalaFile
 		}
 
 		return "Failed to resolve path '" + string(input) + "'!";
+	}
+
+	//
+	// CONVERT CONTAINER
+	//
+
+	//Convert a path vector to a string vector
+	inline string ToStringVector(
+		const vector<path>& in, 
+		vector<string>& out)
+	{
+		if (in.empty()) return "Failed to convert path vector because it was empty!";
+
+		out.clear();
+		out.reserve(in.size());
+
+		for (const path& p : in) out.push_back(p.string());
+
+		return {};
+	}
+
+	//Convert a string vector to a path vector
+	inline string ToPathVector(
+		const vector<string>& in, 
+		vector<path>& out)
+	{
+		if (in.empty()) return "Failed to convert string vector because it was empty!";
+
+		out.clear();
+		out.reserve(in.size());
+
+		for (const string& s : in) out.push_back(path(s));
+
+		return {};
 	}
 
 	//
