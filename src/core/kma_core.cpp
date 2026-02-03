@@ -33,11 +33,13 @@ using KalaHeaders::KalaLog::LogType;
 using KalaHeaders::KalaFile::ReadLinesFromFile;
 using KalaHeaders::KalaFile::ResolveAnyPath;
 using KalaHeaders::KalaFile::ToStringVector;
+using KalaHeaders::KalaFile::HasAnyUnsafePathChar;
 using KalaHeaders::KalaFile::PathTarget;
-using KalaHeaders::KalaString::ContainsString;
 using KalaHeaders::KalaString::SplitString;
 using KalaHeaders::KalaString::ReplaceAfter;
 using KalaHeaders::KalaString::TrimString;
+using KalaHeaders::KalaString::HasAnyWhiteSpace;
+using KalaHeaders::KalaString::HasAnyUnsafeFieldChar;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::GlobalData;
@@ -86,6 +88,7 @@ constexpr string_view field_copy           = "copy";
 constexpr string_view field_force_copy     = "forcecopy";
 constexpr string_view field_create_dir     = "createdir";
 constexpr string_view field_delete         = "delete";
+constexpr string_view field_rename         = "rename";
 
 constexpr string_view compiler_clang_cl = "clang-cl";
 constexpr string_view compiler_cl       = "cl";
@@ -371,25 +374,69 @@ static void ExtractCategoryData(
 	outCategoryValue = value;
 }
 
-static bool ExtractFieldData(
+static void ExtractFieldData(
 	const string& line,
 	string& outFieldName,
-	vector<string>& outFieldValues)
+	vector<string>& outFieldValues,
+	bool isInclude = false)
 {
-	if (!ContainsString(line, ": "))
+	if (line.find(": ") == string::npos)
 	{
 		KalaMakeCore::PrintError(
-			"Failed to resolve field line '" + line + "' because it is missing its value!");
+			"Failed to resolve field '" + line + "' because it is missing its name and value separator!");
 
 		exit(1);
 	}
 
 	vector<string> split = SplitString(line, ": ");
 
+	if (split.size() > 2)
+	{
+		KalaMakeCore::PrintError(
+			"Failed to resolve field '" + line + "' because it has more than one name and value separator!");
+
+		exit(1);
+	}
+
 	string name = split[0];
 	string value = split[1];
 
-	auto remove_quotes = [](const string& input) -> string
+	if (HasAnyWhiteSpace(name))
+	{
+		KalaMakeCore::PrintError(
+			"Field name '" + name + "' cannot have spaces!");
+
+		exit(1);
+	}
+	if (HasAnyUnsafeFieldChar(name))
+	{
+		KalaMakeCore::PrintError(
+			"Field name '" + name + "' must only contain A-Z, a-z, 0-9, _ or -!");
+
+		exit(1);
+	}
+
+	FieldType t{};
+	bool searchSuccess = StringToEnum(name, KalaMakeCore::GetFieldTypes(), t);
+
+	if (!isInclude
+		&& (!searchSuccess
+		|| t == FieldType::T_INVALID))
+	{
+		KalaMakeCore::PrintError("Field '" + name  + "' is invalid!");
+				
+		exit(1);
+	}
+	else if (isInclude
+			 && searchSuccess
+			 && t != FieldType::T_INVALID)
+	{
+		KalaMakeCore::PrintError("Field '" + name  + "' cannot be used for include field names!");
+				
+		exit(1);
+	}
+
+	auto require_quotes = [](const string& input) -> string
 		{
 			if (input.empty())
 			{
@@ -421,55 +468,6 @@ static bool ExtractFieldData(
 			return result;
 		};
 
-	FieldType t{};
-	if (t == FieldType::T_INVALID
-		|| !StringToEnum(name, KalaMakeCore::GetFieldTypes(), t))
-	{
-		KalaMakeCore::PrintError("Field type at line '" + line  + "' is invalid!");
-			
-		exit(1);
-	}
-
-	//these global fields must have a value
-	if ((name == field_binary_type
-		|| name == field_compiler
-		|| name == field_standard
-		|| name == field_target_profile)
-		&& value.empty())
-	{
-		KalaMakeCore::PrintError(
-			"Field '" + name + "' must have a value!");
-
-		exit(1);
-	}
-
-	//links are allowed to have values without quotes
-	if ((name == field_build_path
-		|| name == field_sources
-		|| name == field_headers)
-		&& !value.empty()
-		&& !ContainsString(value, "\""))
-	{
-		KalaMakeCore::PrintError(
-			"Quotes must be used for path fields, field '" + name + "' does not have them!");
-
-		exit(1);
-	}
-
-	//non-path fields must not use quotes
-	if (name != field_build_path
-		&& name != field_sources
-		&& name != field_headers
-		&& name != field_links
-		&& !value.empty()
-		&& ContainsString(value, "\""))
-	{
-		KalaMakeCore::PrintError(
-			"Quotes are only reserved for path fields, field '" + name + "' must not use them!");
-
-		exit(1);
-	}
-
 	//
 	// PARSE FIELD
 	//
@@ -484,13 +482,7 @@ static bool ExtractFieldData(
 			exit(1);
 		}
 
-		if (ContainsString(value, "*"))
-		{
-			KalaMakeCore::PrintError("Build path '" + name  + "' is not allowed to use wildcards!");
-				
-			exit(1);
-		}
-		if (ContainsString(value, ","))
+		if (value.find(",") != string::npos)
 		{
 			KalaMakeCore::PrintError("Build path '" + name  + "' is not allowed to have more than one path!");
 				
@@ -517,7 +509,15 @@ static bool ExtractFieldData(
 			exit(1);
 		}
 
-		string cleanedValue = remove_quotes(value);
+		string cleanedValue = require_quotes(value);
+
+		if (HasAnyUnsafePathChar(cleanedValue))
+		{
+			KalaMakeCore::PrintError(
+				"Build path value '" + cleanedValue + "' must not contain illegal path characters!");
+
+			exit(1);
+		}
 
 		vector<path> resolvedPaths{};
 		string errorMsg = ResolveAnyPath(
@@ -539,12 +539,18 @@ static bool ExtractFieldData(
 		outFieldName = name;
 		outFieldValues = result;
 
-		return true;
+		return;
 	}
-
-	if (name == field_sources
-		|| name == field_headers)
+	else if (name == field_sources
+			 || name == field_headers)
 	{
+		//early exit for empty value
+		if (value.empty())
+		{
+			outFieldName = name;
+			return;
+		}
+
 		vector<string> splitPaths = SplitString(value, ", ");
 
 		vector<string> result{};
@@ -571,7 +577,15 @@ static bool ExtractFieldData(
 				exit(1);
 			}
 
-			string cleanedValue = remove_quotes(l);
+			string cleanedValue = require_quotes(l);
+
+			if (HasAnyUnsafePathChar(cleanedValue))
+			{
+				KalaMakeCore::PrintError(
+					"Source or header value '" + cleanedValue + "' must not contain illegal path characters!");
+
+				exit(1);
+			}
 
 			vector<string> resolvedStringPaths{};
 			vector<path> resolvedPaths{};
@@ -621,11 +635,17 @@ static bool ExtractFieldData(
 		outFieldName = name;
 		outFieldValues = result;
 
-		return true;
+		return;
 	}
-
-	if (name == field_links)
+	else if (name == field_links)
 	{
+		//early exit for empty value
+		if (value.empty())
+		{
+			outFieldName = name;
+			return;
+		}
+
 		vector<string> splitPaths = SplitString(value, ", ");
 
 		vector<string> result{};
@@ -640,7 +660,15 @@ static bool ExtractFieldData(
 					&& !l.ends_with(".lib"))
 				{
 					KalaMakeCore::PrintError(
-						"Relative link '" + l + "' does not have an extension!");
+						"Relative link value '" + l + "' does not have an extension!");
+
+					exit(1);
+				}
+
+				if (HasAnyUnsafeFieldChar(l))
+				{
+					KalaMakeCore::PrintError(
+						"Relative link value '" + l + "' must only contain A-Z, a-z, 0-9, _ or -!");
 
 					exit(1);
 				}
@@ -669,7 +697,15 @@ static bool ExtractFieldData(
 					exit(1);
 				}
 
-				string cleanedValue = remove_quotes(l);
+				string cleanedValue = require_quotes(l);
+
+				if (HasAnyUnsafePathChar(cleanedValue))
+				{
+					KalaMakeCore::PrintError(
+						"Link value '" + cleanedValue + "' must not contain illegal path characters!");
+
+					exit(1);
+				}
 
 				vector<string> resolvedStringPaths{};
 				vector<path> resolvedPaths{};
@@ -702,10 +738,228 @@ static bool ExtractFieldData(
 		outFieldName = name;
 		outFieldValues = result;
 
-		return true;
+		return;
 	}
+	//any field name in includes
+	else if (isInclude)
+	{
+		if (value.empty())
+		{
+			KalaMakeCore::PrintError(
+				"Include field '" + name + "' must have a value!");
 
-	return true;
+			exit(1);
+		}
+
+		if (value.find(",") != string::npos)
+		{
+			KalaMakeCore::PrintError("Include field '" + name  + "' is not allowed to have more than one path!");
+				
+			exit(1);
+		}
+
+		vector<string> splitPaths = SplitString(value, ", ");
+
+		vector<string> result{};
+
+		for (const string& l : splitPaths)
+		{
+			if ((!l.starts_with('"')
+				&& l.ends_with('"'))
+				|| (l.starts_with('"')
+				&& !l.ends_with('"')))
+			{
+				KalaMakeCore::PrintError(
+					"Partial quoting for include value '" + l + "' is not allowed!");
+
+				exit(1);
+			}
+
+			if (!l.starts_with('"')
+				&& !l.ends_with('"'))
+			{
+				KalaMakeCore::PrintError(
+					"Include value '" + l + "' must have quotes!");
+
+				exit(1);
+			}
+
+			string cleanedValue = require_quotes(l);
+
+			if (HasAnyUnsafePathChar(cleanedValue))
+			{
+				KalaMakeCore::PrintError(
+					"Field '" + name + "' value '" + cleanedValue + "' must not contain illegal path characters!");
+
+				exit(1);
+			}
+
+			vector<string> resolvedStringPaths{};
+			vector<path> resolvedPaths{};
+
+			string errorMsg = ResolveAnyPath(
+					cleanedValue, 
+					kmaPath.string(), 
+					resolvedPaths);
+
+			if (!errorMsg.empty())
+			{
+				KalaMakeCore::PrintError(
+					"Include value '" + cleanedValue + "' could not be resolved! Reason: " + errorMsg);
+
+				exit(1);
+			}
+
+			ToStringVector(resolvedPaths, resolvedStringPaths);
+
+			result.insert(
+				result.end(),
+				make_move_iterator(resolvedStringPaths.begin()),
+				make_move_iterator(resolvedStringPaths.end()));
+		}
+
+		RemoveDuplicates(result);
+
+		outFieldName = name;
+		outFieldValues = result;
+	}
+	else if (name == field_move
+			 || name == field_copy
+			 || name == field_force_copy
+			 || name == field_delete
+			 || name == field_create_dir
+			 || name == field_rename)
+	{
+		vector<string> splitPaths = SplitString(value, ", ");
+		if (splitPaths.size() > 2)
+		{
+			KalaMakeCore::PrintError(
+				"Field '" + name + "' must only contain origin and target path!");
+
+			exit(1);
+		}
+		if (splitPaths.size() <= 1)
+		{
+			KalaMakeCore::PrintError(
+				"Field '" + name + "' must contain origin and target path!");
+
+			exit(1);
+		}
+
+		if (splitPaths[0].find("*") != string::npos)
+		{
+			KalaMakeCore::PrintError("Include field '" + name  + "' origin path is not allowed to use wildcards!");
+						
+			exit(1);
+		}
+		if (splitPaths[1].find("*") != string::npos)
+		{
+			KalaMakeCore::PrintError("Include field '" + name  + "' target path is not allowed to use wildcards!");
+						
+			exit(1);
+		}
+
+		vector<string> result{};
+
+		for (const string& l : splitPaths)
+		{
+			if ((!l.starts_with('"')
+				&& l.ends_with('"'))
+				|| (l.starts_with('"')
+				&& !l.ends_with('"')))
+			{
+				KalaMakeCore::PrintError(
+					"Partial quoting for field '" + name + "' value '" + l + "' is not allowed!");
+
+				exit(1);
+			}
+
+			if (!l.starts_with('"')
+				&& !l.ends_with('"'))
+			{
+				KalaMakeCore::PrintError(
+					"Field '" + name + "' value '" + l + "' must have quotes!");
+
+				exit(1);
+			}
+
+			string cleanedValue = require_quotes(l);
+
+			if (HasAnyUnsafePathChar(cleanedValue))
+			{
+				KalaMakeCore::PrintError(
+					"Field '" + name + "' value '" + cleanedValue + "' must not contain illegal path characters!");
+
+				exit(1);
+			}
+
+			vector<string> resolvedStringPaths{};
+			vector<path> resolvedPaths{};
+
+			string errorMsg = ResolveAnyPath(
+					cleanedValue, 
+					kmaPath.string(), 
+					resolvedPaths);
+
+			if (!errorMsg.empty())
+			{
+				KalaMakeCore::PrintError(
+					"Field '" + name + "' value '" + cleanedValue + "' could not be resolved! Reason: " + errorMsg);
+
+				exit(1);
+			}
+
+			ToStringVector(resolvedPaths, resolvedStringPaths);
+
+			result.insert(
+				result.end(),
+				make_move_iterator(resolvedStringPaths.begin()),
+				make_move_iterator(resolvedStringPaths.end()));
+		}
+
+		RemoveDuplicates(result);
+
+		outFieldName = name;
+		outFieldValues = result;
+	}
+	//all other standard fields with no paths
+	else 
+	{
+		//these global fields must have a value
+		if ((name == field_binary_type
+			|| name == field_compiler
+			|| name == field_standard
+			|| name == field_target_profile)
+			&& value.empty())
+		{
+			KalaMakeCore::PrintError(
+				"Field '" + name + "' must have a value!");
+
+			exit(1);
+		}
+
+		vector<string> splitPaths = SplitString(value, ", ");
+
+		vector<string> result{};
+
+		for (const string& l : splitPaths)
+		{
+			if (HasAnyUnsafeFieldChar(l))
+			{
+				KalaMakeCore::PrintError(
+					"Field '" + name + "' value '" + l + "' must only contain A-Z, a-z, 0-9, _ or -!");
+
+				exit(1);
+			}
+
+			result.push_back(l);
+		}
+
+		RemoveDuplicates(result);
+
+		outFieldName = name;
+		outFieldValues = result;
+	}	
 }
 
 static GlobalData FirstParse(const vector<string>& lines);
@@ -751,7 +1005,8 @@ namespace KalaMake::Core
 		{ FieldType::T_COPY,       field_copy },
 		{ FieldType::T_FORCECOPY,  field_force_copy },
 		{ FieldType::T_CREATE_DIR, field_create_dir },
-		{ FieldType::T_DELETE,     field_delete }
+		{ FieldType::T_DELETE,     field_delete },
+		{ FieldType::T_RENAME,     field_rename }
 	};
 
 	static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>> compilerTypes =
@@ -1076,8 +1331,8 @@ namespace KalaMake::Core
 			return false;
 		}
 
-		if (ContainsString(value, "*")
-			|| ContainsString(value, "**"))
+		if (value.find("*") != string::npos
+			|| value.find("**") != string::npos)
 		{
 			KalaMakeCore::PrintError("Build path '" + string(value) + "' is not allowed to use wildcards!");
 
@@ -1258,38 +1513,6 @@ GlobalData FirstParse(const vector<string>& lines)
 			return collected;
 		};
 
-	auto remove_quotes = [](const string& input) -> string
-		{
-			if (input.empty())
-			{
-				KalaMakeCore::PrintError("Failed to parse path! Cannot remove '\"' from empty path.");
-			
-				exit(1);
-			}
-
-			if (input.size() <= 2)
-			{
-				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' was too small.");
-			
-				exit(1);
-			}
-
-			if (input.front() != '"'
-				|| input.back() != '"')
-			{
-				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' did not have the '\"' symbol at the front or back.");
-			
-				exit(1);
-			}
-
-			string result = input;
-
-			result.erase(0, 1);
-			result.pop_back();
-
-			return result;
-		};
-
 	const auto& categoryTypes = KalaMakeCore::GetCategoryTypes();
 	const auto& versions = KalaMakeCore::GetVersions();
 
@@ -1314,8 +1537,8 @@ GlobalData FirstParse(const vector<string>& lines)
 			categoryValue);
 
 		CategoryType categoryType{};
-		if (categoryType == CategoryType::C_INVALID
-			|| StringToEnum(categoryName, categoryTypes, categoryType))
+		if (!StringToEnum(categoryName, categoryTypes, categoryType)
+			|| categoryType == CategoryType::C_INVALID)
 		{
 			KalaMakeCore::PrintError("Category type at line '" + cleanedLine  + "' is invalid!");
 			
@@ -1361,34 +1584,38 @@ GlobalData FirstParse(const vector<string>& lines)
 
 			vector<string> content = get_all_category_content(categoryName);
 
-			vector<path> resolvedIncludes{};
-			
-			for (const string& c : content)
+			unordered_map<string, vector<string>> fields{};
+			for (const auto& c : content)
 			{
-				string cleanedLine = remove_quotes(c);
+				string fieldName{};
+				vector<string> fieldValues{};
+				ExtractFieldData(
+					c, 
+					fieldName, 
+					fieldValues,
+					true);
 
-				vector<path> foundIncludes{};
-				string errorMsg = ResolveAnyPath(cleanedLine, kmaPath.string(), foundIncludes);
-
-				if (!errorMsg.empty())
+				if (fields.contains(fieldName))
 				{
-					KalaMakeCore::PrintError("Include path '" + c + "' could not be resolved! Reason: " + errorMsg);
+					KalaMakeCore::PrintError("Include name '" + fieldName + "' was duplicated!");
 
 					exit(1);
 				}
-				
-				resolvedIncludes.insert(
-					resolvedIncludes.end(),
-					make_move_iterator(foundIncludes.begin()),
-					make_move_iterator(foundIncludes.end()));
+
+				fields[fieldName] = fieldValues;
 			}
 
-			RemoveDuplicates(resolvedIncludes);
+			size_t total = 0;
+			for (const auto& [_, v] : fields) total += v.size();
+			data.includes.reserve(data.includes.size() + total);
 
-			data.includes.insert(
-				data.includes.end(),
-				make_move_iterator(resolvedIncludes.begin()),
-				make_move_iterator(resolvedIncludes.end()));
+			for (const auto& [_, v] : fields)
+			{
+				data.includes.insert(
+					data.includes.end(),
+					make_move_iterator(v.begin()),
+					make_move_iterator(v.end()));	
+			}
 		}
 		else if (categoryType == CategoryType::C_GLOBAL)
 		{
@@ -1402,8 +1629,6 @@ GlobalData FirstParse(const vector<string>& lines)
 			foundGlobal = true;
 
 			vector<string> content = get_all_category_content(categoryName);
-
-			
 		}
 		else if (categoryType == CategoryType::C_PROFILE)
 		{

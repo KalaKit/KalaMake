@@ -111,7 +111,9 @@ namespace KalaMake::Core
 		//where a new folder is created
 		T_CREATE_DIR = 18u,
 		//where a file or folder is deleted
-		T_DELETE = 19u
+		T_DELETE = 19u,
+		//what a file or folder will be renamed to
+		T_RENAME = 20u
 	};
 
 	//Allowed compiler types that can be added to the compiler field

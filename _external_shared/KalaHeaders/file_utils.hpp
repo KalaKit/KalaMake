@@ -121,6 +121,30 @@ namespace KalaHeaders::KalaFile
 		size_t end{};
 	};
 
+	//Returns true if string contains any unsafe path characters.
+	//Safe: 'A-Z', 'a-z', '0-9', '_', '-', '.', '/', '\\', ':'.
+	//If ignoreWildcards is true then '*' is also safe
+	inline constexpr bool HasAnyUnsafePathChar(
+		string_view origin, 
+		bool ignoreWildcards = false)
+	{
+		for (unsigned char c : origin)
+		{
+			if (!(isalnum(c)
+				|| c == '_'
+				|| c == '-'
+				|| c == '.'
+				|| c == ':'
+				|| c == '/'
+				|| c == '\\'
+				|| (ignoreWildcards && c == '*')))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	//
 	// COMMON CONCEPTS
 	//
@@ -213,7 +237,7 @@ namespace KalaHeaders::KalaFile
 					}
 					catch (const filesystem_error&)
 					{
-						return "Failed to resolve target path '" + string(p) + "'!";
+						return "Failed to resolve target path '" + p.string() + "'!";
 					}
 				}
 

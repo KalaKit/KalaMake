@@ -118,39 +118,6 @@ namespace KalaHeaders::KalaString
 		memset(&outValue[i + 1], 0, N - (i + 1));
 	}
 
-	//Returns true if origin string contains target string, with optional case sensitivity flag
-	inline constexpr bool ContainsString(
-		string_view origin,
-		string_view target,
-		bool ignoreCase = true)
-	{
-		//return false if origin or target is empty
-		if (origin.empty()
-			|| target.empty())
-		{
-			return false;
-		}
-
-		//can't contain something longer than itself
-		if (target.size() > origin.size()) return false;
-
-		//case-sensitive search
-		if (!ignoreCase) return origin.find(target) != string::npos;
-
-		//case-insensitive search
-		auto it = search(
-			origin.begin(), 
-			origin.end(),
-			target.begin(), 
-			target.end(),
-			[](unsigned char char1, unsigned char char2)
-			{
-				return tolower(char1) == tolower(char2);
-			});
-
-		return it != origin.end();
-	}
-
 	//Check if origin is the same as target, with optional case sensitivity flag
 	inline constexpr bool StringsMatch(
 		string_view origin,
@@ -487,6 +454,22 @@ namespace KalaHeaders::KalaString
 	{
 		for (unsigned char c : origin) if (isspace(c)) return true;
 		
+		return false;
+	}
+
+	//Returns true if string contains any unsafe field characters,
+	//Safe: 'A-Z', 'a-z', '0-9', '_', '-'
+	inline constexpr bool HasAnyUnsafeFieldChar(string_view origin)
+	{
+		for (unsigned char c : origin)
+		{
+			if (!(isalnum(c)
+				|| c == '_'
+				|| c == '-'))
+			{
+				return true;
+			}
+		}
 		return false;
 	}
 }
