@@ -41,9 +41,9 @@ set(EXT_CLI_DIR "${EXT_SHARED_DIR}/KalaCLI")
 if (WIN32)
 	# Library Paths
 	if(IS_RELEASE)
-		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/release/KalaCLI1.lib")
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/release/libKalaCLI1.dll.a")
 	else()
-		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/debug/KalaCLI1d.lib")
+		set(CLI_LIBRARY_PATH "${EXT_CLI_DIR}/debug/libKalaCLI1d.dll.a")
 	endif()
 else()
 	# Library Paths
@@ -149,6 +149,25 @@ foreach(BIN_FILE ${BIN_FILES})
     )
 endforeach()
 
+# Copy MinGW dlls
+if (MINGW AND WIN32)
+    set(MINGW_BIN_DIR "/usr/x86_64-w64-mingw32/bin")
+
+    set(MINGW_DLLS
+        libstdc++-6.dll
+        libgcc_s_seh-1.dll
+        libwinpthread-1.dll
+    )
+
+    foreach(dll ${MINGW_DLLS})
+        add_custom_command(TARGET KalaMake POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${MINGW_BIN_DIR}/${dll}"
+                "$<TARGET_FILE_DIR:KalaMake>/${dll}"
+        )
+    endforeach()
+endif()
+
 # Copy important files
 set(COPY_TARGETS README.md LICENSE.md CHANGES.md)
 foreach(FILE ${COPY_TARGETS})
@@ -160,6 +179,15 @@ add_custom_command(TARGET KalaMake POST_BUILD
 		"$<TARGET_FILE_DIR:KalaMake>/${FILE}"
 )
 endforeach()
+
+# Copy entire docs folder
+add_custom_command(TARGET KalaMake POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf
+        "$<TARGET_FILE_DIR:KalaMake>/docs"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/docs"
+        "$<TARGET_FILE_DIR:KalaMake>/docs"
+)
 
 # Package
 include(CPack)
