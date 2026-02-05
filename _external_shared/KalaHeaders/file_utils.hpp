@@ -285,8 +285,7 @@ namespace KalaHeaders::KalaFile
 			return {};
 		}
 
-		if (!contains_string(p.string(), "/")
-			&& !contains_string(p.string(), "\\"))
+		if (!contains_string(p.string(), "*"))
 		{
 			p = relativeDir / p;
 		}
@@ -575,7 +574,7 @@ namespace KalaHeaders::KalaFile
 			return {};
 		}
 
-		return "Failed to resolve path '" + string(input) + "'!";
+		return "Failed to resolve path '" + string(input) + "' because it had no matching wildcard pattern, or its relative or full path was not found!";
 	}
 
 	//

@@ -27,7 +27,6 @@ using KalaHeaders::KalaCore::AnyEnumAndStringMap;
 using KalaHeaders::KalaCore::AnyEnum;
 using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaCore::RemoveDuplicates;
-using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 using KalaHeaders::KalaFile::ReadLinesFromFile;
@@ -44,9 +43,15 @@ using KalaHeaders::KalaString::HasAnyUnsafeFieldChar;
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::GlobalData;
 using KalaMake::Core::ProfileData;
+using KalaMake::Core::Version;
 using KalaMake::Core::CategoryType;
 using KalaMake::Core::FieldType;
-using KalaMake::Core::Version;
+using KalaMake::Core::CompilerType;
+using KalaMake::Core::StandardType;
+using KalaMake::Core::BuildType;
+using KalaMake::Core::BinaryType;
+using KalaMake::Core::WarningLevel;
+using KalaMake::Core::CustomFlag;
 
 using std::ostringstream;
 using std::filesystem::exists;
@@ -482,9 +487,15 @@ static void ExtractFieldData(
 			exit(1);
 		}
 
-		if (value.find(",") != string::npos)
+		if (value.find(',') != string::npos)
 		{
 			KalaMakeCore::PrintError("Build path '" + name  + "' is not allowed to have more than one path!");
+				
+			exit(1);
+		}
+		if (value.find('*') != string::npos)
+		{
+			KalaMakeCore::PrintError("Build path '" + name  + "' is not allowed to use wildcards!");
 				
 			exit(1);
 		}
@@ -665,14 +676,6 @@ static void ExtractFieldData(
 					exit(1);
 				}
 
-				if (HasAnyUnsafeFieldChar(l))
-				{
-					KalaMakeCore::PrintError(
-						"Relative link value '" + l + "' must only contain A-Z, a-z, 0-9, _ or -!");
-
-					exit(1);
-				}
-
 				result.push_back(l);
 			}
 			else 
@@ -751,7 +754,7 @@ static void ExtractFieldData(
 			exit(1);
 		}
 
-		if (value.find(",") != string::npos)
+		if (value.find(',') != string::npos)
 		{
 			KalaMakeCore::PrintError("Include field '" + name  + "' is not allowed to have more than one path!");
 				
@@ -846,13 +849,13 @@ static void ExtractFieldData(
 			exit(1);
 		}
 
-		if (splitPaths[0].find("*") != string::npos)
+		if (splitPaths[0].find('*') != string::npos)
 		{
 			KalaMakeCore::PrintError("Include field '" + name  + "' origin path is not allowed to use wildcards!");
 						
 			exit(1);
 		}
-		if (splitPaths[1].find("*") != string::npos)
+		if (splitPaths[1].find('*') != string::npos)
 		{
 			KalaMakeCore::PrintError("Include field '" + name  + "' target path is not allowed to use wildcards!");
 						
@@ -925,8 +928,22 @@ static void ExtractFieldData(
 	//all other standard fields with no paths
 	else 
 	{
-		//these global fields must have a value
+		if (value.find('"') != string::npos)
+		{
+			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to use quotes or paths!");
+						
+			exit(1);
+		}
+		if (value.find('*') != string::npos)
+		{
+			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to use wildcards!");
+						
+			exit(1);
+		}
+
+		//these fields must have a value
 		if ((name == field_binary_type
+			|| name == field_build_type
 			|| name == field_compiler
 			|| name == field_standard
 			|| name == field_target_profile)
@@ -938,22 +955,74 @@ static void ExtractFieldData(
 			exit(1);
 		}
 
+		if ((name == field_binary_type
+			|| name == field_compiler
+			|| name == field_standard
+			|| name == field_binary_name
+			|| name == field_warning_level)
+			&& value.find(",") != string::npos)
+		{
+			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to have more than one value!");
+							
+			exit(1);
+		}
+
+		if (name == field_binary_type)
+		{
+			const auto& binaryTypes = KalaMakeCore::GetBinaryTypes();
+
+			BinaryType binaryType{};
+			if (!StringToEnum(value, binaryTypes, binaryType)
+				|| binaryType == BinaryType::B_INVALID)
+			{
+				KalaMakeCore::PrintError("Binary type '" + value + "' is invalid!");
+				
+				exit(1);
+			}
+		}
+		if (name == field_build_type)
+		{
+			const auto& buildTypes = KalaMakeCore::GetBuildTypes();
+
+			BuildType buildType{};
+			if (!StringToEnum(value, buildTypes, buildType)
+				|| buildType == BuildType::B_INVALID)
+			{
+				KalaMakeCore::PrintError("Build type '" + value + "' is invalid!");
+				
+				exit(1);
+			}
+		}
+		if (name == field_compiler)
+		{
+			const auto& compilerTypes = KalaMakeCore::GetCompilerTypes();
+
+			CompilerType compilerType{};
+			if (!StringToEnum(value, compilerTypes, compilerType)
+				|| compilerType == CompilerType::C_INVALID)
+			{
+				KalaMakeCore::PrintError("Compiler type '" + value + "' is invalid!");
+				
+				exit(1);
+			}
+		}
+		if (name == field_standard)
+		{
+			const auto& standardTypes = KalaMakeCore::GetStandardTypes();
+
+			StandardType standardType{};
+			if (!StringToEnum(value, standardTypes, standardType)
+				|| standardType == StandardType::S_INVALID)
+			{
+				KalaMakeCore::PrintError("Standard type '" + value + "' is invalid!");
+				
+				exit(1);
+			}
+		}
+
 		vector<string> splitPaths = SplitString(value, ", ");
 
 		vector<string> result{};
-
-		for (const string& l : splitPaths)
-		{
-			if (HasAnyUnsafeFieldChar(l))
-			{
-				KalaMakeCore::PrintError(
-					"Field '" + name + "' value '" + l + "' must only contain A-Z, a-z, 0-9, _ or -!");
-
-				exit(1);
-			}
-
-			result.push_back(l);
-		}
 
 		RemoveDuplicates(result);
 
@@ -1042,41 +1111,41 @@ namespace KalaMake::Core
 
 	static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
 	{
-		{ BuildType::B_DEBUG,      "debug" },
-		{ BuildType::B_RELEASE,    "release" },
-		{ BuildType::B_RELDEBUG,   "reldebug" },
-		{ BuildType::B_MINSIZEREL, "minsizerel" }
+		{ BuildType::B_DEBUG,      build_type_debug },
+		{ BuildType::B_RELEASE,    build_type_release },
+		{ BuildType::B_RELDEBUG,   build_type_reldebug },
+		{ BuildType::B_MINSIZEREL, build_type_minsizerel }
 	};
 
 	static const unordered_map<BinaryType, string_view, EnumHash<BinaryType>> binaryTypes =
 	{
-		{ BinaryType::B_EXECUTABLE,   "executable" },
-		{ BinaryType::B_LINK_ONLY,    "link-only" },
-		{ BinaryType::B_RUNTIME_ONLY, "runtime-only" },
-		{ BinaryType::B_LINK_RUNTIME, "link-runtime" }
+		{ BinaryType::B_EXECUTABLE,   binary_type_executable },
+		{ BinaryType::B_LINK_ONLY,    binary_type_link_only },
+		{ BinaryType::B_RUNTIME_ONLY, binary_type_runtime_only },
+		{ BinaryType::B_LINK_RUNTIME, binary_type_link_runtime }
 	};
 
 	//Same warning types are used for both MSVC and GNU,
 	//their true meanings change depending on which OS is used
 	static const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>> warningLevels =
 	{
-		{ WarningLevel::W_NONE,   "none" },
-		{ WarningLevel::W_BASIC,  "basic" },
-		{ WarningLevel::W_NORMAL, "normal" },
-		{ WarningLevel::W_STRONG, "strong" },
-		{ WarningLevel::W_STRICT, "strict" },
-		{ WarningLevel::W_ALL,    "all" }
+		{ WarningLevel::W_NONE,   warning_level_none },
+		{ WarningLevel::W_BASIC,  warning_level_basic },
+		{ WarningLevel::W_NORMAL, warning_level_normal },
+		{ WarningLevel::W_STRONG, warning_level_strong },
+		{ WarningLevel::W_STRICT, warning_level_strict },
+		{ WarningLevel::W_ALL,    warning_level_all }
 	};
 
 	//Same warning types are used for both MSVC and GNU,
 	//their true meanings change depending on which OS is used
 	static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>> customFlags =
 	{
-		{ CustomFlag::F_USE_NINJA,               "use-ninja" },
-		{ CustomFlag::F_NO_OBJ,                  "no-obj" },
-		{ CustomFlag::F_STANDARD_REQUIRED,       "standard-required" },
-		{ CustomFlag::F_WARNINGS_AS_ERRORS,      "warnings-as-errors" },
-		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS, "export-compile-commands" }
+		{ CustomFlag::F_USE_NINJA,               custom_flag_use_ninja },
+		{ CustomFlag::F_NO_OBJ,                  custom_flag_no_obj },
+		{ CustomFlag::F_STANDARD_REQUIRED,       custom_flag_standard_req },
+		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
+		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS, custom_flag_export_comp_comm }
 	};
 
 	void KalaMakeCore::OpenFile(
@@ -1331,8 +1400,7 @@ namespace KalaMake::Core
 			return false;
 		}
 
-		if (value.find("*") != string::npos
-			|| value.find("**") != string::npos)
+		if (value.find('*') != string::npos)
 		{
 			KalaMakeCore::PrintError("Build path '" + string(value) + "' is not allowed to use wildcards!");
 
@@ -1453,12 +1521,13 @@ namespace KalaMake::Core
 		return true;
 	}
 
-	const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& KalaMakeCore::GetCategoryTypes() { return categoryTypes; }
 	const unordered_map<Version, string_view, EnumHash<Version>>& KalaMakeCore::GetVersions() { return versions; }
+	const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& KalaMakeCore::GetCategoryTypes() { return categoryTypes; }
 	const unordered_map<FieldType, string_view, EnumHash<FieldType>>& KalaMakeCore::GetFieldTypes() { return fieldTypes; }
 	const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& KalaMakeCore::GetCompilerTypes() { return compilerTypes; }
 	const unordered_map<StandardType, string_view, EnumHash<StandardType>>& KalaMakeCore::GetStandardTypes() { return standardTypes; }
 	const unordered_map<BinaryType, string_view, EnumHash<BinaryType>>& KalaMakeCore::GetBinaryTypes() { return binaryTypes; }
+	const unordered_map<BuildType, string_view, EnumHash<BuildType>>& KalaMakeCore::GetBuildTypes() { return buildTypes; }
 	const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>>& KalaMakeCore::GetWarningLevels() { return warningLevels; }
 	const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>>& KalaMakeCore::GetCustomFlags() { return customFlags; }
 
@@ -1540,7 +1609,7 @@ GlobalData FirstParse(const vector<string>& lines)
 		if (!StringToEnum(categoryName, categoryTypes, categoryType)
 			|| categoryType == CategoryType::C_INVALID)
 		{
-			KalaMakeCore::PrintError("Category type at line '" + cleanedLine  + "' is invalid!");
+			KalaMakeCore::PrintError("Category type '" + categoryName  + "' is invalid!");
 			
 			exit(1);
 		}
@@ -1629,6 +1698,26 @@ GlobalData FirstParse(const vector<string>& lines)
 			foundGlobal = true;
 
 			vector<string> content = get_all_category_content(categoryName);
+
+			unordered_map<string, vector<string>> fields{};
+			for (const auto& c : content)
+			{
+				string fieldName{};
+				vector<string> fieldValues{};
+				ExtractFieldData(
+					c, 
+					fieldName, 
+					fieldValues);
+
+				if (fields.contains(fieldName))
+				{
+					KalaMakeCore::PrintError("Include name '" + fieldName + "' was duplicated!");
+
+					exit(1);
+				}
+
+				fields[fieldName] = fieldValues;
+			}
 		}
 		else if (categoryType == CategoryType::C_PROFILE)
 		{
@@ -1643,6 +1732,26 @@ GlobalData FirstParse(const vector<string>& lines)
 			}
 
 			vector<string> content = get_all_category_content(categoryName, categoryValue);
+
+			unordered_map<string, vector<string>> fields{};
+			for (const auto& c : content)
+			{
+				string fieldName{};
+				vector<string> fieldValues{};
+				ExtractFieldData(
+					c, 
+					fieldName, 
+					fieldValues);
+
+				if (fields.contains(fieldName))
+				{
+					KalaMakeCore::PrintError("Include name '" + fieldName + "' was duplicated!");
+
+					exit(1);
+				}
+
+				fields[fieldName] = fieldValues;
+			}
 
 			data.profiles.push_back(
 				{

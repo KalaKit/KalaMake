@@ -395,12 +395,13 @@ namespace KalaMake::Core
 			const vector<string>& value,
 			vector<CustomFlag>& outValues);
 
+				static const unordered_map<Version, string_view, EnumHash<Version>>& GetVersions();
 		static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& GetCategoryTypes();
-		static const unordered_map<Version, string_view, EnumHash<Version>>& GetVersions();
 		static const unordered_map<FieldType, string_view, EnumHash<FieldType>>& GetFieldTypes();
 		static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& GetCompilerTypes();
 		static const unordered_map<StandardType, string_view, EnumHash<StandardType>>& GetStandardTypes();
 		static const unordered_map<BinaryType, string_view, EnumHash<BinaryType>>& GetBinaryTypes();
+		static const unordered_map<BuildType, string_view, EnumHash<BuildType>>& GetBuildTypes();
 		static const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>>& GetWarningLevels();
 		static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>>& GetCustomFlags();
 
