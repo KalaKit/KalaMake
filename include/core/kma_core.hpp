@@ -35,32 +35,44 @@ namespace KalaMake::Core
 	constexpr size_t MIN_NAME_LENGTH = 1;
 	constexpr size_t MAX_NAME_LENGTH = 20;
 
+	enum class SolutionType : u8
+	{
+		S_INVALID = 0u,
+
+		//generates ninja solution files
+		S_NINJA = 1u,
+		//generates visual studio solution files
+		S_VS = 2u,
+		//generates visual studio code files
+		S_VSCODE = 3u
+	};
+
 	enum class Version : u8
 	{
-		V_INVALID = 0,
+		V_INVALID = 0u,
 
-		V_1_0 = 1
+		V_1_0 = 1u
 	};
 
 	//Allowed categories that can be added to any kmake file
 	enum class CategoryType : u8
 	{
-		C_INVALID = 0,
+		C_INVALID = 0u,
 
 		//required version category
-		C_VERSION = 1,
+		C_VERSION = 1u,
 
 		//optional include paths category
-		C_INCLUDE = 2,
+		C_INCLUDE = 2u,
 
 		//required global fields category
-		C_GLOBAL = 3,
+		C_GLOBAL = 3u,
 
 		//optional N amount of profile categories with custom names
-		C_PROFILE = 4,
+		C_PROFILE = 4u,
 
 		//optional post-build commands
-		C_POST_BUILD = 5
+		C_POST_BUILD = 5u
 	};
 
 	//Allowed field types that can be added to global and profile categories
@@ -75,88 +87,86 @@ namespace KalaMake::Core
 		//which language standard is used to compile this source code,
 		//only for C, C++, C#, Rust and Java
 		T_STANDARD = 3u,
-		//which profiles will be built
-		T_TARGET_PROFILE = 4u,
 
 		//what is the name of the the binary
-		T_BINARY_NAME = 5u,
+		T_BINARY_NAME = 4u,
 		//which build type is the binary
-		T_BUILD_TYPE = 6u,
+		T_BUILD_TYPE = 5u,
 		//where is the binary built to
-		T_BUILD_PATH = 7u,
+		T_BUILD_PATH = 6u,
 		//where are the source code files of the binary located
-		T_SOURCES = 8u,
+		T_SOURCES = 7u,
 		//where are the header files of the binary located,
 		//only for C and C++
-		T_HEADERS = 9u,
+		T_HEADERS = 8u,
 		//what links will be added to the binary,
 		//only for C, C++ and Rust
-		T_LINKS = 10u,
+		T_LINKS = 9u,
 		//what warning level will compilation and linking use, defaults to 'none'
-		T_WARNING_LEVEL = 11u,
+		T_WARNING_LEVEL = 10u,
 		//what defines will be added to the binary,
 		//only for C, C++ and Rust
-		T_DEFINES = 12u,
+		T_DEFINES = 11u,
 		//what flags will be passed to the compiler
-		T_FLAGS = 13u,
+		T_FLAGS = 12u,
 		//what kalamake-specific flags will trigger extra actions
-		T_CUSTOM_FLAGS = 14u,
+		T_CUSTOM_FLAGS = 13u,
 
 		//where a file or folder is moved
-		T_MOVE = 15u,
+		T_MOVE = 14u,
 		//where a file or folder is copied
-		T_COPY = 16u,
+		T_COPY = 15u,
 		//where a file or folder is copied and overridden if it already exists
-		T_FORCECOPY = 17u,
+		T_FORCECOPY = 16u,
 		//where a new folder is created
-		T_CREATE_DIR = 18u,
+		T_CREATE_DIR = 17u,
 		//where a file or folder is deleted
-		T_DELETE = 19u,
+		T_DELETE = 18u,
 		//what a file or folder will be renamed to
-		T_RENAME = 20u
+		T_RENAME = 19u
 	};
 
 	//Allowed compiler types that can be added to the compiler field
 	enum class CompilerType : u8
 	{
-		C_INVALID = 0,
+		C_INVALID = 0u,
 
 		//windows only, MSVC-style flags
-		C_CLANG_CL = 1,
+		C_CLANG_CL = 1u,
 		//windows only, MSVC-style flags
-		C_CL = 2,
+		C_CL = 2u,
 
 		//windows + linux, GNU flags, defaults to C
-		C_CLANG = 3,
+		C_CLANG = 3u,
 		//windows + linux, GNU flags, defaults to C++
-		C_CLANGPP = 4,
+		C_CLANGPP = 4u,
 		//linux, GNU flags, defaults to C
-		C_GCC = 5,
+		C_GCC = 5u,
 		//linux, GNU flags, defaults to C++
-		C_GPP = 6
+		C_GPP = 6u
 	};
 
 	//Allowed standard types that can be added to the standard field
 	enum class StandardType : u8
 	{
-		S_INVALID = 0,
+		S_INVALID = 0u,
 
-		C_89 = 1,
-		C_99 = 2,
-		C_11 = 3,
-		C_17 = 4,
-		C_23 = 5,
-		C_LATEST = 6,
+		C_89 = 1u,
+		C_99 = 2u,
+		C_11 = 3u,
+		C_17 = 4u,
+		C_23 = 5u,
+		C_LATEST = 6u,
 
-		CPP_98 = 7,
-		CPP_03 = 8,
-		CPP_11 = 9,
-		CPP_14 = 10,
-		CPP_17 = 11,
-		CPP_20 = 12,
-		CPP_23 = 13,
-		CPP_26 = 14,
-		CPP_LATEST = 15
+		CPP_98 = 7u,
+		CPP_03 = 8u,
+		CPP_11 = 9u,
+		CPP_14 = 10u,
+		CPP_17 = 11u,
+		CPP_20 = 12u,
+		CPP_23 = 13u,
+		CPP_26 = 14u,
+		CPP_LATEST = 15u
 	};
 
 	//Allowed build types that can be added to the buildtype field
@@ -244,41 +254,22 @@ namespace KalaMake::Core
 		F_EXPORT_COMPILE_COMMANDS = 5u
 	};
 
+	struct PostBuildAction
+	{
+		//what build action will be done
+		FieldType buildAction{};
+
+		//from where
+		path origin{};
+		//to where, unused for delete and createdir
+		path target{};
+	};
+
 	//Overridable per-profile field definitions for kalamake action types
 	struct ProfileData
 	{
 		//what is the name of this profile
 		string profileName{};
-
-		//what is the target type of the binary
-		string overrideBinaryName{};
-		//which build type is the binary
-		BuildType overrideBuildType{};
-		//where is the binary built to
-		string overrideBuildPath{};
-		//where are the source code files of the binary located
-		vector<string> overrideSources{};
-		//where are the header files of the binary located,
-		//only for C and C++
-		vector<string> overrideHeaders{};
-		//what links will be added to the binary,
-		//only for C, C++ and Rust
-		vector<string> overrideLinks{};
-		//what warning level will compilation and linking use, defaults to 'none'
-		WarningLevel overrideWarningLevel;
-		//what defines will be added to the binary,
-		//only for C, C++ and Rust
-		vector<string> overrideDefines{};
-		//what flags will be passed to the compiler
-		vector<string> overrideFlags{};
-		//what kalamake-specific flags will trigger extra actions
-		vector<CustomFlag> overrideCustomFlags{};
-	};
-
-	//Default field definitions for all kalamake action types
-	struct GlobalData
-	{
-		//cannot be overridden, global only
 
 		//what is the target type of the binary
 		BinaryType binaryType{};
@@ -287,12 +278,7 @@ namespace KalaMake::Core
 		//which language standard is used to compile this source code,
 		//only for C, C++, C#, Rust and Java
 		StandardType standard{};
-		//which profiles will be built
-		string targetProfile{};
-
-		//overridable
-
-		//what is the name of the the binary
+		//what is the target type of the binary
 		string binaryName{};
 		//which build type is the binary
 		BuildType buildType{};
@@ -315,11 +301,17 @@ namespace KalaMake::Core
 		vector<string> flags{};
 		//what kalamake-specific flags will trigger extra actions
 		vector<CustomFlag> customFlags{};
+	};
 
-		//what profiles are included in this kalamake project
-		vector<ProfileData> profiles{};
+	//Default field definitions for all kalamake action types
+	struct GlobalData
+	{
+		//what profile will be built
+		ProfileData profile{};
 		//what includes are included in this kalamake project
-		vector<string> includes{};
+		vector<path> includes{};
+		//what actions will be done after the compilation is complete
+		vector<PostBuildAction> postBuildActions{};
 	};
 
 	class KalaMakeCore
@@ -335,7 +327,8 @@ namespace KalaMake::Core
 
 		static void Generate(
 			const path& filePath,
-			const vector<string>& lines);
+			const vector<string>& lines,
+			SolutionType solutionType);
 
 		static bool ResolveFieldReference(
 			const vector<path>& currentProjectIncludes,
@@ -395,7 +388,8 @@ namespace KalaMake::Core
 			const vector<string>& value,
 			vector<CustomFlag>& outValues);
 
-				static const unordered_map<Version, string_view, EnumHash<Version>>& GetVersions();
+		static const unordered_map<SolutionType, string_view, EnumHash<SolutionType>>& GetSolutionTypes();
+		static const unordered_map<Version, string_view, EnumHash<Version>>& GetVersions();
 		static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& GetCategoryTypes();
 		static const unordered_map<FieldType, string_view, EnumHash<FieldType>>& GetFieldTypes();
 		static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>>& GetCompilerTypes();

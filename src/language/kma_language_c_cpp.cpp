@@ -39,16 +39,16 @@ namespace KalaMake::Language
 
 	bool Language_C_CPP::Compile()
 	{
-		if (compileData.binaryType == BinaryType::B_LINK_ONLY)
-		{
-			//continue to static lib compilation function
-			//since its very different from exe and shared lib
-			return CompileLinkOnly(compileData);
+		//continue to static lib compilation function
+		//since its very different from exe and shared lib
+		if (compileData.profile.binaryType == BinaryType::B_LINK_ONLY)
+		{	
+				return CompileLinkOnly(compileData);
 		}
 
-		vector<string> finalFlags = std::move(compileData.flags);
+		vector<string> finalFlags = std::move(compileData.profile.flags);
 
-		return false;
+		return true;
 	}
 
 	bool Language_C_CPP::IsValidCompiler(CompilerType compiler)
