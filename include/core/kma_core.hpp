@@ -253,7 +253,50 @@ namespace KalaMake::Core
 		//exports the compilation commands to your solution file type you selected
 		F_EXPORT_COMPILE_COMMANDS = 5u
 	};
+	
+	struct ProfileData
+	{
+		//what is the name of this profile
+		string profileName{};
 
+		//what is the target type of the binary, required
+		BinaryType binaryType{};
+		//which compiler is used to compile this binary source code, required
+		CompilerType compiler{};
+		//which language standard is used to compile this source code,
+		//only for C, C++, C#, Rust and Java, required for supported standards
+		StandardType standard{};
+		//what is the target type of the binary, required
+		string binaryName{};
+		//which build type is the binary, required
+		BuildType buildType{};
+		//where is the binary built to, required
+		path buildPath{};
+		//where are the source code files of the binary located, required
+		vector<path> sources{};
+		//where are the header files of the binary located,
+		//only for C and C++, optional
+		vector<path> headers{};
+		//what links will be added to the binary,
+		//only for C, C++ and Rust, optional
+		vector<path> links{};
+		//what warning level will compilation and linking use, defaults to 'none'
+		WarningLevel warningLevel;
+		//what defines will be added to the binary,
+		//only for C, C++ and Rust, optional
+		vector<string> defines{};
+		//what flags will be passed to the compiler, optional
+		vector<string> flags{};
+		//what kalamake-specific flags will trigger extra actions, optional
+		vector<CustomFlag> customFlags{};
+	};
+
+	struct IncludeData
+	{
+		string name{};
+		path value{};
+	};
+	
 	struct PostBuildAction
 	{
 		//what build action will be done
@@ -265,51 +308,15 @@ namespace KalaMake::Core
 		path target{};
 	};
 
-	//Overridable per-profile field definitions for kalamake action types
-	struct ProfileData
-	{
-		//what is the name of this profile
-		string profileName{};
-
-		//what is the target type of the binary
-		BinaryType binaryType{};
-		//which compiler is used to compile this binary source code
-		CompilerType compiler{};
-		//which language standard is used to compile this source code,
-		//only for C, C++, C#, Rust and Java
-		StandardType standard{};
-		//what is the target type of the binary
-		string binaryName{};
-		//which build type is the binary
-		BuildType buildType{};
-		//where is the binary built to
-		string buildPath{};
-		//where are the source code files of the binary located
-		vector<string> sources{};
-		//where are the header files of the binary located,
-		//only for C and C++
-		vector<string> headers{};
-		//what links will be added to the binary,
-		//only for C, C++ and Rust
-		vector<string> links{};
-		//what warning level will compilation and linking use, defaults to 'none'
-		WarningLevel warningLevel;
-		//what defines will be added to the binary,
-		//only for C, C++ and Rust
-		vector<string> defines{};
-		//what flags will be passed to the compiler
-		vector<string> flags{};
-		//what kalamake-specific flags will trigger extra actions
-		vector<CustomFlag> customFlags{};
-	};
-
-	//Default field definitions for all kalamake action types
 	struct GlobalData
 	{
-		//what profile will be built
-		ProfileData profile{};
+		//global profile data, user profile is not filled if global is picked
+		ProfileData globalProfile{};
+		//optional overrides to global profile provided by user profile, global is also filled
+		ProfileData userProfile{};
+
 		//what includes are included in this kalamake project
-		vector<path> includes{};
+		vector<IncludeData> includes{};
 		//what actions will be done after the compilation is complete
 		vector<PostBuildAction> postBuildActions{};
 	};

@@ -19,7 +19,11 @@
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_C_COMPILER": "x86_64-w64-mingw32-gcc",
         "CMAKE_CXX_COMPILER": "x86_64-w64-mingw32-g++",
+
         "CMAKE_RC_COMPILER": "x86_64-w64-mingw32-windres",
+        "CMAKE_TOOLCHAIN_FILE": "/home/greenlaser/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+        "VCPKG_APPLOCAL_DEPS": "OFF",
 
         "CMAKE_CXX_STANDARD": "20",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
