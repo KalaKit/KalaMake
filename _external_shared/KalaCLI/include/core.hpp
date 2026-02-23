@@ -27,7 +27,7 @@ namespace KalaCLI
 
 		//Use this when you absolutely need a hard crash at this very moment.
 		//Aborts and doesn't clean up data.
-		[[noreturn]] static void ForceClose(
+		static void ForceClose(
 			const string& title,
 			const string& reason);
 	};

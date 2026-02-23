@@ -1161,7 +1161,7 @@ static void ExtractFieldData(
 
 				path combinedValue = path(originAppend / path(targetAppend));
 
-				store_value(combinedValue, false);
+				store_value(combinedValue.string(), false);
 			}
 			else
 			{

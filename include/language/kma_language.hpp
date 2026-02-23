@@ -33,7 +33,7 @@ namespace KalaMake::Language
 		static bool IsValidMSVCCompiler(string_view value);
 		static bool IsValidGNUCompiler(string_view value);
 
-		virtual bool Compile() = 0;
+		virtual bool Compile(string_view profileName) = 0;
 
 		virtual bool IsValidCompiler(CompilerType compiler) = 0;
 		virtual bool IsValidStandard(StandardType standard) = 0;

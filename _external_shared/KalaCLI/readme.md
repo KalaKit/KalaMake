@@ -1,12 +1,13 @@
 # KalaCLI
 
-This is a cli executable template for C++ 20 on Windows. 
+This is a cli executable template for C++ 20 on Windows and Linux. 
 
 ## Projects that use this template
 
-[KalaData](https://github.com/kalakit/kaladata)
+[KalaMake](https://github.com/kalakit/kalamake)
 [KalaMove](https://github.com/kalakit/kalamove)
 [KalaFont](https://github.com/kalakit/kalafont)
+[KalaModel](https://github.com/kalakit/kalamodel)
 
 ---
 

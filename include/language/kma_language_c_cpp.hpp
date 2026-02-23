@@ -16,7 +16,7 @@ namespace KalaMake::Language
 
 		static bool IsValidC_CPPCompiler(string_view value);
 
-		bool Compile() override;
+		bool Compile(string_view profileName) override;
 
 		bool IsValidCompiler(CompilerType compiler) override;
 		bool IsValidStandard(StandardType standard) override;

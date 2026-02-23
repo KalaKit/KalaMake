@@ -10,6 +10,7 @@
 
 using KalaMake::Language::GlobalData;
 using KalaMake::Core::BinaryType;
+using KalaMake::Core::ProfileData;
 
 using std::string_view;
 using std::unique_ptr;
@@ -37,16 +38,29 @@ namespace KalaMake::Language
 		return nullptr;
 	}
 
-	bool Language_C_CPP::Compile()
+	bool Language_C_CPP::Compile(string_view profileName)
 	{
-		//continue to static lib compilation function
-		//since its very different from exe and shared lib
-		if (compileData.profile.binaryType == BinaryType::B_LINK_ONLY)
-		{	
-				return CompileLinkOnly(compileData);
+		//TODO: finish
+
+		ProfileData profile = profileName == "global"
+			? compileData.globalProfile
+			: profileName == compileData.userProfile.profileName
+				? compileData.userProfile
+				: ProfileData{};
+
+		if (profile.profileName.empty())
+		{
+			return false;
 		}
 
-		vector<string> finalFlags = std::move(compileData.profile.flags);
+		//continue to static lib compilation function
+		//since its very different from exe and shared lib
+		if (profile.binaryType == BinaryType::B_LINK_ONLY)
+		{	
+			return CompileLinkOnly(compileData);
+		}
+
+		vector<string> finalFlags = std::move(profile.flags);
 
 		return true;
 	}
