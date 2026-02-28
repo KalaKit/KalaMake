@@ -25,9 +25,8 @@ namespace KalaCLI
 
 	struct LIB_API Command
 	{
-		//Variants for the primary keyword that determines the desired action,
-		//for example 'help' and 'h'. You should always add atleast one
-		vector<string> primary{};
+		//What parameter to use to call this command
+		string primaryParam{};
 
 		//The description of this command that is listed when the built-in 'info' command is called
 		string description{};

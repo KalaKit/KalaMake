@@ -30,7 +30,7 @@ static void AddExternalCommands()
 
 	CommandManager::AddCommand(
 		{
-			.primary = { "compile" },
+			.primaryParam = "compile",
 			.description =
 				"Compile a project from a kalamake file, "
 				"second parameter must be valid path to a .kmake file, "
@@ -41,7 +41,7 @@ static void AddExternalCommands()
 
 	CommandManager::AddCommand(
 		{
-			.primary = { "generate" },
+			.primaryParam = "generate",
 			.description =
 				"Generate a solution file from a kalamake file, "
 				"second parameter must be valid path to a .kmake file, "
