@@ -513,6 +513,7 @@ static void ExtractFieldData(
 
 			exit(1);
 		}
+
 		if (trimmedValue.find('+') != string::npos)
 		{
 			KalaMakeCore::PrintError("Build path '" + trimmedValue + "' is not allowed to append values!");
@@ -1191,7 +1192,18 @@ static void ExtractFieldData(
 						
 			exit(1);
 		}
-		if (trimmedValue.find('+') != string::npos)
+		if (trimmedValue.find('+') != string::npos
+			&& trimmedValue != compiler_clangpp
+			&& trimmedValue != compiler_gpp
+			&& trimmedValue != standard_cpp98
+			&& trimmedValue != standard_cpp03
+			&& trimmedValue != standard_cpp11
+			&& trimmedValue != standard_cpp14
+			&& trimmedValue != standard_cpp17
+			&& trimmedValue != standard_cpp20
+			&& trimmedValue != standard_cpp23
+			&& trimmedValue != standard_cpp26
+			&& trimmedValue != standard_cpp_latest)
 		{
 			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to append values!");
 						
