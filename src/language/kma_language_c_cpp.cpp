@@ -5,8 +5,13 @@
 
 #include <memory>
 
+#include "KalaHeaders/log_utils.hpp"
+
 #include "language/kma_language_c_cpp.hpp"
 #include "core/kma_core.hpp"
+
+using KalaHeaders::KalaLog::Log;
+using KalaHeaders::KalaLog::LogType;
 
 using KalaMake::Language::GlobalData;
 using KalaMake::Core::BinaryType;
@@ -61,6 +66,8 @@ namespace KalaMake::Language
 		}
 
 		vector<string> finalFlags = std::move(profile.flags);
+
+		Log::Print("@@@@@ compile complete");
 
 		return true;
 	}

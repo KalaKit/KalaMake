@@ -27,12 +27,17 @@ using KalaHeaders::KalaCore::AnyEnumAndStringMap;
 using KalaHeaders::KalaCore::AnyEnum;
 using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaCore::RemoveDuplicates;
+using KalaHeaders::KalaCore::StringToEnum;
+
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
+
 using KalaHeaders::KalaFile::ReadLinesFromFile;
 using KalaHeaders::KalaFile::ResolveAnyPath;
 using KalaHeaders::KalaFile::ToStringVector;
+using KalaHeaders::KalaFile::ToPathVector;
 using KalaHeaders::KalaFile::PathTarget;
+
 using KalaHeaders::KalaString::SplitString;
 using KalaHeaders::KalaString::ReplaceAfter;
 using KalaHeaders::KalaString::TrimString;
@@ -1306,7 +1311,7 @@ static void ExtractFieldData(
 		Log::Print(
 			"Field '" + outFieldName + "' was parsed correctly and had no values",
 			"KALAMAKE",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_INFO);
 	}
 	else
 	{
@@ -1322,7 +1327,7 @@ static void ExtractFieldData(
 		Log::Print(
 			msg,
 			"KALAMAKE",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_INFO);
 	}
 }
 
@@ -1586,6 +1591,13 @@ namespace KalaMake::Core
 			LogType::LOG_INFO);
 
 		GlobalData data = FirstParse(lines);
+
+		Log::Print("\n==========================================================================================\n");
+
+		Log::Print(
+			"Finished first parse! Cleaning up parsed data and parsing for compiler.",
+			"KALAMAKE",
+			LogType::LOG_SUCCESS);
 
 		HandleRecursions(data);
 
@@ -1971,6 +1983,7 @@ GlobalData FirstParse(const vector<string>& lines)
 			{
 				foundTargetProfile = true;
 				correctTargetProfile = value;
+
 				break;
 			}
 		}
@@ -2040,7 +2053,7 @@ GlobalData FirstParse(const vector<string>& lines)
 				Log::Print(
 					"Found valid version '" + value + "'",
 					"KALAMAKE",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_INFO);
 
 				foundVersion = true;
 
@@ -2069,7 +2082,10 @@ GlobalData FirstParse(const vector<string>& lines)
 
 			if (type == CategoryType::C_INCLUDE)
 			{
-				Log::Print("Starting to parse include category");
+				Log::Print(
+					"\n------------------------------------------------------------"
+					"\n# Starting to parse include category\n"
+					"------------------------------------------------------------\n");
 
 				if (foundInclude)
 				{
@@ -2116,11 +2132,6 @@ GlobalData FirstParse(const vector<string>& lines)
 					data.includes.push_back(inc);	
 				}
 
-				Log::Print(
-					"Finished parsing include category",
-					"KALAMAKE",
-					LogType::LOG_SUCCESS);
-
 				foundInclude = true;
 
 				break;
@@ -2141,7 +2152,10 @@ GlobalData FirstParse(const vector<string>& lines)
 
 			if (type == CategoryType::C_GLOBAL)
 			{
-				Log::Print("Starting to parse global category");
+				Log::Print(
+					"\n------------------------------------------------------------"
+					"\n# Starting to parse global profile\n"
+					"------------------------------------------------------------\n");
 
 				if (foundGlobal)
 				{
@@ -2172,12 +2186,101 @@ GlobalData FirstParse(const vector<string>& lines)
 					fields[fieldName] = fieldValues;
 				}
 
-				//TODO: finish setting up
+				ProfileData userProfile{};
 
-				Log::Print(
-					"Finished parsing global category",
-					"KALAMAKE",
-					LogType::LOG_SUCCESS);
+				userProfile.profileName = value;
+				if (fields.contains(string(field_binary_type)))
+				{
+					const vector<string>& values = fields[string(field_binary_type)];
+
+					BinaryType result{};
+					StringToEnum(values.front(), KalaMake::Core::binaryTypes, result);
+					userProfile.binaryType = result;
+				}
+				if (fields.contains(string(field_compiler)))
+				{
+					const vector<string>& values = fields[string(field_compiler)];
+
+					CompilerType result{};
+					StringToEnum(values.front(), KalaMake::Core::compilerTypes, result);
+					userProfile.compiler = result;
+				}
+				if (fields.contains(string(field_standard)))
+				{
+					const vector<string>& values = fields[string(field_standard)];
+
+					StandardType result{};
+					StringToEnum(values.front(), KalaMake::Core::standardTypes, result);
+					userProfile.standard = result;
+				}
+				if (fields.contains(string(field_binary_name)))
+				{
+					userProfile.binaryName = fields[string(field_standard)][0];
+				}
+				if (fields.contains(string(field_build_type)))
+				{
+					const vector<string>& values = fields[string(field_build_type)];
+
+					BuildType result{};
+					StringToEnum(values.front(), KalaMake::Core::buildTypes, result);
+					userProfile.buildType = result;
+				}
+				if (fields.contains(string(field_build_path)))
+				{
+					userProfile.binaryName = fields[string(field_build_path)][0];
+				}
+				if (fields.contains(string(field_sources)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_sources)], pathResult);
+
+					userProfile.sources = std::move(pathResult);
+				}
+				if (fields.contains(string(field_headers)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_headers)], pathResult);
+
+					userProfile.headers = std::move(pathResult);
+				}
+				if (fields.contains(string(field_links)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_links)], pathResult);
+
+					userProfile.headers = std::move(pathResult);
+				}
+				if (fields.contains(string(field_warning_level)))
+				{
+					const vector<string>& values = fields[string(field_warning_level)];
+
+					WarningLevel result{};
+					StringToEnum(values.front(), KalaMake::Core::warningLevels, result);
+					userProfile.warningLevel = result;
+				}
+				if (fields.contains(string(field_defines)))
+				{
+					userProfile.defines = std::move(fields[string(field_defines)]);
+				}
+				if (fields.contains(string(field_flags)))
+				{
+					userProfile.defines = std::move(fields[string(field_flags)]);
+				}
+				if (fields.contains(string(field_custom_flags)))
+				{
+					const vector<string>& values = fields[string(field_build_type)];
+					vector<CustomFlag> customFlags{};
+
+					for (const auto& cf : values)
+					{
+						CustomFlag result{};
+						StringToEnum(cf, KalaMake::Core::customFlags, result);
+						customFlags.push_back(result);
+					}
+					userProfile.customFlags = std::move(customFlags);
+				}
+
+				data.userProfile = std::move(userProfile);
 
 				foundGlobal = true;
 
@@ -2206,7 +2309,10 @@ GlobalData FirstParse(const vector<string>& lines)
 
 			if (type == CategoryType::C_POST_BUILD)
 			{
-				Log::Print("Starting to parse post-build category");
+				Log::Print(
+					"\n------------------------------------------------------------"
+					"\n# Starting to parse post-builc category\n"
+					"------------------------------------------------------------\n");
 
 				if (foundPostBuild)
 				{
@@ -2218,11 +2324,6 @@ GlobalData FirstParse(const vector<string>& lines)
 				vector<string> content = get_all_category_content(name, value);
 
 				//TODO: finish setting up
-
-				Log::Print(
-					"Finished parsing post-build category",
-					"KALAMAKE",
-					LogType::LOG_SUCCESS);
 
 				foundPostBuild = true;
 
@@ -2247,7 +2348,10 @@ GlobalData FirstParse(const vector<string>& lines)
 			{
 				if (value != correctTargetProfile) continue;
 
-				Log::Print("Starting to parse user profile '" + value + "'");
+				Log::Print(
+					"\n------------------------------------------------------------"
+					"\n# Starting to parse user profile '" + value + "'\n"
+					"------------------------------------------------------------\n");
 
 				vector<string> content = get_all_category_content(name, value);
 
@@ -2271,17 +2375,101 @@ GlobalData FirstParse(const vector<string>& lines)
 					fields[fieldName] = fieldValues;
 				}
 
-				//TODO: finish setting up
+				ProfileData userProfile{};
 
-				data.userProfile =
+				userProfile.profileName = value;
+				if (fields.contains(string(field_binary_type)))
+				{
+					const vector<string>& values = fields[string(field_binary_type)];
+
+					BinaryType result{};
+					StringToEnum(values.front(), KalaMake::Core::binaryTypes, result);
+					userProfile.binaryType = result;
+				}
+				if (fields.contains(string(field_compiler)))
+				{
+					const vector<string>& values = fields[string(field_compiler)];
+
+					CompilerType result{};
+					StringToEnum(values.front(), KalaMake::Core::compilerTypes, result);
+					userProfile.compiler = result;
+				}
+				if (fields.contains(string(field_standard)))
+				{
+					const vector<string>& values = fields[string(field_standard)];
+
+					StandardType result{};
+					StringToEnum(values.front(), KalaMake::Core::standardTypes, result);
+					userProfile.standard = result;
+				}
+				if (fields.contains(string(field_binary_name)))
+				{
+					userProfile.binaryName = fields[string(field_standard)][0];
+				}
+				if (fields.contains(string(field_build_type)))
+				{
+					const vector<string>& values = fields[string(field_build_type)];
+
+					BuildType result{};
+					StringToEnum(values.front(), KalaMake::Core::buildTypes, result);
+					userProfile.buildType = result;
+				}
+				if (fields.contains(string(field_build_path)))
+				{
+					userProfile.binaryName = fields[string(field_build_path)][0];
+				}
+				if (fields.contains(string(field_sources)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_sources)], pathResult);
+
+					userProfile.sources = std::move(pathResult);
+				}
+				if (fields.contains(string(field_headers)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_headers)], pathResult);
+
+					userProfile.headers = std::move(pathResult);
+				}
+				if (fields.contains(string(field_links)))
+				{
+					vector<path> pathResult{};
+					ToPathVector(fields[string(field_links)], pathResult);
+
+					userProfile.headers = std::move(pathResult);
+				}
+				if (fields.contains(string(field_warning_level)))
+				{
+					const vector<string>& values = fields[string(field_warning_level)];
+
+					WarningLevel result{};
+					StringToEnum(values.front(), KalaMake::Core::warningLevels, result);
+					userProfile.warningLevel = result;
+				}
+				if (fields.contains(string(field_defines)))
+				{
+					userProfile.defines = std::move(fields[string(field_defines)]);
+				}
+				if (fields.contains(string(field_flags)))
+				{
+					userProfile.defines = std::move(fields[string(field_flags)]);
+				}
+				if (fields.contains(string(field_custom_flags)))
+				{
+					const vector<string>& values = fields[string(field_build_type)];
+					vector<CustomFlag> customFlags{};
+
+					for (const auto& cf : values)
 					{
-						.profileName = value
-					};
+						CustomFlag result{};
+						StringToEnum(cf, KalaMake::Core::customFlags, result);
+						customFlags.push_back(result);
+					}
+					userProfile.customFlags = std::move(customFlags);
+				}
 
-				Log::Print(
-					"Finished parsing user profile '" + value + "'",
-					"KALAMAKE",
-					LogType::LOG_SUCCESS);
+				data.userProfile = std::move(userProfile);
 
 				if (value == correctTargetProfile) break;
 			}
