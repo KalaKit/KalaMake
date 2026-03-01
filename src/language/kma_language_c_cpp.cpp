@@ -3,7 +3,9 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
-#include <memory>
+#include <string>
+#include <vector>
+#include <filesystem>
 
 #include "KalaHeaders/log_utils.hpp"
 
@@ -13,15 +15,21 @@
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
+using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
 using KalaMake::Core::BinaryType;
-using KalaMake::Core::ProfileData;
+using KalaMake::Core::CompilerType;
+using KalaMake::Core::StandardType;
+using KalaMake::Core::BuildType;
+using KalaMake::Core::WarningLevel;
+using KalaMake::Core::CustomFlag;
 
+using std::string;
 using std::string_view;
-using std::unique_ptr;
-using std::make_unique;
-
-static bool CompileLinkOnly(const GlobalData& data);
+using std::vector;
+using std::filesystem::path;
+using std::filesystem::exists;
+using std::filesystem::is_regular_file;
 
 namespace KalaMake::Language
 {
@@ -32,69 +40,127 @@ namespace KalaMake::Language
 
 	static path foundCLPath{};
 
-	unique_ptr<Language_C_CPP> languageContext{};
-
-	Language_C_CPP* Language_C_CPP::Initialize(GlobalData data)
+	void Language_C_CPP::Compile(GlobalData& globalData)
 	{
-		if (languageContext) languageContext = nullptr;
-
-		unique_ptr<Language_C_CPP> newLanguageContext = make_unique<Language_C_CPP>();
-
-		return nullptr;
-	}
-
-	bool Language_C_CPP::Compile(string_view profileName)
-	{
-		//TODO: finish
-
-		ProfileData profile = profileName == "global"
-			? compileData.globalProfile
-			: profileName == compileData.userProfile.profileName
-				? compileData.userProfile
-				: ProfileData{};
-
-		if (profile.profileName.empty())
-		{
-			return false;
-		}
+		CompilerType compilerType = globalData.targetProfile.compiler;
+		BinaryType binaryType = globalData.targetProfile.binaryType;
 
 		//continue to static lib compilation function
 		//since its very different from exe and shared lib
-		if (profile.binaryType == BinaryType::B_LINK_ONLY)
+		if (binaryType == BinaryType::B_LINK_ONLY)
 		{	
-			return CompileLinkOnly(compileData);
+			//handle link here
 		}
 
-		vector<string> finalFlags = std::move(profile.flags);
+		StandardType standard = globalData.targetProfile.standard;
+		bool isCLanguage =
+			standard == StandardType::C_89
+			|| standard == StandardType::C_99
+			|| standard == StandardType::C_11
+			|| standard == StandardType::C_17
+			|| standard == StandardType::C_23
+			|| standard == StandardType::C_LATEST;
 
-		Log::Print("@@@@@ compile complete");
+		bool isCPPLanguage =
+			standard == StandardType::CPP_03
+			|| standard == StandardType::CPP_11
+			|| standard == StandardType::CPP_14
+			|| standard == StandardType::CPP_17
+			|| standard == StandardType::CPP_20
+			|| standard == StandardType::CPP_23
+			|| standard == StandardType::CPP_LATEST;
 
-		return true;
-	}
+		auto should_remove = [isCLanguage, isCPPLanguage](
+			const path& target, 
+			bool isSource) -> bool
+			{
+				if (!exists(target)
+					|| is_directory(target)
+					|| !is_regular_file(target)
+					|| !target.has_extension())
+				{
+					return true;
+				}
 
-	bool Language_C_CPP::IsValidCompiler(CompilerType compiler)
-	{
-		return false;
-	}
-	bool Language_C_CPP::IsValidStandard(StandardType standard)
-	{
-		return false;
-	}
-	bool Language_C_CPP::AreValidSources(const vector<string>& sources)
-	{
-		return false;
-	}
-	bool Language_C_CPP::AreValidHeaders(const vector<string>& headers)
-	{
-		return false;
-	}
-	bool Language_C_CPP::AreValidLinks(const vector<string>& links)
-	{
-		return false;
-	}
-}
+				if (!isCLanguage
+					&& !isCPPLanguage)
+				{
+					return true;
+				}
 
-bool CompileLinkOnly(const GlobalData& data)
-{
-	return false;
+				string extension = target.extension();
+
+				if (isCLanguage)
+				{
+					if (isSource
+						&& target.extension() != ".c")
+					{
+						return true;
+					}
+					if (!isSource
+						&& target.extension() != ".h")
+					{
+						return true;
+					}
+				}
+				if (isCPPLanguage)
+				{
+					if (isSource
+						&& target.extension() != ".c"
+						&& target.extension() != ".cpp")
+					{
+						return true;
+					}
+					if (!isSource
+						&& target.extension() != ".h"
+						&& target.extension() != ".hpp")
+					{
+						return true;
+					}
+				}
+
+				return false;
+			};
+
+		vector<path>& sources = globalData.targetProfile.sources;
+		for (auto it = sources.begin(); it != sources.end();)
+		{
+			path target = *it;
+			if (should_remove(target, true))
+			{
+				Log::Print(
+					"Removed invalid source script path '" + target.string() + "'",
+					"LANGUAGE_C_CPP",
+					LogType::LOG_WARNING);
+
+				sources.erase(it);
+			}
+			else ++it;
+		}
+
+		vector<path>& headers = globalData.targetProfile.headers;
+		for (auto it = headers.begin(); it != headers.end();)
+		{
+			path target = *it;
+			if (should_remove(target, false))
+			{
+				Log::Print(
+					"Removed invalid header script path '" + target.string() + "'",
+					"LANGUAGE_C_CPP",
+					LogType::LOG_WARNING);
+
+				headers.erase(it);
+			}
+			else ++it;
+		}
+
+		if (sources.empty())
+		{
+			KalaMakeCore::CloseOnError(
+				"LANGUAGE_C_CPP",
+				"No sources were remaining after cleaning source scripts list!");
+		}
+
+		Log::Print("\n@@@@@ completed compile parse");
+	}
 }

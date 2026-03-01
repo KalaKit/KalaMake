@@ -16,6 +16,7 @@
 #include "KalaHeaders/string_utils.hpp"
 
 #include "core.hpp"
+#include "language/kma_language_c_cpp.hpp"
 
 #include "core/kma_core.hpp"
 
@@ -57,6 +58,7 @@ using KalaMake::Core::BuildType;
 using KalaMake::Core::BinaryType;
 using KalaMake::Core::WarningLevel;
 using KalaMake::Core::CustomFlag;
+using KalaMake::Language::Language_C_CPP;
 
 using std::ostringstream;
 using std::filesystem::exists;
@@ -161,6 +163,8 @@ static bool foundGlobal{};
 static bool foundPostBuild{};
 static bool foundTargetProfile{};
 
+static GlobalData globalData{};
+
 static void CleanFoundFlags()
 {
 	foundVersion = false;
@@ -177,7 +181,9 @@ static bool EnumMapContainsValue(
 {
 	if (value.empty())
 	{
-		KalaMakeCore::PrintError(string(valueName) + " cannot be empty!");
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			string(valueName) + " cannot be empty!");
 
 		return false;
 	}
@@ -191,7 +197,9 @@ static bool EnumMapContainsValue(
 
 	if (!result)
 	{
-		KalaMakeCore::PrintError(string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
 
 		return false;
 	}
@@ -211,7 +219,9 @@ static bool GetEnumFromMap(
 {
 	if (value.empty())
 	{
-		KalaMakeCore::PrintError(string(valueName) + " cannot be empty!");
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			string(valueName) + " cannot be empty!");
 
 		return false;
 	}
@@ -225,7 +235,9 @@ static bool GetEnumFromMap(
 
 	if (!result)
 	{
-		KalaMakeCore::PrintError(string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
 
 		return false;
 	}
@@ -244,9 +256,9 @@ static void ResolvePathVector(
 		{
 			if (value.empty())
 			{
-				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' cannot be empty!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					string(valueName) + " '" + string(value) + "' cannot be empty!");
 			}
 
 			path p{ value };
@@ -254,32 +266,32 @@ static void ResolvePathVector(
 			if (!exists(p)) p = kmaPath / p;
 			if (!exists(p))
 			{
-				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					string(valueName) + " '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
 			}
 
 			if (!is_regular_file(p))
 			{
-				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' is not a regular file so its extension can't be checked!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					string(valueName) + " '" + string(value) + "' is not a regular file so its extension can't be checked!");
 			}
 
 			if (!p.has_extension())
 			{
-				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' has no extension!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					string(valueName) + " '" + string(value) + "' has no extension!");
 			}
 
 			string ext = p.extension().string();
 
 			if (!ContainsValue(extensions, ext))
 			{
-				KalaMakeCore::PrintError(string(valueName) + " '" + string(value) + "' has an unsupported extension '" + string(ext) + "'!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					string(valueName) + " '" + string(value) + "' has an unsupported extension '" + string(ext) + "'!");
 			}
 
 			try
@@ -288,9 +300,9 @@ static void ResolvePathVector(
 			}
 			catch (const filesystem_error&)
 			{
-				KalaMakeCore::PrintError("Failed to resolve target path '" + string(value) + "'!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Failed to resolve target path '" + string(value) + "'!");
 			}
 
 			outValues.push_back(p);
@@ -300,9 +312,9 @@ static void ResolvePathVector(
 
 	if (value.empty())
 	{
-		KalaMakeCore::PrintError(string(valueName) + " has no values!");
-
-		exit(1);
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			string(valueName) + " has no values!");
 	}
 
 	vector<path> cleanedValues{};
@@ -323,10 +335,9 @@ static void ExtractCategoryData(
 	newLine.erase(0,  1);
 	if (newLine.empty())
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve category '" + line + "' because it had no type or value!");
-
-		exit(1);
 	}
 
 	if (newLine == category_include)
@@ -349,19 +360,17 @@ static void ExtractCategoryData(
 		|| newLine.starts_with(category_global)
 		|| newLine.starts_with(category_postbuild))
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve category line '" + line + "' because it is not allowed to have a value after its name!");
-
-		exit(1);
 	}
 
 	size_t spacePos = newLine.find(' ');
 	if (spacePos == string::npos)
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve category line '" + line + "' because its value was empty!");
-
-		exit(1);
 	}
 
 	string name = newLine.substr(0, spacePos);
@@ -370,19 +379,17 @@ static void ExtractCategoryData(
 	if (!KalaMakeCore::ResolveCategory(name, type)
 		|| type == CategoryType::C_INVALID)
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve category line '" + line + "' because its type '" + name + "' was not found!");
-
-		exit(1);
 	}
 
 	size_t valueStart = newLine.find_first_not_of(' ', spacePos + 1);
 	if (valueStart == string::npos)
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve category line '" + line + "' because its value was empty!");
-
-		exit(1);
 	}
 	
 	string value = newLine.substr(valueStart);
@@ -399,20 +406,18 @@ static void ExtractFieldData(
 {
 	if (line.find(": ") == string::npos)
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve field '" + line + "' because it is missing its name and value separator!");
-
-		exit(1);
 	}
 
 	vector<string> split = SplitString(line, ": ");
 
 	if (split.size() > 2)
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Failed to resolve field '" + line + "' because it has more than one name and value separator!");
-
-		exit(1);
 	}
 
 	string name = split[0];
@@ -420,17 +425,15 @@ static void ExtractFieldData(
 
 	if (HasAnyWhiteSpace(name))
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Field name '" + name + "' cannot have spaces!");
-
-		exit(1);
 	}
 	if (HasAnyUnsafeFieldChar(name))
 	{
-		KalaMakeCore::PrintError(
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
 			"Field name '" + name + "' must only contain A-Z, a-z, 0-9, _ or -!");
-
-		exit(1);
 	}
 
 	FieldType t{};
@@ -440,41 +443,41 @@ static void ExtractFieldData(
 		&& (!searchSuccess
 		|| t == FieldType::T_INVALID))
 	{
-		KalaMakeCore::PrintError("Field '" + name  + "' is invalid!");
-				
-		exit(1);
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"Field '" + name  + "' is invalid!");
 	}
 	else if (isInclude
 			 && searchSuccess
 			 && t != FieldType::T_INVALID)
 	{
-		KalaMakeCore::PrintError("Field '" + name  + "' cannot be used for include field names!");
-				
-		exit(1);
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"Field '" + name  + "' cannot be used for include field names!");
 	}
 
 	auto require_quotes = [](const string& input) -> string
 		{
 			if (input.empty())
 			{
-				KalaMakeCore::PrintError("Failed to parse path! Cannot remove '\"' from empty path.");
-			
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Failed to parse path! Cannot remove '\"' from empty path.");
 			}
 
 			if (input.size() <= 2)
 			{
-				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' was too small.");
-			
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Failed to parse path! Input path '" + input + "' was too small.");
 			}
 
 			if (input.front() != '"'
 				|| input.back() != '"')
 			{
-				KalaMakeCore::PrintError("Failed to parse path! Input path '" + input + "' did not have the '\"' symbol at the front or back.");
-			
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Failed to parse path! Input path '" + input + "' did not have the '\"' symbol at the front or back.");
 			}
 
 			string result = input;
@@ -493,47 +496,44 @@ static void ExtractFieldData(
 	{
 		if (trimmedValue.empty())
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Build path must have a value!");
-
-			exit(1);
 		}
 
 		if (trimmedValue.find(',') != string::npos)
 		{
-			KalaMakeCore::PrintError("Build path '" + trimmedValue  + "' is not allowed to have more than one path!");
-				
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + trimmedValue  + "' is not allowed to have more than one path!");
 		}
 		if (trimmedValue.find('*') != string::npos)
 		{
-			KalaMakeCore::PrintError("Build path '" + trimmedValue + "' is not allowed to use wildcards!");
-				
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + trimmedValue + "' is not allowed to use wildcards!");
 		}
 		if (trimmedValue.find('#') != string::npos)
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Build path '" + trimmedValue + "' is not allowed to contain reference symbols!");
-
-			exit(1);
 		}
 
 		if (trimmedValue.find('+') != string::npos)
 		{
-			KalaMakeCore::PrintError("Build path '" + trimmedValue + "' is not allowed to append values!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + trimmedValue + "' is not allowed to append values!");
 		}
 
 		if (trimmedValue.starts_with('"'))
 		{
 			if (!trimmedValue.ends_with('"'))
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Build path '" + trimmedValue + "' must end with quotes!");
-
-				exit(1);
 			}
 
 			trimmedValue = require_quotes(trimmedValue);
@@ -546,10 +546,9 @@ static void ExtractFieldData(
 
 			if (!errorMsg.empty())
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Build path '" + trimmedValue + "' could not be resolved! Reason: " + errorMsg);
-
-				exit(1);
 			}
 
 			vector<string> result{};
@@ -560,10 +559,10 @@ static void ExtractFieldData(
 		}
 		else
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+					
 				"Build path '" + trimmedValue + "' has an illegal structure!");
-
-			exit(1);
 		}
 	}
 	else if (name == field_sources
@@ -588,17 +587,15 @@ static void ExtractFieldData(
 			{
 				if (!trimmedLine.ends_with('"'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Source or header path '" + trimmedLine + "' must end with quotes!");
-
-					exit(1);
 				}
 				if (trimmedLine.find('#') != string::npos)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Source or header path '" + trimmedLine + "' is not allowed to contain reference symbols!");
-
-					exit(1);
 				}
 
 				string cleanedValue = require_quotes(trimmedLine);
@@ -616,10 +613,9 @@ static void ExtractFieldData(
 
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Source value '" + cleanedValue + "' could not be resolved! Reason: " + errorMsg);
-
-						exit(1);
 					}
 				}
 				else 
@@ -631,10 +627,9 @@ static void ExtractFieldData(
 
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Header value '" + cleanedValue + "' could not be resolved! Reason: " + errorMsg);
-
-						exit(1);
 					}
 				}
 
@@ -649,17 +644,15 @@ static void ExtractFieldData(
 			{
 				if (trimmedLine.find('"') != string::npos)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Source or header reference '" + trimmedLine + "' is not allowed to contain quotes!");
-
-					exit(1);
 				}
 				if (trimmedLine.ends_with('#'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Source or header reference '" + trimmedLine + "' has no value after the last found reference symbol!");
-
-					exit(1);
 				}
 
 				result.push_back(trimmedLine);
@@ -668,10 +661,9 @@ static void ExtractFieldData(
 			}
 			else
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Source or header value '" + trimmedLine + "' has an illegal structure!");
-
-				exit(1);
 			}
 
 			//TODO: finish setting up
@@ -701,17 +693,15 @@ static void ExtractFieldData(
 				{
 					if (!trimmedLine.ends_with('"'))
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link path '" + trimmedLine + "' must end with quotes!");
-
-						exit(1);
 					}
 					if (trimmedLine.find('#') != string::npos)
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link path '" + trimmedLine + "' is not allowed to contain reference symbols!");
-
-						exit(1);
 					}
 
 					trimmedLine = require_quotes(trimmedLine);
@@ -727,10 +717,9 @@ static void ExtractFieldData(
 
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link path '" + trimmedLine + "' could not be resolved! Reason: " + errorMsg);
-
-						exit(1);
 					}
 
 					ToStringVector(resolvedPaths, resolvedStringPaths);
@@ -741,17 +730,15 @@ static void ExtractFieldData(
 				{
 					if (trimmedLine.find('"') != string::npos)
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link reference '" + trimmedLine + "' is not allowed to contain quotes!");
-
-						exit(1);
 					}
 					if (trimmedLine.ends_with('#'))
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link reference '" + trimmedLine + "' has no value after the last found reference symbol!");
-
-						exit(1);
 					}
 
 					return { trimmedLine };
@@ -762,17 +749,16 @@ static void ExtractFieldData(
 						&& !trimmedLine.ends_with(".a")
 						&& !trimmedLine.ends_with(".lib"))
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Link literal path '" + trimmedLine + "' does not have an extension!");
-
-						exit(1);
 					}
 
 					if (trimmedLine.find('+') != string::npos)
 					{
-						KalaMakeCore::PrintError("Link literal path '" + trimmedLine + "' is not allowed to append values!");
-									
-						exit(1);
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Link literal path '" + trimmedLine + "' is not allowed to append values!");
 					}
 
 					return { trimmedLine };
@@ -790,26 +776,23 @@ static void ExtractFieldData(
 				if (trimmedLine.starts_with('+')
 					|| trimmedLine.ends_with('+'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' value '" + trimmedLine + "' may not start or end with the append symbol!");
-
-					exit(1);
 				}
 
 				vector<string> appendValues = SplitString(trimmedLine, " + ");
 				if (appendValues.size() > 2)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' value '" + trimmedLine + "' may not append more than two values!");
-
-					exit(1);
 				}
 				if (appendValues.size() <= 1)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' value '" + trimmedLine + "' is malformed!");
-
-					exit(1);
 				}
 
 				string originAppend = TrimString(appendValues[0]);
@@ -818,26 +801,23 @@ static void ExtractFieldData(
 				if (originAppend.starts_with('#')
 					&& targetAppend.starts_with('#'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' may not append two references!");
-
-					exit(1);
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('"'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' may not append two paths!");
-
-					exit(1);
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('#'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include field '" + name + "' may not append a reference to a path!");
-
-					exit(1);
 				}
 
 				vector<string> cleanedStrings = resolve_line(targetAppend);
@@ -870,23 +850,22 @@ static void ExtractFieldData(
 	{
 		if (trimmedValue.empty())
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Include field '" + name + "' must have a value!");
-
-			exit(1);
 		}
 
 		if (trimmedValue.find(',') != string::npos)
 		{
-			KalaMakeCore::PrintError("Include field '" + name  + "' is not allowed to have more than one path!");
-				
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Include field '" + name  + "' is not allowed to have more than one path!");
 		}
 		if (trimmedValue.find('+') != string::npos)
 		{
-			KalaMakeCore::PrintError("Include field '" + name + "' is not allowed to append values!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Include field '" + name + "' is not allowed to append values!");
 		}
 
 		vector<string> splitPaths = SplitString(trimmedValue, ", ");
@@ -900,34 +879,30 @@ static void ExtractFieldData(
 			{
 				if (!trimmedLine.ends_with('"'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include path '" + name + "' value '" + trimmedLine + "' must end with quotes!");
-
-					exit(1);
 				}
 				if (trimmedLine.find('#') != string::npos)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Include path '" + trimmedLine + "' is not allowed to contain reference symbols!");
-
-					exit(1);
 				}
 
 				trimmedLine = require_quotes(trimmedLine);
 			}
 			else if (trimmedLine.starts_with('#'))
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Include field '" + name + "' value '" + trimmedLine + "' is not allowed to use references!");
-
-				exit(1);
 			}
 			else
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Include field '" + name + "' value '" + trimmedLine + "' has an illegal structure!");
-
-				exit(1);
 			}
 
 			vector<string> resolvedStringPaths{};
@@ -940,10 +915,9 @@ static void ExtractFieldData(
 
 			if (!errorMsg.empty())
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Include field '" + name + "' value '" + trimmedLine + "' could not be resolved! Reason: " + errorMsg);
-
-				exit(1);
 			}
 
 			ToStringVector(resolvedPaths, resolvedStringPaths);
@@ -968,10 +942,9 @@ static void ExtractFieldData(
 	{
 		if (trimmedValue.empty())
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Field '" + name + "' has no content!");
-
-			exit(1);
 		}
 
 		vector<string> splitPaths = SplitString(trimmedValue, ", ");
@@ -980,42 +953,39 @@ static void ExtractFieldData(
 			if (name != field_delete
 				&& name != field_create_dir)
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Field '" + name + "' must only contain origin and target path!");
-
-				exit(1);
 			}
 			else
 			{
-				KalaMakeCore::PrintError(
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
 					"Field '" + name + "' must only contain origin path!");
-
-				exit(1);
 			}
 		}
 		if (name != field_delete
 			&& name != field_create_dir
 			&& splitPaths.size() < 2)
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Field '" + name + "' must contain origin and target path!");
-
-			exit(1);
 		}
 
 		if (splitPaths[0].find('*') != string::npos)
 		{
-			KalaMakeCore::PrintError("Field '" + name  + "' origin path is not allowed to use wildcards!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name  + "' origin path is not allowed to use wildcards!");
 		}
 		if (name != field_delete
 			&& name != field_create_dir
 			&& splitPaths[1].find('*') != string::npos)
 		{
-			KalaMakeCore::PrintError("Field '" + name  + "' target path is not allowed to use wildcards!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name  + "' target path is not allowed to use wildcards!");
 		}
 
 		vector<string> result{};
@@ -1026,17 +996,15 @@ static void ExtractFieldData(
 				{
 					if (!trimmedLine.ends_with('"'))
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Field '" + name + "' path '" + trimmedLine + "' must end with quotes!");
-
-						exit(1);
 					}
 					if (trimmedLine.find('#') != string::npos)
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Field '" + name + "' path '" + trimmedLine + "' is not allowed to contain reference symbols!");
-
-						exit(1);
 					}
 
 					trimmedLine = require_quotes(trimmedLine);
@@ -1047,27 +1015,24 @@ static void ExtractFieldData(
 				{
 					if (trimmedLine.find('"') != string::npos)
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Field '" + name + "' reference '" + trimmedLine + "' is not allowed to contain quotes!");
-
-						exit(1);
 					}
 					if (trimmedLine.ends_with('#'))
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Field '" + name + "' reference '" + trimmedLine + "' has no value after the last found reference symbol!");
-
-						exit(1);
 					}
 
 					return true;
 				}
 				else
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' value '" + trimmedLine + "' has an illegal structure!");
-
-					exit(1);
 				}
 
 				return false;
@@ -1088,10 +1053,9 @@ static void ExtractFieldData(
 
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::PrintError(
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
 							"Field '" + name + "' value '" + targetValue + "' could not be resolved! Reason: " + errorMsg);
-
-						exit(1);
 					}
 
 					ToStringVector(resolvedPaths, resolvedStringPaths);
@@ -1113,26 +1077,23 @@ static void ExtractFieldData(
 				if (trimmedLine.starts_with('+')
 					|| trimmedLine.ends_with('+'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' value '" + trimmedLine + "' may not start or end with the append symbol!");
-
-					exit(1);
 				}
 
 				vector<string> appendValues = SplitString(trimmedLine, " + ");
 				if (appendValues.size() > 2)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' value '" + trimmedLine + "' may not append more than two values!");
-
-					exit(1);
 				}
 				if (appendValues.size() <= 1)
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' value '" + trimmedLine + "' is malformed!");
-
-					exit(1);
 				}
 
 				string originAppend = TrimString(appendValues[0]);
@@ -1141,26 +1102,23 @@ static void ExtractFieldData(
 				if (originAppend.starts_with('#')
 					&& targetAppend.starts_with('#'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' may not append two references!");
-
-					exit(1);
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('"'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' may not append two paths!");
-
-					exit(1);
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('#'))
 				{
-					KalaMakeCore::PrintError(
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
 						"Field '" + name + "' may not append a reference to a path!");
-
-					exit(1);
 				}
 
 				resolve_line(targetAppend);
@@ -1187,15 +1145,15 @@ static void ExtractFieldData(
 	{
 		if (trimmedValue.find('"') != string::npos)
 		{
-			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to use quotes or paths!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name + "' is not allowed to use quotes or paths!");
 		}
 		if (trimmedValue.find('*') != string::npos)
 		{
-			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to use wildcards!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name + "' is not allowed to use wildcards!");
 		}
 		if (trimmedValue.find('+') != string::npos
 			&& trimmedValue != compiler_clangpp
@@ -1210,9 +1168,9 @@ static void ExtractFieldData(
 			&& trimmedValue != standard_cpp26
 			&& trimmedValue != standard_cpp_latest)
 		{
-			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to append values!");
-						
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name + "' is not allowed to append values!");
 		}
 
 		//these fields must have a value
@@ -1222,10 +1180,9 @@ static void ExtractFieldData(
 			|| name == field_standard)
 			&& trimmedValue.empty())
 		{
-			KalaMakeCore::PrintError(
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
 				"Field '" + name + "' must have a value!");
-
-			exit(1);
 		}
 
 		if ((name == field_binary_type
@@ -1235,9 +1192,9 @@ static void ExtractFieldData(
 			|| name == field_warning_level)
 			&& trimmedValue.find(",") != string::npos)
 		{
-			KalaMakeCore::PrintError("Field '" + name + "' is not allowed to have more than one value!");
-							
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Field '" + name + "' is not allowed to have more than one value!");
 		}
 
 		if (name == field_binary_type)
@@ -1248,9 +1205,9 @@ static void ExtractFieldData(
 			if (!StringToEnum(trimmedValue, binaryTypes, binaryType)
 				|| binaryType == BinaryType::B_INVALID)
 			{
-				KalaMakeCore::PrintError("Binary type '" + trimmedValue + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Binary type '" + trimmedValue + "' is invalid!");
 			}
 		}
 		if (name == field_build_type)
@@ -1261,9 +1218,9 @@ static void ExtractFieldData(
 			if (!StringToEnum(trimmedValue, buildTypes, buildType)
 				|| buildType == BuildType::B_INVALID)
 			{
-				KalaMakeCore::PrintError("Build type '" + trimmedValue + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Build type '" + trimmedValue + "' is invalid!");
 			}
 		}
 		if (name == field_compiler)
@@ -1274,9 +1231,9 @@ static void ExtractFieldData(
 			if (!StringToEnum(trimmedValue, compilerTypes, compilerType)
 				|| compilerType == CompilerType::C_INVALID)
 			{
-				KalaMakeCore::PrintError("Compiler type '" + trimmedValue + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Compiler type '" + trimmedValue + "' is invalid!");
 			}
 		}
 		if (name == field_standard)
@@ -1287,9 +1244,9 @@ static void ExtractFieldData(
 			if (!StringToEnum(trimmedValue, standardTypes, standardType)
 				|| standardType == StandardType::S_INVALID)
 			{
-				KalaMakeCore::PrintError("Standard type '" + trimmedValue + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Standard type '" + trimmedValue + "' is invalid!");
 			}
 		}
 
@@ -1331,7 +1288,7 @@ static void ExtractFieldData(
 	}
 }
 
-static GlobalData FirstParse(const vector<string>& lines);
+static void FirstParse(const vector<string>& lines);
 
 static void HandleRecursions(GlobalData& data);
 
@@ -1477,9 +1434,9 @@ namespace KalaMake::Core
 			if (!StringToEnum(params[3], solutionTypes, solutionType)
 				|| solutionType == SolutionType::S_INVALID)
 			{
-				KalaMakeCore::PrintError("Solution type '" + params[3] + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Solution type '" + params[3] + "' is invalid!");
 			}
 		}
 
@@ -1490,17 +1447,17 @@ namespace KalaMake::Core
 			{
 				if (is_directory(filePath))
 				{
-					KalaMakeCore::PrintError("Project path '" + filePath.string() + "' leads to a directory!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Project path '" + filePath.string() + "' leads to a directory!");
 				}
 
 				if (!filePath.has_extension()
 					|| filePath.extension() != ".kmake")
 				{
-					KalaMakeCore::PrintError("Project path '" + filePath.string() + "' has an incorrect extension!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Project path '" + filePath.string() + "' has an incorrect extension!");
 				}
 
 				vector<string> content{};
@@ -1511,16 +1468,16 @@ namespace KalaMake::Core
 
 				if (!result.empty())
 				{
-					KalaMakeCore::PrintError("Project '" + filePath.string() + "' could not be compiled! Reason: " + result);
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Project '" + filePath.string() + "' could not be compiled! Reason: " + result);
 				}
 
 				if (content.empty())
 				{
-					KalaMakeCore::PrintError("Project '" + filePath.string() + "' was empty!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Project '" + filePath.string() + "' was empty!");
 				}
 
 				kmaPath = filePath.parent_path();
@@ -1529,9 +1486,9 @@ namespace KalaMake::Core
 				else if (state == TargetState::S_GENERATE) { Generate(filePath, content, solutionType); }
 				else
 				{
-					KalaMakeCore::PrintError("An unknown target state was passed!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"An unknown target state was passed!");
 				}
 			};
 
@@ -1545,9 +1502,9 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			KalaMakeCore::PrintError("Project partial path via '" + projectFile.string() + "' could not be resolved!");
-
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Project partial path via '" + projectFile.string() + "' could not be resolved!");
 		}
 
 		if (exists(correctTarget))
@@ -1565,9 +1522,9 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			KalaMakeCore::PrintError("Project full path '" + projectFile.string() + "' could not be resolved!");
-
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Project full path '" + projectFile.string() + "' could not be resolved!");
 		}
 
 		if (exists(correctTarget))
@@ -1577,7 +1534,9 @@ namespace KalaMake::Core
 			return;
 		}
 
-		KalaMakeCore::PrintError("Project path '" + projectFile.string() + "' does not exist!");
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"Project path '" + projectFile.string() + "' does not exist!");
 	}
 
 	void KalaMakeCore::Compile(
@@ -1590,7 +1549,7 @@ namespace KalaMake::Core
 			"KALAMAKE",
 			LogType::LOG_INFO);
 
-		GlobalData data = FirstParse(lines);
+		FirstParse(lines);
 
 		Log::Print("\n==========================================================================================\n");
 
@@ -1599,9 +1558,25 @@ namespace KalaMake::Core
 			"KALAMAKE",
 			LogType::LOG_SUCCESS);
 
-		HandleRecursions(data);
+		HandleRecursions(globalData);
 
 		CleanFoundFlags();
+
+		CompilerType compilerType = globalData.targetProfile.compiler;
+
+		switch (compilerType)
+		{
+			default:
+			case CompilerType::C_CL:
+			case CompilerType::C_CLANG:
+			case CompilerType::C_CLANG_CL:
+			case CompilerType::C_CLANGPP:
+			case CompilerType::C_GCC:
+			case CompilerType::C_GPP:
+			{
+				Language_C_CPP::Compile(globalData);
+			}
+		}
 
 		//TODO: finish setting up
 	}
@@ -1617,9 +1592,9 @@ namespace KalaMake::Core
 			"KALAMAKE",
 			LogType::LOG_INFO);
 
-		GlobalData data = FirstParse(lines);
+		FirstParse(lines);
 
-		HandleRecursions(data);
+		HandleRecursions(globalData);
 
 		CleanFoundFlags();
 
@@ -1686,7 +1661,9 @@ namespace KalaMake::Core
 	{
 		if (value.empty())
 		{
-			KalaMakeCore::PrintError("Target profile list has no values!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Target profile list has no values!");
 
 			return false;
 		}
@@ -1700,20 +1677,26 @@ namespace KalaMake::Core
 	{
 		if (value.empty())
 		{
-			KalaMakeCore::PrintError("Binary name cannot be empty!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Binary name cannot be empty!");
 
 			return false;
 		}
 
 		if (value.size() < MIN_NAME_LENGTH)
 		{
-			KalaMakeCore::PrintError("Binary name length is too short!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Binary name length is too short!");
 
 			return false;
 		}
 		if (value.size() > MAX_NAME_LENGTH)
 		{
-			KalaMakeCore::PrintError("Binary name length is too long!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Binary name length is too long!");
 
 			return false;
 		}
@@ -1732,14 +1715,18 @@ namespace KalaMake::Core
 	{
 		if (value.empty())
 		{
-			KalaMakeCore::PrintError("Build path cannot be empty!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path cannot be empty!");
 
 			return false;
 		}
 
 		if (value.find('*') != string::npos)
 		{
-			KalaMakeCore::PrintError("Build path '" + string(value) + "' is not allowed to use wildcards!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + string(value) + "' is not allowed to use wildcards!");
 
 			return false;
 		}
@@ -1749,14 +1736,18 @@ namespace KalaMake::Core
 		if (!exists(p)) p = kmaPath / p;
 		if (!exists(p))
 		{
-			KalaMakeCore::PrintError("Build path '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
 
 			return false;
 		}
 
 		if (!is_directory(p))
 		{
-			KalaMakeCore::PrintError("Build path '" + string(value) + "' must lead to a directory!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Build path '" + string(value) + "' must lead to a directory!");
 
 			return false;
 		}
@@ -1767,7 +1758,9 @@ namespace KalaMake::Core
 		}
 		catch (const filesystem_error&)
 		{
-			KalaMakeCore::PrintError("Failed to resolve build path '" + string(value)  + "'!");
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Failed to resolve build path '" + string(value)  + "'!");
 
 			return false;
 		}
@@ -1869,19 +1862,24 @@ namespace KalaMake::Core
 	const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>>& KalaMakeCore::GetWarningLevels() { return warningLevels; }
 	const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>>& KalaMakeCore::GetCustomFlags() { return customFlags; }
 
-    void KalaMakeCore::PrintError(string_view message)
+    void KalaMakeCore::CloseOnError(
+		string_view target,
+		string_view message)
 	{
 		Log::Print(
 			message,
-			"KALAMAKE",
+			target,
 			LogType::LOG_ERROR,
 			2);
+
+		exit(1);
 	}
 }
 
-GlobalData FirstParse(const vector<string>& lines)
+void FirstParse(const vector<string>& lines)
 {
-	GlobalData data{};
+	//always a fresh build
+	globalData = GlobalData{};
 
 	auto get_all_category_content = [&lines](
 		string_view categoryName,
@@ -1946,9 +1944,9 @@ GlobalData FirstParse(const vector<string>& lines)
 			if (!StringToEnum(name, categoryTypes, type)
 				|| type == CategoryType::C_INVALID)
 			{
-				KalaMakeCore::PrintError("Category type '" + name + "' is invalid!");
-				
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Category type '" + name + "' is invalid!");
 			}
 		};
 
@@ -1966,16 +1964,16 @@ GlobalData FirstParse(const vector<string>& lines)
 		{
 			if (value == "global")
 			{
-				KalaMakeCore::PrintError("User profile name is not allowed to be 'global'!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"User profile name is not allowed to be 'global'!");
 			}
 
 			if (HasAnyUnsafeFieldChar(value))
 			{
-				KalaMakeCore::PrintError("User profile name '" + value + "' must only contain A-Z, a-z, 0-9, _ or -!");
-
-				exit(1);
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"User profile name '" + value + "' must only contain A-Z, a-z, 0-9, _ or -!");
 			}
 
 			if (value != targetProfile) continue;
@@ -2011,9 +2009,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 	if (!foundTargetProfile)
 	{
-		KalaMakeCore::PrintError("Target profile '" + targetProfile + "' was not found!");
-
-		exit(1);
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"Target profile '" + targetProfile + "' was not found!");
 	}
 
 	if (!foundVersion)
@@ -2031,9 +2029,9 @@ GlobalData FirstParse(const vector<string>& lines)
 			{
 				if (foundVersion)
 				{
-					KalaMakeCore::PrintError("Version category was passed more than once!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Version category was passed more than once!");
 				}
 
 				Version v{};
@@ -2045,9 +2043,9 @@ GlobalData FirstParse(const vector<string>& lines)
 				if (!convertVersion
 					|| v == Version::V_INVALID)
 				{
-					KalaMakeCore::PrintError("Version '" + value  + "' is invalid!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Version '" + value  + "' is invalid!");
 				}
 
 				Log::Print(
@@ -2063,9 +2061,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 		if (!foundVersion)
 		{
-			KalaMakeCore::PrintError("Failed to find version!");
-
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Failed to find version!");
 		}
 	}
 
@@ -2089,9 +2087,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 				if (foundInclude)
 				{
-					KalaMakeCore::PrintError("Include category was used more than once!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Include category was used more than once!");
 				}
 
 				vector<string> content = get_all_category_content(name);
@@ -2109,9 +2107,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					if (fields.contains(fieldName))
 					{
-						KalaMakeCore::PrintError("Include name '" + fieldName + "' was duplicated!");
-
-						exit(1);
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Include name '" + fieldName + "' was duplicated!");
 					}
 
 					path includePath = path(fieldValues[0]);
@@ -2119,7 +2117,7 @@ GlobalData FirstParse(const vector<string>& lines)
 					fields[fieldName] = includePath;
 				}
 
-				data.includes.reserve(data.includes.size() + fields.size());
+				globalData.includes.reserve(globalData.includes.size() + fields.size());
 
 				for (const auto& [k, v] : fields)
 				{
@@ -2129,7 +2127,7 @@ GlobalData FirstParse(const vector<string>& lines)
 						.value = v
 					};
 
-					data.includes.push_back(inc);	
+					globalData.includes.push_back(inc);	
 				}
 
 				foundInclude = true;
@@ -2159,9 +2157,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 				if (foundGlobal)
 				{
-					KalaMakeCore::PrintError("Global category was used more than once!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Global category was used more than once!");
 				}
 				
 				vector<string> content = get_all_category_content(name);
@@ -2178,9 +2176,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					if (fields.contains(fieldName))
 					{
-						KalaMakeCore::PrintError("Field '" + fieldName + "' was duplicated!");
-
-						exit(1);
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Field '" + fieldName + "' was duplicated!");
 					}
 
 					fields[fieldName] = fieldValues;
@@ -2280,7 +2278,7 @@ GlobalData FirstParse(const vector<string>& lines)
 					userProfile.customFlags = std::move(customFlags);
 				}
 
-				data.userProfile = std::move(userProfile);
+				globalData.targetProfile = std::move(userProfile);
 
 				foundGlobal = true;
 
@@ -2290,9 +2288,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 		if (!foundGlobal)
 		{
-			KalaMakeCore::PrintError("Failed to find global profile!");
-
-			exit(1);
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Failed to find global profile!");
 		}
 	}
 
@@ -2316,9 +2314,9 @@ GlobalData FirstParse(const vector<string>& lines)
 
 				if (foundPostBuild)
 				{
-					KalaMakeCore::PrintError("Post build category was used more than once!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Post build category was used more than once!");
 				}
 
 				vector<string> content = get_all_category_content(name, value);
@@ -2367,24 +2365,22 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					if (fields.contains(fieldName))
 					{
-						KalaMakeCore::PrintError("Include name '" + fieldName + "' was duplicated!");
-
-						exit(1);
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Include name '" + fieldName + "' was duplicated!");
 					}
 
 					fields[fieldName] = fieldValues;
 				}
 
-				ProfileData userProfile{};
-
-				userProfile.profileName = value;
+				globalData.targetProfile.profileName = value;
 				if (fields.contains(string(field_binary_type)))
 				{
 					const vector<string>& values = fields[string(field_binary_type)];
 
 					BinaryType result{};
 					StringToEnum(values.front(), KalaMake::Core::binaryTypes, result);
-					userProfile.binaryType = result;
+					globalData.targetProfile.binaryType = result;
 				}
 				if (fields.contains(string(field_compiler)))
 				{
@@ -2392,7 +2388,7 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					CompilerType result{};
 					StringToEnum(values.front(), KalaMake::Core::compilerTypes, result);
-					userProfile.compiler = result;
+					globalData.targetProfile.compiler = result;
 				}
 				if (fields.contains(string(field_standard)))
 				{
@@ -2400,11 +2396,11 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					StandardType result{};
 					StringToEnum(values.front(), KalaMake::Core::standardTypes, result);
-					userProfile.standard = result;
+					globalData.targetProfile.standard = result;
 				}
 				if (fields.contains(string(field_binary_name)))
 				{
-					userProfile.binaryName = fields[string(field_standard)][0];
+					globalData.targetProfile.binaryName = fields[string(field_standard)][0];
 				}
 				if (fields.contains(string(field_build_type)))
 				{
@@ -2412,52 +2408,101 @@ GlobalData FirstParse(const vector<string>& lines)
 
 					BuildType result{};
 					StringToEnum(values.front(), KalaMake::Core::buildTypes, result);
-					userProfile.buildType = result;
+					globalData.targetProfile.buildType = result;
 				}
 				if (fields.contains(string(field_build_path)))
 				{
-					userProfile.binaryName = fields[string(field_build_path)][0];
+					globalData.targetProfile.buildPath = fields[string(field_build_path)][0];
 				}
 				if (fields.contains(string(field_sources)))
 				{
 					vector<path> pathResult{};
 					ToPathVector(fields[string(field_sources)], pathResult);
 
-					userProfile.sources = std::move(pathResult);
+					globalData.targetProfile.sources.reserve(
+						globalData.targetProfile.sources.size()
+						+ pathResult.size());
+
+					globalData.targetProfile.sources.insert(
+						globalData.targetProfile.sources.end(),
+						pathResult.begin(),
+						pathResult.end());
+
+					RemoveDuplicates(globalData.targetProfile.sources);
 				}
 				if (fields.contains(string(field_headers)))
 				{
 					vector<path> pathResult{};
 					ToPathVector(fields[string(field_headers)], pathResult);
 
-					userProfile.headers = std::move(pathResult);
+					globalData.targetProfile.headers.reserve(
+						globalData.targetProfile.headers.size()
+						+ pathResult.size());
+
+					globalData.targetProfile.headers.insert(
+						globalData.targetProfile.headers.end(),
+						pathResult.begin(),
+						pathResult.end());
+
+					RemoveDuplicates(globalData.targetProfile.headers);
 				}
 				if (fields.contains(string(field_links)))
 				{
 					vector<path> pathResult{};
 					ToPathVector(fields[string(field_links)], pathResult);
 
-					userProfile.headers = std::move(pathResult);
+					globalData.targetProfile.links.reserve(
+						globalData.targetProfile.links.size()
+						+ pathResult.size());
+
+					globalData.targetProfile.links.insert(
+						globalData.targetProfile.links.end(),
+						pathResult.begin(),
+						pathResult.end());
+
+					RemoveDuplicates(globalData.targetProfile.links);
 				}
 				if (fields.contains(string(field_warning_level)))
 				{
-					const vector<string>& values = fields[string(field_warning_level)];
+					vector<string>& values = fields[string(field_warning_level)];
 
 					WarningLevel result{};
 					StringToEnum(values.front(), KalaMake::Core::warningLevels, result);
-					userProfile.warningLevel = result;
+					globalData.targetProfile.warningLevel = result;
 				}
 				if (fields.contains(string(field_defines)))
 				{
-					userProfile.defines = std::move(fields[string(field_defines)]);
+					vector<string>& defines = fields[string(field_defines)];
+
+					globalData.targetProfile.defines.reserve(
+						globalData.targetProfile.defines.size()
+						+ defines.size());
+
+					globalData.targetProfile.defines.insert(
+						globalData.targetProfile.defines.end(),
+						defines.begin(),
+						defines.end());
+
+					RemoveDuplicates(globalData.targetProfile.defines);
 				}
 				if (fields.contains(string(field_flags)))
 				{
-					userProfile.defines = std::move(fields[string(field_flags)]);
+					vector<string>& flags = fields[string(field_flags)];
+
+					globalData.targetProfile.flags.reserve(
+						globalData.targetProfile.flags.size()
+						+ flags.size());
+
+					globalData.targetProfile.flags.insert(
+						globalData.targetProfile.flags.end(),
+						flags.begin(),
+						flags.end());
+
+					RemoveDuplicates(globalData.targetProfile.flags);
 				}
 				if (fields.contains(string(field_custom_flags)))
 				{
-					const vector<string>& values = fields[string(field_build_type)];
+					const vector<string>& values = fields[string(field_custom_flags)];
 					vector<CustomFlag> customFlags{};
 
 					for (const auto& cf : values)
@@ -2466,17 +2511,23 @@ GlobalData FirstParse(const vector<string>& lines)
 						StringToEnum(cf, KalaMake::Core::customFlags, result);
 						customFlags.push_back(result);
 					}
-					userProfile.customFlags = std::move(customFlags);
-				}
 
-				data.userProfile = std::move(userProfile);
+					globalData.targetProfile.customFlags.reserve(
+						globalData.targetProfile.customFlags.size()
+						+ customFlags.size());
+
+					globalData.targetProfile.customFlags.insert(
+						globalData.targetProfile.customFlags.end(),
+						customFlags.begin(),
+						customFlags.end());
+
+					RemoveDuplicates(globalData.targetProfile.customFlags);
+				}
 
 				if (value == correctTargetProfile) break;
 			}
 		}
 	}
-
-	return data;
 }
 
 void HandleRecursions(GlobalData& data)
@@ -2491,15 +2542,15 @@ void HandleRecursions(GlobalData& data)
 
 				if (hashCount == 2)
 				{
-					KalaMakeCore::PrintError("Field '" + string(fieldName) + "' value '" + v + "' cannot reference a category!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Field '" + string(fieldName) + "' value '" + v + "' cannot reference a category!");
 				}
 				if (hashCount > 3)
 				{
-					KalaMakeCore::PrintError("Field '" + string(fieldName) + "' value '" + v + "' cannot go deeper than three references!");
-
-					exit(1);
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Field '" + string(fieldName) + "' value '" + v + "' cannot go deeper than three references!");
 				}
 
 				if (hashCount == 1)

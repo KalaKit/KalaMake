@@ -24,6 +24,14 @@ namespace KalaMake::Core
 
 	using u8 = uint8_t;
 
+	constexpr size_t MIN_NAME_LENGTH = 1;
+	constexpr size_t MAX_NAME_LENGTH = 20;
+
+	//default build directory path relative to kmaPath if buildpath is not added or filled
+	static const path defaultBuildPath = "build";
+	//default object directory path relative to kmaPath if objpath is not added or filled
+	static const path defaultObjPath = "build/obj";
+
 	enum class TargetState : u8
 	{
 		S_INVALID = 0,
@@ -31,9 +39,6 @@ namespace KalaMake::Core
 		S_COMPILE = 1,
 		S_GENERATE = 2
 	};
-
-	constexpr size_t MIN_NAME_LENGTH = 1;
-	constexpr size_t MAX_NAME_LENGTH = 20;
 
 	enum class SolutionType : u8
 	{
@@ -310,10 +315,8 @@ namespace KalaMake::Core
 
 	struct GlobalData
 	{
-		//global profile data, user profile is not filled if global is picked
-		ProfileData globalProfile{};
-		//optional overrides to global profile provided by user profile, global is also filled
-		ProfileData userProfile{};
+		//final mixed data from global and/or target user profile
+		ProfileData targetProfile{};
 
 		//what includes are included in this kalamake project
 		vector<IncludeData> includes{};
@@ -406,6 +409,8 @@ namespace KalaMake::Core
 		static const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>>& GetWarningLevels();
 		static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>>& GetCustomFlags();
 
-		static void PrintError(string_view message);
+		static void CloseOnError(
+			string_view target,
+			string_view message);
 	};
 }
