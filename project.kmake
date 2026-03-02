@@ -17,14 +17,12 @@ compiler: clang-cl
 buildtype: debug
 buildpath: "build/windows-debug"
 links: "_external_shared/KalaCLI/debug/KalaCLI1d.lib"
-defines: WIN32_LEAN_AND_MEAN, NOMINMAX, UNICODE, _UNICODE
 
 #profile release-windows
 compiler: clang-cl
 buildtype: release
 buildpath: "build/windows-release"
 links: "_external_shared/KalaCLI/debug/KalaCLI1.lib"
-defines: WIN32_LEAN_AND_MEAN, NOMINMAX, UNICODE, _UNICODE
 
 #profile debug-linux
 compiler: clang++
