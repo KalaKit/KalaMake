@@ -155,10 +155,11 @@ constexpr string_view warning_level_strong = "strong";
 constexpr string_view warning_level_strict = "strict";
 constexpr string_view warning_level_all    = "all";
 
-constexpr string_view custom_flag_use_ninja        = "use-ninja";
-constexpr string_view custom_flag_no_obj           = "no-obj";
-constexpr string_view custom_flag_standard_req     = "standard-required";
-constexpr string_view custom_warnings_as_err       = "warnings-as-errors";
+constexpr string_view custom_flag_use_ninja    = "use-ninja";
+constexpr string_view custom_flag_no_obj       = "no-obj";
+constexpr string_view custom_flag_standard_req = "standard-required";
+constexpr string_view custom_warnings_as_err   = "warnings-as-errors";
+constexpr string_view custom_clang_zig_msvc    = "use-clang-zig-msvc";
 
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
@@ -1431,7 +1432,8 @@ namespace KalaMake::Core
 		{ CustomFlag::F_USE_NINJA,               custom_flag_use_ninja },
 		{ CustomFlag::F_NO_OBJ,                  custom_flag_no_obj },
 		{ CustomFlag::F_STANDARD_REQUIRED,       custom_flag_standard_req },
-		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err }
+		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
+		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,      custom_clang_zig_msvc }
 	};
 
 	void KalaMakeCore::OpenFile(

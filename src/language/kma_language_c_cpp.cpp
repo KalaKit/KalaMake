@@ -16,6 +16,7 @@
 
 using KalaHeaders::KalaCore::EnumToString;
 using KalaHeaders::KalaCore::RemoveDuplicates;
+using KalaHeaders::KalaCore::ContainsValue;
 
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
@@ -236,6 +237,21 @@ void Compile_Final(const GlobalData& globalData)
 
 			string_view compiler{};
 			EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
+			
+#if _WIN32
+			if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+			{
+				if (compiler == "gcc")      compiler = gcc_compiler_windows_to_linux;
+				else if (compiler == "g++") compiler = gpp_compiler_windows_to_linux;
+			}
+#else
+			if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+			{
+				if (compiler == "gcc")      compiler = gcc_compiler_linux_to_windows;
+				else if (compiler == "g++") compiler = gpp_compiler_linux_to_windows;
+			}
+#endif
+			
 			command += string(compiler);
 
 			if (compiler == "zig")
@@ -261,6 +277,29 @@ void Compile_Final(const GlobalData& globalData)
 				{
 					command += " c++";
 				}
+			}
+
+			//set target type
+
+			if (compiler == "clang"
+				|| compiler == "clang++"
+				|| compiler == "zig")
+			{
+#if _WIN32
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				{
+					command += " -target " + string(clang_zig_target_windows_to_linux);
+				}
+#else
+				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				{
+					if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_USE_CLANG_ZIG_MSVC))
+					{
+						command += " -target " + string(clang_zig_target_linux_to_windows_msvc);
+					}
+					else command += " -target " + string(clang_zig_target_linux_to_windows_gnu);
+				}
+#endif
 			}
 
 			//set standard
@@ -539,6 +578,21 @@ void Compile_Final(const GlobalData& globalData)
 				compiler = "ar rcs";
 #endif
 			}
+
+#if _WIN32
+			if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+			{
+				if (compiler == "gcc")      compiler = gcc_compiler_windows_to_linux;
+				else if (compiler == "g++") compiler = gpp_compiler_windows_to_linux;
+			}
+#else
+			if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+			{
+				if (compiler == "gcc")      compiler = gcc_compiler_linux_to_windows;
+				else if (compiler == "g++") compiler = gpp_compiler_linux_to_windows;
+			}
+#endif
+
 			command += string(compiler);
 
 			if (compiler == "zig")
@@ -566,13 +620,85 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
+			//set target type
+
+			if (compiler == "clang"
+				|| compiler == "clang++"
+				|| compiler == "zig")
+			{
+#if _WIN32
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				{
+					command += " -target " + string(clang_zig_target_windows_to_linux);
+				}
+#else
+				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				{
+					if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_USE_CLANG_ZIG_MSVC))
+					{
+						command += " -target " + string(clang_zig_target_linux_to_windows_msvc);
+					}
+					else command += " -target " + string(clang_zig_target_linux_to_windows_gnu);
+				}
+#endif
+			}
+
 #ifdef __linux__
-			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
+			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC
+				&& globalData.targetProfile.targetType != TargetType::T_WINDOWS)
 			{
 				//set current dir .so flags for linux
 				command += " -Wl,-rpath,'$ORIGIN'";
 			}
 #endif
+
+			//add object files
+			
+			for (const auto& o : objFiles)
+			{
+				command += " \"" + o.string() + "\"";
+			}
+
+			//set link flags
+
+			vector<string> finalFlags = globalData.targetProfile.linkFlags;
+
+			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
+			{
+				if (isMSVC
+					&& (globalData.targetProfile.buildType == BuildType::B_DEBUG
+					|| globalData.targetProfile.buildType == BuildType::B_RELDEBUG))
+				{
+					finalFlags.push_back("/DEBUG");
+				}
+				if (!isMSVC
+					&& (globalData.targetProfile.buildType == BuildType::B_RELEASE
+					|| globalData.targetProfile.buildType == BuildType::B_MINSIZEREL))
+				{
+					finalFlags.push_back("-Wl,-s");
+				}
+			}
+
+			RemoveDuplicates(finalFlags);
+			for (const auto& f : finalFlags)
+			{
+				command += " " + f;
+			}
+
+			//set links
+
+			if (!globalData.targetProfile.links.empty())
+			{
+				for (const auto& l : globalData.targetProfile.links)
+				{
+					if (path(l).has_extension()) command += " \"" + l.string() + "\"";
+					else
+					{
+						if (isMSVC) command += " " + l.string() + ".lib";
+						else        command += " -l" + l.string();
+					}
+				}
+			}
 
 			//set output
 
@@ -603,29 +729,76 @@ void Compile_Final(const GlobalData& globalData)
 			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE)
 			{
 #ifdef _WIN32
-				if (!binaryName.ends_with(".exe")) extension = ".exe";
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				{
+					
+					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
+				}
+				else
+				{
+					if (!binaryName.ends_with(".exe")) extension = ".exe";
+				}
+#else
+				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				{
+					if (!binaryName.ends_with(".exe")) extension = ".exe";
+				}
+				else
+				{
+					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
+				}
 #endif
 			}
 			else if (globalData.targetProfile.binaryType == BinaryType::B_SHARED)
 			{
 #ifdef _WIN32
-				if (!binaryName.ends_with(".dll")) extension = ".dll";
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				{
+					if (!binaryName.ends_with(".so")) extension = ".so";
+				}
+				else
+				{
+					if (!binaryName.ends_with(".dll")) extension = ".dll";
+				}
 #else
-				if (!binaryName.ends_with(".so")) extension = ".so";
+				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				{
+					if (!binaryName.ends_with(".dll")) extension = ".dll";
+				}
+				else
+				{
+					if (!binaryName.ends_with(".so")) extension = ".so";
+				}
 #endif
 			}
 			else if (globalData.targetProfile.binaryType == BinaryType::B_STATIC)
 			{
 #ifdef _WIN32
-				if (!binaryName.ends_with(".lib")) extension = ".lib";
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				{
+					if (!binaryName.ends_with(".a")) extension = ".a";
+				}
+				else
+				{
+					if (!binaryName.ends_with(".lib")) extension = ".lib";
+				}
 #else
-				if (!binaryName.ends_with(".a")) extension = ".a";
+				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				{
+					if (!binaryName.ends_with(".lib")) extension = ".lib";
+				}
+				else
+				{
+					if (!binaryName.ends_with(".a")) extension = ".a";
+				}
 #endif
 			}
 
 			path outputPath = path(buildPath / string(binaryName + extension));
 
 			command += " " + outputArgFront + outputArg + "\"" + outputPath.string() + "\"";
+
+			//link 
 
 			auto needs_link = [](
 				const path& output,
@@ -647,53 +820,6 @@ void Compile_Final(const GlobalData& globalData)
 
 					return false;
 				};
-
-			//set link flags
-
-			vector<string> finalFlags = globalData.targetProfile.linkFlags;
-
-			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
-			{
-				if (isMSVC
-					&& (globalData.targetProfile.buildType == BuildType::B_DEBUG
-					|| globalData.targetProfile.buildType == BuildType::B_RELDEBUG))
-				{
-					finalFlags.push_back("/DEBUG");
-				}
-				if (!isMSVC
-					&& (globalData.targetProfile.buildType == BuildType::B_RELEASE
-					|| globalData.targetProfile.buildType == BuildType::B_MINSIZEREL))
-				{
-					finalFlags.push_back("-Wl,-s");
-				}
-			}
-
-			RemoveDuplicates(finalFlags);
-			for (const auto& f : finalFlags)
-			{
-				command += " " + f;
-			}
-
-			//add object files
-			for (const auto& o : objFiles)
-			{
-				command += " \"" + o.string() + "\"";
-			}
-
-			//set links
-
-			if (!globalData.targetProfile.links.empty())
-			{
-				for (const auto& l : globalData.targetProfile.links)
-				{
-					if (path(l).has_extension()) command += " \"" + l.string() + "\"";
-					else
-					{
-						if (isMSVC) command += " " + l.string() + ".lib";
-						else        command += " -l" + l.string();
-					}
-				}
-			}
 
 			Log::Print("\n==========================================================================================\n");
 

@@ -258,14 +258,18 @@ namespace KalaMake::Core
 		//uses the multithreaded benefits of ninja for faster compilation
 		F_USE_NINJA = 1u,
 
-		//will not generate object files for object-compatible languages, compiles and links directly
+		//will not generate object files for object-compatible languages - compiles and links directly
 		F_NO_OBJ = 2u,
 
 		//fails the build if the compiler cannot support the requested standard, ignored on GNU
 		F_STANDARD_REQUIRED = 3u,
 
 		//treats all warnings as errors
-		F_WARNINGS_AS_ERRORS = 4u
+		F_WARNINGS_AS_ERRORS = 4u,
+
+		//uses msvc instead of the default gnu for cross-compiling linux binary to windows binary,
+		//not usable for msvc compilers, not usable outside of linux and c/c++
+		F_USE_CLANG_ZIG_MSVC = 5u
 	};
 	
 	struct ProfileData
