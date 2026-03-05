@@ -800,11 +800,12 @@ static void ExtractFieldData(
 			if (trimmedLine.find('+') != string::npos)
 			{
 				if (trimmedLine.starts_with('+')
-					|| trimmedLine.ends_with('+'))
+					|| (trimmedLine.ends_with('+')
+					&& !trimmedLine.ends_with("++")))
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Include field '" + name + "' value '" + trimmedLine + "' may not start or end with the append symbol!");
+						"Link field '" + name + "' value '" + trimmedLine + "' may not start or end with the append symbol!");
 				}
 
 				vector<string> appendValues = SplitString(trimmedLine, " + ");
@@ -812,14 +813,9 @@ static void ExtractFieldData(
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Include field '" + name + "' value '" + trimmedLine + "' may not append more than two values!");
+						"Link field '" + name + "' value '" + trimmedLine + "' may not append more than two values!");
 				}
-				if (appendValues.size() <= 1)
-				{
-					KalaMakeCore::CloseOnError(
-						"KALAMAKE",
-						"Include field '" + name + "' value '" + trimmedLine + "' is malformed!");
-				}
+				if (appendValues.size() <= 1) appendValues.push_back(trimmedLine);
 
 				string originAppend = TrimString(appendValues[0]);
 				string targetAppend = TrimString(appendValues[1]);
@@ -829,21 +825,21 @@ static void ExtractFieldData(
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Include field '" + name + "' may not append two references!");
+						"Link field '" + name + "' may not append two references!");
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('"'))
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Include field '" + name + "' may not append two paths!");
+						"Link field '" + name + "' may not append two paths!");
 				}
 				if (originAppend.starts_with('"')
 					&& targetAppend.starts_with('#'))
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Include field '" + name + "' may not append a reference to a path!");
+						"Link field '" + name + "' may not append a reference to a path!");
 				}
 
 				vector<string> cleanedStrings = resolve_line(targetAppend);
