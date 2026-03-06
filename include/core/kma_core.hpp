@@ -75,10 +75,7 @@ namespace KalaMake::Core
 		C_GLOBAL = 3u,
 
 		//optional N amount of profile categories with custom names
-		C_PROFILE = 4u,
-
-		//optional post-build commands
-		C_POST_BUILD = 5u
+		C_PROFILE = 4u
 	};
 
 	//Allowed field types that can be added to global and profile categories
@@ -127,18 +124,8 @@ namespace KalaMake::Core
 		//what kalamake-specific flags will trigger extra actions
 		T_CUSTOM_FLAGS = 17u,
 
-		//where a file or folder is moved
-		T_MOVE = 18u,
-		//where a file or folder is copied
-		T_COPY = 19u,
-		//where a file or folder is copied and overridden if it already exists
-		T_FORCECOPY = 20u,
-		//where a new folder is created
-		T_CREATE_DIR = 21u,
-		//where a file or folder is deleted
-		T_DELETE = 22u,
-		//what a file or folder will be renamed to
-		T_RENAME = 23u
+		//post-build action field, can add as many as you want, optional
+		T_POST_BUILD_ACTION = 18u
 	};
 
 	//Allowed binary types that can be added to the binarytype field
@@ -334,23 +321,14 @@ namespace KalaMake::Core
 		vector<string> linkFlags{};
 		//what kalamake-specific flags will trigger extra actions, optional
 		vector<CustomFlag> customFlags{};
+		//what actions will be done after the compilation and linking is complete
+		vector<string> postBuildActions{};
 	};
 
 	struct IncludeData
 	{
 		string name{};
 		path value{};
-	};
-	
-	struct PostBuildAction
-	{
-		//what build action will be done
-		FieldType buildAction{};
-
-		//from where
-		path origin{};
-		//to where, unused for delete and createdir
-		path target{};
 	};
 
 	struct GlobalData
@@ -360,8 +338,6 @@ namespace KalaMake::Core
 
 		//what includes are included in this kalamake project
 		vector<IncludeData> includes{};
-		//what actions will be done after the compilation is complete
-		vector<PostBuildAction> postBuildActions{};
 	};
 
 	class KalaMakeCore

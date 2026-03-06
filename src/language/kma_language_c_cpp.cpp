@@ -197,22 +197,6 @@ void PreCheck(GlobalData& globalData)
 		else ++it;
 	}
 
-	vector<path>& headers = globalData.targetProfile.headers;
-	for (auto it = headers.begin(); it != headers.end();)
-	{
-		path target = *it;
-		if (should_remove(target, false))
-		{
-			Log::Print(
-				"Removed invalid header script path '" + target.string() + "'",
-				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO);
-
-			headers.erase(it);
-		}
-		else ++it;
-	}
-
 	if (sources.empty())
 	{
 		KalaMakeCore::CloseOnError(
@@ -946,6 +930,35 @@ void Compile_Final(const GlobalData& globalData)
 
 	vector<path> objFiles = compile();
 	if (!objFiles.empty()) link(objFiles);
+
+	if (!globalData.targetProfile.postBuildActions.empty())
+	{
+		Log::Print("\n==========================================================================================\n");
+
+		Log::Print(
+			"Starting to run post build actions.",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_INFO);
+
+		for (const auto& a : globalData.targetProfile.postBuildActions)
+		{
+			Log::Print("\naction: " + a);
+
+			if (system(a.c_str()) != 0)
+			{
+				KalaMakeCore::CloseOnError(
+					"LANGUAGE_C_CPP",
+					"Failed to run action!");
+			}
+		}
+
+		Log::Print("\n");
+
+		Log::Print(
+			"Finished all post build actions!",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_SUCCESS);
+	}
 }
 
 void Generate_Final(const GlobalData& globalData)

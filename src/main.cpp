@@ -33,7 +33,7 @@ static void AddExternalCommands()
 		};
 	auto version = [](const vector<string>& params)
 		{
-			Log::Print("prerelease-linux aka prog tries to avoid isa");
+			Log::Print("prerelease-linux: attempt to fix ISA CPU errors");
 		};
 
 	CommandManager::AddCommand(

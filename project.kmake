@@ -31,9 +31,13 @@ compiler: clang++
 buildtype: debug
 buildpath: "build/debug-linux"
 links: "_external_shared/KalaCLI/debug/libKalaCLI1d.a"
+//strips stupid avx requirements that cachyos seems to add for no reason
+postbuildaction: objcopy --remove-section .note.gnu.property build/debug-linux/kalamake
 
 #profile release-linux
 compiler: clang++
 buildtype: minsizerel
 buildpath: "build/release-linux"
 links: "_external_shared/KalaCLI/release/libKalaCLI1.a"
+//strips stupid avx requirements that cachyos seems to add for no reason
+postbuildaction: objcopy --remove-section .note.gnu.property build/release-linux/kalamake
