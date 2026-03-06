@@ -8,11 +8,13 @@
 #include <filesystem>
 #include <atomic>
 #include <thread>
+#include <sstream>
 
 #include "KalaHeaders/core_utils.hpp"
 #include "KalaHeaders/log_utils.hpp"
 #include "KalaHeaders/file_utils.hpp"
 #include "KalaHeaders/thread_utils.hpp"
+#include "KalaHeaders/string_utils.hpp"
 
 #include "language/kma_language.hpp"
 #include "core/kma_core.hpp"
@@ -24,10 +26,15 @@ using KalaHeaders::KalaCore::ContainsValue;
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
+using KalaHeaders::KalaFile::DeletePath;
 using KalaHeaders::KalaFile::CreateNewDirectory;
+using KalaHeaders::KalaFile::CreateNewFile;
+using KalaHeaders::KalaFile::FileType;
 
 using KalaHeaders::KalaThread::lockwait_m;
 using KalaHeaders::KalaThread::unlock_m;
+
+using KalaHeaders::KalaString::RemoveFromString;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
@@ -52,6 +59,7 @@ using std::min;
 using std::atomic;
 using std::thread;
 using std::mutex;
+using std::ostringstream;
 
 using u16 = uint16_t;
 
@@ -72,6 +80,16 @@ constexpr string_view clang_zig_target_windows_to_linux = "x86_64-linux-gnu";
 constexpr string_view clang_zig_target_linux_to_windows_gnu = "x86_64-windows-gnu";
 //optional for clang linux-to-windows, must add custom flag use-clang-zig-msvc to enable
 constexpr string_view clang_zig_target_linux_to_windows_msvc = "x86_64-windows-msvc";
+
+struct CompileCommand
+{
+	string dir{};
+	string command{};
+	string file{};
+	string output{};
+};
+
+static vector<CompileCommand> commands{};
 
 namespace KalaMake::Language
 {
@@ -322,6 +340,25 @@ void Compile_Final(const GlobalData& globalData)
 
 			vector<string> finalFlags = globalData.targetProfile.compileFlags;
 
+			if (isMSVC)
+			{
+				string runtimeFlag = ContainsValue(
+					globalData.targetProfile.customFlags, 
+					CustomFlag::F_MSVC_STATIC_RUNTIME) ? "/MT" : "/MD";
+				
+				finalFlags.push_back(globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
+					? runtimeFlag + "d"
+					: runtimeFlag);
+			}
+
+			if (ContainsValue(
+				globalData.targetProfile.customFlags, 
+				CustomFlag::F_WARNINGS_AS_ERRORS))
+			{
+				if (isMSVC) finalFlags.push_back("/WX");
+				else        finalFlags.push_back("-Werror");
+			}
+
 			switch (globalData.targetProfile.buildType)
 			{
 			case BuildType::B_DEBUG:
@@ -544,6 +581,17 @@ void Compile_Final(const GlobalData& globalData)
 					perFileCommand += " \"" + s.string() + "\"";
 					perFileCommand += " " + objFront + " \"" + objPath.string() + "\"";
 
+					if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+					{
+						commands.push_back(
+						{
+							.dir = globalData.targetProfile.buildPath.string(),
+							.command = RemoveFromString(perFileCommand, "\"", true),
+							.file = s.string(),
+							.output = objPath.string()
+						});
+					}
+
 					//only recompile this object file when source and object timestamp differences occur
 					if (needs_compile(s, objPath))
 					{
@@ -596,7 +644,7 @@ void Compile_Final(const GlobalData& globalData)
 							{
 								int idx = next++;
 
-								if (idx >= globalData.targetProfile.sources.size()) break;
+								if (scast<size_t>(idx) >= globalData.targetProfile.sources.size()) break;
 
 								compile(idx);
 							}
@@ -609,7 +657,7 @@ void Compile_Final(const GlobalData& globalData)
 			return compiledObj;
 		};
 
-	auto link = [&isMSVC, &frontArg, &globalData](const vector<path>& objFiles) -> void
+	auto link = [&isMSVC, &globalData](const vector<path>& objFiles) -> void
 		{
 			string sharedArg = globalData.targetProfile.binaryType == BinaryType::B_SHARED
 				? (isMSVC ? "/LD" : "-shared")
@@ -930,6 +978,71 @@ void Compile_Final(const GlobalData& globalData)
 
 	vector<path> objFiles = compile();
 	if (!objFiles.empty()) link(objFiles);
+
+	if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+	{
+		Log::Print("\n==========================================================================================\n");
+
+		Log::Print(
+			"Starting to create compile_commands.json.",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_INFO);
+
+		path compComm = globalData.targetProfile.buildPath / "compile_commands.json";
+
+		if (exists(compComm))
+		{
+			string errorMsg = DeletePath(compComm);
+
+			if (!errorMsg.empty())
+			{
+				KalaMakeCore::CloseOnError(
+					"LANGUAGE_C_CPP",
+					"Failed to remove existing compile_commands.json! Reason: " + errorMsg);
+			}
+		}
+
+		ostringstream out{};
+
+		out << "[\n";
+
+		for (size_t i = 0; i < commands.size(); ++i)
+		{
+			const CompileCommand& s = commands[i];
+
+			out << "{\n";
+			out << "  \"directory\": \"" << s.dir     << "\",\n";
+			out << "  \"command\": \""   << s.command << "\",\n";
+			out << "  \"file\": \""      << s.file    << "\",\n";
+			out << "  \"output\": \""    << s.output  << "\"\n";
+			out << "}";
+
+			if (i + 1 < commands.size()) out << ",";
+
+			out << "\n";
+		}
+
+		out << "]";
+
+		string errorMsg = CreateNewFile(
+			compComm,
+			FileType::FILE_TEXT,
+			{ .inText = out.str() });
+
+		if (!errorMsg.empty())
+		{
+			KalaMakeCore::CloseOnError(
+				"LANGUAGE_C_CPP",
+				"Failed to create new compile_commands.json! Reason: " + errorMsg);
+		}
+
+		Log::Print("\n");
+
+		Log::Print(
+			"Finished creating compile_commands.json!",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_SUCCESS);
+	}
 
 	if (!globalData.targetProfile.postBuildActions.empty())
 	{

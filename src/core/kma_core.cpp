@@ -27,7 +27,6 @@
 #include "core/kma_core.hpp"
 
 using KalaHeaders::KalaCore::EnumHash;
-using KalaHeaders::KalaCore::ContainsValue;
 using KalaHeaders::KalaCore::IsComparable;
 using KalaHeaders::KalaCore::IsAssignable;
 using KalaHeaders::KalaCore::AnyEnumAndStringMap;
@@ -163,10 +162,10 @@ constexpr string_view warning_level_strong = "strong";
 constexpr string_view warning_level_strict = "strict";
 constexpr string_view warning_level_all    = "all";
 
-constexpr string_view custom_flag_no_obj       = "no-obj";
-constexpr string_view custom_flag_standard_req = "standard-required";
-constexpr string_view custom_warnings_as_err   = "warnings-as-errors";
-constexpr string_view custom_clang_zig_msvc    = "use-clang-zig-msvc";
+constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
+constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
+constexpr string_view custom_clang_zig_msvc      = "use-clang-zig-msvc";
+constexpr string_view custom_export_comp_comm    = "export-compile-commands";
 
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
@@ -269,86 +268,6 @@ static bool GetEnumFromMap(
 
 	outEnum = foundEnum;
 	return true;
-}
-
-static void ResolvePathVector(
-	const vector<string>& value,
-	string_view valueName,
-	const vector<string>& extensions,
-	vector<path>& outValues)
-{
-	auto check_path = [&valueName, &extensions](string_view value, vector<path>& outValues) -> bool
-		{
-			if (value.empty())
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					string(valueName) + " '" + string(value) + "' cannot be empty!");
-			}
-
-			path p{ value };
-
-			if (!exists(p)) p = kmaPath / p;
-			if (!exists(p))
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					string(valueName) + " '" + string(value) + "' could not be resolved! Did you assign the local or full path correctly?");
-			}
-
-			if (!is_regular_file(p))
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					string(valueName) + " '" + string(value) + "' is not a regular file so its extension can't be checked!");
-			}
-
-			if (!p.has_extension())
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					string(valueName) + " '" + string(value) + "' has no extension!");
-			}
-
-			string ext = p.extension().string();
-
-			if (!ContainsValue(extensions, ext))
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					string(valueName) + " '" + string(value) + "' has an unsupported extension '" + string(ext) + "'!");
-			}
-
-			try
-			{
-				p = weakly_canonical(p);
-			}
-			catch (const filesystem_error&)
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					"Failed to resolve target path '" + string(value) + "'!");
-			}
-
-			outValues.push_back(p);
-
-			return true;
-		};
-
-	if (value.empty())
-	{
-		KalaMakeCore::CloseOnError(
-			"KALAMAKE",
-			string(valueName) + " has no values!");
-	}
-
-	vector<path> cleanedValues{};
-
-	for (const auto& v : value) check_path(v, cleanedValues);
-
-	RemoveDuplicates(cleanedValues);
-
-	outValues = std::move(cleanedValues);
 }
 
 static void ExtractCategoryData(
@@ -552,10 +471,10 @@ namespace KalaMake::Core
 	//their true meanings change depending on which OS is used
 	static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>> customFlags =
 	{
-		{ CustomFlag::F_NO_OBJ,                  custom_flag_no_obj },
-		{ CustomFlag::F_STANDARD_REQUIRED,       custom_flag_standard_req },
+		{ CustomFlag::F_MSVC_STATIC_RUNTIME,     custom_msvc_static_runtime },
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
-		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,      custom_clang_zig_msvc }
+		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,      custom_clang_zig_msvc },
+		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS, custom_export_comp_comm }
 	};
 
 	void KalaMakeCore::OpenFile(
@@ -1163,7 +1082,7 @@ void ExtractFieldData(
 
 		vector<string> result{};
 
-		auto resolve_line = [&name, require_quotes](string& trimmedLine) -> vector<string>
+		auto resolve_line = [require_quotes](string& trimmedLine) -> vector<string>
 			{
 				if (trimmedLine.starts_with('"'))
 				{
@@ -1518,7 +1437,7 @@ void ExtractFieldData(
 	else
 	{
 		string msg = "Field '" + outFieldName + "' was parsed correctly, found values:\n";
-		for (int i = 0; i < outFieldValues.size(); ++i)
+		for (size_t i = 0; i < outFieldValues.size(); ++i)
 		{
 			string_view v = outFieldValues[i];
 

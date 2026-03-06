@@ -13,6 +13,7 @@ binaryname: kalamake
 sources: "src"
 headers: "include", #kh
 warninglevel: normal
+customflags: export-compile-commands
 
 #profile debug-windows
 compiler: clang-cl

@@ -262,18 +262,20 @@ namespace KalaMake::Core
 	{
 		F_INVALID = 0u,
 
-		//will not generate object files for object-compatible languages - compiles and links directly
-		F_NO_OBJ = 1u,
-
-		//fails the build if the compiler cannot support the requested standard, ignored on GNU
-		F_STANDARD_REQUIRED = 2u,
+		//embed the C/C++ runtime into the binary,
+		//dynamic runtime is enabled by default unless this is added,
+		//only for C and C++, not used in linux
+		F_MSVC_STATIC_RUNTIME = 1u,
 
 		//treats all warnings as errors
-		F_WARNINGS_AS_ERRORS = 3u,
+		F_WARNINGS_AS_ERRORS = 2u,
 
 		//uses msvc instead of the default gnu for cross-compiling linux binary to windows binary,
 		//not usable for msvc compilers, not usable outside of linux and c/c++
-		F_USE_CLANG_ZIG_MSVC = 4u
+		F_USE_CLANG_ZIG_MSVC = 3u,
+
+		//creates compile_commands.json in the same directory as the kmake file
+		F_EXPORT_COMPILE_COMMANDS = 4u,
 	};
 	
 	struct ProfileData
