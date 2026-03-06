@@ -33,7 +33,7 @@ static void AddExternalCommands()
 		};
 	auto version = [](const vector<string>& params)
 		{
-			Log::Print("prerelease-linux: attempt to fix ISA CPU errors");
+			Log::Print("prerelease 8");
 		};
 
 	CommandManager::AddCommand(
