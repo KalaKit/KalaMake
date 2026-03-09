@@ -198,7 +198,6 @@ Available values:
     - warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
     - use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
     - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
-    - linux-strip-symbols - strips symbols from output, unused in msvc
     - linux-use-origin-as-lib-dir - allow to use origin as lib dir, unused in msvc
     
 ### postbuildaction

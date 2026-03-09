@@ -277,15 +277,10 @@ namespace KalaMake::Core
 		//dynamic runtime is enabled by default unless this is added,
 		//only for C and C++, not used in linux
 		F_MSVC_STATIC_RUNTIME = 4u,
-
-		//strips symbols from output,
-		//intended only for release and minsizerel,
-		//only for C and C++, not used in msvc
-		F_LINUX_STRIP_SYMBOLS = 5u,
 		
 		//allow to use origin as lib dir,
 		//only for C and C++, not used in msvc
-		F_LINUX_USE_ORIGIN_AS_LIB_DIR = 6u
+		F_LINUX_USE_ORIGIN_AS_LIB_DIR = 5u
 	};
 	
 	struct ProfileData

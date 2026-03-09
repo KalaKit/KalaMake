@@ -904,13 +904,6 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
 			{
-				//strip symbols in linux
-				if (!isMSVC
-					&& ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_LINUX_STRIP_SYMBOLS))
-				{
-					finalFlags.push_back("Wl,--strip-unneeded");
-				}
-
 				if (isMSVC)
 				{
 					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG

@@ -45,7 +45,7 @@ compiler: clang++
 buildtype: minsizerel
 buildpath: "${dir_release}linux"
 links: "${dir_kalacli}/release/lib${name_kalacli}.a"
-customflags: linux-strip-symbols
 //strips stupid avx requirements that cachyos seems to add for no reason
 postbuildaction: ${comm_objcopy} ${dir_release}linux/${name_bin}
+postbuildaction: strip --strip-unneeded ${dir_release}linux/${name_bin}
 
