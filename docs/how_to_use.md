@@ -21,7 +21,7 @@ An object file for C/C++ may only be recompiled if its source file or any of the
 The version category tells KalaMake what the available fields and categories are. It prevents older versions from using new fields or categories that version did not yet have or from using deprecated or removed fields and categories in newer versions. You must add a version number after the `#version` category name.
 
 Available versions:
-    - 1.0
+- 1.0
     
 Example:
 ```
@@ -52,84 +52,84 @@ standard: ${myref2}
 The global category describes global state across all user-defined profiles so no profiles need to duplicate the same field again.
 
 Available fields:
-    - binarytype
-    - compilerlauncher (optional)
-    - compiler
-    - standard
-    - targettype (optional)
-    - jobs (optional)
-    - binaryname
-    - buildtype
-    - buildpath
-    - sources
-    - headers (optional)
-    - links (optional)
-    - warninglevel (optional)
-    - defines (optional)
-    - compileflags (optional)
-    - linkflags (optional)
-    - customflags (optional)
-    - postbuildaction (optional)
+- binarytype
+- compilerlauncher (optional)
+- compiler
+- standard
+- targettype (optional)
+- jobs (optional)
+- binaryname
+- buildtype
+- buildpath
+- sources
+- headers (optional)
+- links (optional)
+- warninglevel (optional)
+- defines (optional)
+- compileflags (optional)
+- linkflags (optional)
+- customflags (optional)
+- postbuildaction (optional)
     
 ### binarytype
 
 Describes which binary type to build as. Only one value is allowed.
 
 Available values:
-    - executable - creates an executable
-    - static - creates a static .lib (.a on linux)
-    - shared - creates a shared dll + inline .lib (.so on linux)
+- executable - creates an executable
+- static - creates a static .lib (.a on linux)
+- shared - creates a shared dll + inline .lib (.so on linux)
     
 ### compilerlauncher
 
 Describes which compiler launcher to use for the compiler to cache object files, scripts and headers. Only one value is allowed.
 
 Available values:
-    - ccache - reuses previous compile results
-    - sccache - same as ccache but supports shared cache servers
-    - distcc - sends compile jobs to other servers
-    - icecc - same as distcc but ships compiler toolchain too
+- ccache - reuses previous compile results
+- sccache - same as ccache but supports shared cache servers
+- distcc - sends compile jobs to other servers
+- icecc - same as distcc but ships compiler toolchain too
     
 ### compiler
 
 Describes which compiler to use. Only one value is allowed.
 
 Available values:
-    - cl
-    - clang-cl
-    - gcc
-    - g++
-    - clang
-    - zig
+- cl
+- clang-cl
+- gcc
+- g++
+- clang
+- zig
     
 ### standard
 
 Describes which language standard to use. Only one value is allowed.
 
 Available values:
-    - c89
-    - c99
-    - c11
-    - c17
-    - c23
-    - clatest
-    - c++98
-    - c++03
-    - c++11
-    - c++14
-    - c++17
-    - c++20
-    - c++23
-    - c++26
-    - c++latest
+- c89
+- c99
+- c11
+- c17
+- c23
+- clatest
+- c++98
+- c++03
+- c++11
+- c++14
+- c++17
+- c++20
+- c++23
+- c++26
+- c++latest
     
 ### targettype
 
 Describes which target to aim for, used for cross-compilation. Only one value is allowed.
 
 Available values:
-    - windows - build a windows binary on linux
-    - linux - build a linux binary on windows
+- windows - build a windows binary on linux
+- linux - build a linux binary on windows
     
 ### jobs
 
@@ -144,10 +144,10 @@ Give a name for what your binary will be called. Extension is not needed. Only o
 Describes what output target to aim for, adds the chosen build type flags. Only one value is allowed.
 
 Available values:
-    - debug - full debug symbols, no size or speed optimization flags
-    - release - release output, optimizes for speed
-    - reldebug - release output, optimizes for speed, keeps debug symbols
-    - minsizerel - release output, optimizes for size
+- debug - full debug symbols, no size or speed optimization flags
+- release - release output, optimizes for speed
+- reldebug - release output, optimizes for speed, keeps debug symbols
+- minsizerel - release output, optimizes for size
     
 ### buildpath
 
@@ -170,12 +170,12 @@ Describes what libraries this binary will link to. Supports quoted relative and 
 Describes how strict compiler warning levels should be. Only one value is allowed.
 
 Available values:
-    - none - no warnings
-    - basic - very basic warnings
-    - normal - common, useful warnings, recommended default
-    - strong - strong warnings
-    - strict - very strict, high signal warnings
-    - all - all warnings
+- none - no warnings
+- basic - very basic warnings
+- normal - common, useful warnings, recommended default
+- strong - strong warnings
+- strict - very strict, high signal warnings
+- all - all warnings
     
 ### defines
 
@@ -194,11 +194,10 @@ Describes what flags will be added during the link stage. `-` and `/` are added 
 Describes what KalaMake-specific flags will be added that will add extra actions. Can add multiple values.
 
 Available values:
-    - export-compile-commands - creates the compile-commands.json file at the build dir of your profile
-    - warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
-    - use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
-    - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
-    - linux-use-origin-as-lib-dir - allow to use origin as lib dir, unused in msvc
+- export-compile-commands - creates the compile-commands.json file at the build dir of your profile
+- warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
+- use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
+- msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
     
 ### postbuildaction
 
@@ -229,44 +228,50 @@ Example:
 #version 1.0
 
 #references
-ext: "_external_shared"
-kalacli: "_external_shared/KalaCLI"
+name_bin: kalamake
+dir_release: build/release-
+dir_debug: build/debug-
+name_kc: KalaCLI1
+dir_kc_rel: _external_shared/KalaCLI/release
+dir_kc_deb: _external_shared/KalaCLI/debug
+comm_objcopy: objcopy --remove-section .note.gnu.property
 
 #global
 compilerlauncher: ccache
 standard: c++20
 binarytype: executable
-binaryname: kalamake
+binaryname: ${name_bin}
 sources: "src"
-headers: "include", ${ext}
+headers: "include", "_external_shared/KalaHeaders", "_external_shared/KalaCLI/include"
 warninglevel: normal
 customflags: export-compile-commands
 
 #profile debug-windows
 compiler: clang-cl
 buildtype: debug
-buildpath: "build/debug-windows"
-links: "${kalacli}/debug/KalaCLI1d.lib"
+buildpath: "${dir_debug}windows"
+links: "${dir_kc_deb}/${name_kc}.lib"
 
 #profile release-windows
 compiler: clang-cl
 buildtype: minsizerel
-buildpath: "build/release-windows"
-links: "${kalacli}/release/KalaCLI1.lib"
+buildpath: "${dir_release}windows"
+links: "${dir_kc_rel}/${name_kc}.lib"
 
 #profile debug-linux
 compiler: clang++
 buildtype: debug
-buildpath: "build/debug-linux"
-links: "${kalacli}/debug/libKalaCLI1d.a"
+buildpath: "${dir_debug}linux"
+links: "${dir_kc_deb}/lib${name_kc}d.a"
 //strips stupid avx requirements that cachyos seems to add for no reason
-postbuildaction: objcopy --remove-section .note.gnu.property build/debug-linux/kalamake
+postbuildaction: ${comm_objcopy} ${dir_debug}linux/${name_bin}
 
 #profile release-linux
 compiler: clang++
 buildtype: minsizerel
-buildpath: "build/release-linux"
-links: "${kalacli}/release/libKalaCLI1.a"
+buildpath: "${dir_release}linux"
+links: "${dir_kc_rel}/lib${name_kc}.a"
 //strips stupid avx requirements that cachyos seems to add for no reason
-postbuildaction: objcopy --remove-section .note.gnu.property build/release-linux/kalamake
+postbuildaction: ${comm_objcopy} ${dir_release}linux/${name_bin}
+postbuildaction: strip --strip-unneeded ${dir_release}linux/${name_bin}
 ```

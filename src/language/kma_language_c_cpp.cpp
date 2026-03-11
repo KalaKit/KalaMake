@@ -888,19 +888,24 @@ void Compile_Final(const GlobalData& globalData)
 				command += " \"" + o.string() + "\"";
 			}
 
+			//set links
+
+			if (!globalData.targetProfile.links.empty())
+			{
+				for (const auto& l : globalData.targetProfile.links)
+				{
+					if (path(l).has_extension()) command += " \"" + l.string() + "\"";
+					else
+					{
+						if (isMSVC) command += " " + l.string() + ".lib";
+						else        command += " -l" + l.string();
+					}
+				}
+			}
+
 			//set link flags
 
 			vector<string> finalFlags = globalData.targetProfile.linkFlags;
-
-#ifdef __linux__
-			if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_LINUX_USE_ORIGIN_AS_LIB_DIR)
-				&& globalData.targetProfile.binaryType != BinaryType::B_STATIC
-				&& globalData.targetProfile.targetType != TargetType::T_WINDOWS)
-			{
-				//set current dir .so flags for linux
-				finalFlags.push_back("Wl,-rpath,'$ORIGIN'");
-			}
-#endif
 
 			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
 			{
@@ -919,21 +924,6 @@ void Compile_Final(const GlobalData& globalData)
 			for (const auto& f : finalFlags)
 			{
 				command += " " + frontArg + f;
-			}
-
-			//set links
-
-			if (!globalData.targetProfile.links.empty())
-			{
-				for (const auto& l : globalData.targetProfile.links)
-				{
-					if (path(l).has_extension()) command += " \"" + l.string() + "\"";
-					else
-					{
-						if (isMSVC) command += " " + l.string() + ".lib";
-						else        command += " -l" + l.string();
-					}
-				}
 			}
 
 			//link 

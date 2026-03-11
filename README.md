@@ -1,4 +1,4 @@
-#KalaMake
+# KalaMake
 
 KalaMake is a multithreaded binary compiler that uses ".kmake" files and it is intended to use as a replacement for other build scripts and generators like Make, Premake, CMake or Ninja. KalaMake automatically uses all available threads from your cpu to always help speed up compilation, or you can fill the jobs field with your desired job count.
 

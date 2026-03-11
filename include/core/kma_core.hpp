@@ -276,11 +276,7 @@ namespace KalaMake::Core
 		//embed the C/C++ runtime into the binary,
 		//dynamic runtime is enabled by default unless this is added,
 		//only for C and C++, not used in linux
-		F_MSVC_STATIC_RUNTIME = 4u,
-		
-		//allow to use origin as lib dir,
-		//only for C and C++, not used in msvc
-		F_LINUX_USE_ORIGIN_AS_LIB_DIR = 5u
+		F_MSVC_STATIC_RUNTIME = 4u
 	};
 	
 	struct ProfileData

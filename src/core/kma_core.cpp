@@ -167,7 +167,6 @@ constexpr string_view custom_export_comp_comm    = "export-compile-commands";
 constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
 constexpr string_view custom_clang_zig_msvc      = "use-clang-zig-msvc";
 constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
-constexpr string_view custom_linux_use_origin    = "linux-use-origin-as-lib-dir";
 
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
@@ -474,8 +473,7 @@ namespace KalaMake::Core
 		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS,     custom_export_comp_comm },
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,          custom_warnings_as_err },
 		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,          custom_clang_zig_msvc },
-		{ CustomFlag::F_MSVC_STATIC_RUNTIME,         custom_msvc_static_runtime },
-		{ CustomFlag::F_LINUX_USE_ORIGIN_AS_LIB_DIR, custom_linux_use_origin }
+		{ CustomFlag::F_MSVC_STATIC_RUNTIME,         custom_msvc_static_runtime }
 	};
 
 	void KalaMakeCore::OpenFile(
@@ -1275,19 +1273,6 @@ void ExtractFieldData(
 					"Binary type '" + trimmedValue + "' is invalid!");
 			}
 		}
-		if (name == field_build_type)
-		{
-			const auto& buildTypes = KalaMakeCore::GetBuildTypes();
-
-			BuildType buildType{};
-			if (!StringToEnum(cleanValue, buildTypes, buildType)
-				|| buildType == BuildType::B_INVALID)
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					"Build type '" + trimmedValue + "' is invalid!");
-			}
-		}
 		if (name == field_compiler_launcher)
 		{
 			const auto& compilerLauncherTypes = KalaMakeCore::GetCompilerLauncherTypes();
@@ -1327,6 +1312,45 @@ void ExtractFieldData(
 					"Standard type '" + trimmedValue + "' is invalid!");
 			}
 		}
+		if (name == field_target_type)
+		{
+			const auto& targetTypes = KalaMakeCore::GetTargetTypes();
+
+			TargetType targetType{};
+			if (!StringToEnum(cleanValue, targetTypes, targetType)
+				|| targetType == TargetType::T_INVALID)
+			{
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Target type '" + trimmedValue + "' is invalid!");
+			}
+		}
+		if (name == field_build_type)
+		{
+			const auto& buildTypes = KalaMakeCore::GetBuildTypes();
+
+			BuildType buildType{};
+			if (!StringToEnum(cleanValue, buildTypes, buildType)
+				|| buildType == BuildType::B_INVALID)
+			{
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Build type '" + trimmedValue + "' is invalid!");
+			}
+		}
+		if (name == field_warning_level)
+		{
+			const auto& warningLevels = KalaMakeCore::GetWarningLevels();
+
+			WarningLevel warningLevel{};
+			if (!StringToEnum(cleanValue, warningLevels, warningLevel)
+				|| warningLevel == WarningLevel::W_INVALID)
+			{
+				KalaMakeCore::CloseOnError(
+					"KALAMAKE",
+					"Warning level '" + trimmedValue + "' is invalid!");
+			}
+		}
 
 		vector<string> result{};
 		if (cleanValue.find(',') != string::npos)
@@ -1336,6 +1360,23 @@ void ExtractFieldData(
 		else result.push_back(cleanValue);
 
 		RemoveDuplicates(result);
+
+		if (name == field_custom_flags)
+		{
+			const auto& customFlags = KalaMakeCore::GetCustomFlags();
+
+			for (const auto& r : result)
+			{
+				CustomFlag customFlag{};
+				if (!StringToEnum(cleanValue, customFlags, customFlag)
+					|| customFlag == CustomFlag::F_INVALID)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Custom flag '" + trimmedValue + "' is invalid!");
+				}
+			}
+		}
 
 		outFieldName = name;
 		outFieldValues = result;
