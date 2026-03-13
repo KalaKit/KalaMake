@@ -20,9 +20,7 @@ and make sure these are toggled on at the right side panel:
 
 ## Windows and Linux
 
-[Download](https://github.com/KalaKit/KalaMake/releases) and get the latest Windows or Linux build.
-
-[Download](https://github.com/ninja-build/ninja/releases) and get the latest Windows or Linux build.
+[Download KalaMake](https://github.com/KalaKit/KalaMake/releases) and get the latest Windows or Linux build.
 
 # How to build from source
 

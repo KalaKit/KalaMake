@@ -347,9 +347,6 @@ static string TranslateReferences(string_view value);
 
 namespace KalaMake::Core
 {
-	constexpr string_view EXE_VERSION_NUMBER = "1.0";
-	constexpr string_view KMA_VERSION_NUMBER = "1.0";
-
 	static const unordered_map<SolutionType, string_view, EnumHash<SolutionType>> solutionTypes =
 	{
 		{ SolutionType::S_VS,     solution_vs },
@@ -482,15 +479,12 @@ namespace KalaMake::Core
 	{
 		ostringstream details{};
 
-		details
-			<< "# exe version: " << EXE_VERSION_NUMBER.data() << "\n"
-			<< "# kma version: " << KMA_VERSION_NUMBER.data() << "\n";
-
 		Log::Print(details.str());
 
 		path projectFile = params[1];
 		targetProfile = params[2];
 
+		/*
 		SolutionType solutionType{};
 		if (state == TargetState::S_GENERATE)
 		{
@@ -502,11 +496,12 @@ namespace KalaMake::Core
 					"Solution type '" + params[3] + "' is invalid!");
 			}
 		}
+		*/
 
 		string& currentDir = KalaCLI::Core::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
-		auto handle_state = [state, solutionType](path filePath) -> void
+		auto handle_state = [state](path filePath) -> void
 			{
 				if (is_directory(filePath))
 				{
@@ -546,7 +541,7 @@ namespace KalaMake::Core
 				kmaPath = filePath.parent_path();
 
 				if (state == TargetState::S_COMPILE) { Compile(filePath, content); }
-				else if (state == TargetState::S_GENERATE) { Generate(filePath, content, solutionType); }
+				//else if (state == TargetState::S_GENERATE) { Generate(filePath, content, solutionType); }
 				else
 				{
 					KalaMakeCore::CloseOnError(
@@ -1027,19 +1022,28 @@ void ExtractFieldData(
 							return out;
 						};
 
-
 					vector<path> sourceFiles{};
 
 					for (const auto& p : resolvedPaths)
 					{
-						if (is_directory(p)) sourceFiles = dir_to_scripts(p);
-						else 				 result.push_back(p);
+						if (is_directory(p))
+						{
+							vector<path> localSrc = dir_to_scripts(p);
+							sourceFiles.insert(
+								sourceFiles.end(),
+								make_move_iterator(localSrc.begin()),
+								make_move_iterator(localSrc.end()));
+						}
+						else result.push_back(p.string());
 					}
+
+					vector<string> stringSourceFiles{};
+					ToStringVector(sourceFiles, stringSourceFiles);
 
 					result.insert(
 						result.end(),
-						make_move_iterator(sourceFiles.begin()),
-						make_move_iterator(sourceFiles.end()));
+						make_move_iterator(stringSourceFiles.begin()),
+						make_move_iterator(stringSourceFiles.end()));
 				}
 				else
 				{
@@ -1368,7 +1372,7 @@ void ExtractFieldData(
 			for (const auto& r : result)
 			{
 				CustomFlag customFlag{};
-				if (!StringToEnum(cleanValue, customFlags, customFlag)
+				if (!StringToEnum(r, customFlags, customFlag)
 					|| customFlag == CustomFlag::F_INVALID)
 				{
 					KalaMakeCore::CloseOnError(
@@ -1653,7 +1657,7 @@ void FirstParse(const vector<string>& lines)
 					ReferenceData ref
 					{
 						.name = k,
-						.value = v
+						.value = v.string()
 					};
 
 					globalData.references.push_back(ref);	

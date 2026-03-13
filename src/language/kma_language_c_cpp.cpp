@@ -35,6 +35,7 @@ using KalaHeaders::KalaThread::lockwait_m;
 using KalaHeaders::KalaThread::unlock_m;
 
 using KalaHeaders::KalaString::RemoveFromString;
+using KalaHeaders::KalaString::ReplaceFromString;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
@@ -84,9 +85,9 @@ constexpr string_view clang_zig_target_linux_to_windows_msvc = "x86_64-windows-m
 
 struct CompileCommand
 {
-	string dir{};
+	path dir{};
 	string command{};
-	string file{};
+	path file{};
 	string output{};
 };
 
@@ -177,7 +178,7 @@ void PreCheck(GlobalData& globalData)
 				return true;
 			}
 
-			string extension = target.extension();
+			string extension = target.extension().string();
 
 			if (isCLanguage)
 			{
@@ -355,6 +356,9 @@ void Compile_Final(const GlobalData& globalData)
 					? runtimeFlag + "d"
 					: runtimeFlag);
 			}
+
+			//explicitly enable exceptions
+			if (isMSVC) finalFlags.push_back("EHsc");
 
 			if (ContainsValue(
 				globalData.targetProfile.customFlags, 
@@ -607,9 +611,9 @@ void Compile_Final(const GlobalData& globalData)
 					{
 						commands.push_back(
 						{
-							.dir = globalData.targetProfile.buildPath.string(),
+							.dir = globalData.targetProfile.buildPath,
 							.command = RemoveFromString(perFileCommand, "\"", true),
-							.file = s.string(),
+							.file = s,
 							.output = objPath.string()
 						});
 					}
@@ -920,6 +924,12 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
+			if (isMSVC
+				&& !finalFlags.empty())
+			{
+				finalFlags.insert(finalFlags.begin(), "link");
+			}
+
 			RemoveDuplicates(finalFlags);
 			for (const auto& f : finalFlags)
 			{
@@ -1028,15 +1038,32 @@ void Compile_Final(const GlobalData& globalData)
 
 		out << "[\n";
 
+		auto fix_msvc_slash = [&isMSVC](string_view input) -> string
+			{
+				return isMSVC
+					? ReplaceFromString(string(input), "\\", "\\\\", true)
+					: string(input);
+			};
+
+		auto fix_json_quotes = [](string_view input) -> string
+			{
+				return ReplaceFromString(string(input), "\"", "\\\"", true);
+			};
+
 		for (size_t i = 0; i < commands.size(); ++i)
 		{
 			const CompileCommand& s = commands[i];
 
+			string cleanDir = fix_json_quotes(fix_msvc_slash(s.dir.string()));
+			string cleanComm = fix_json_quotes(fix_msvc_slash(s.command));
+			string cleanFile = fix_json_quotes(fix_msvc_slash(s.file.string()));
+			string cleanOut = fix_json_quotes(fix_msvc_slash(s.output));
+
 			out << "{\n";
-			out << "  \"directory\": \"" << s.dir     << "\",\n";
-			out << "  \"command\": \""   << s.command << "\",\n";
-			out << "  \"file\": \""      << s.file    << "\",\n";
-			out << "  \"output\": \""    << s.output  << "\"\n";
+			out << "  \"directory\": \"" << cleanDir  << "\",\n";
+			out << "  \"command\": \""   << cleanComm << "\",\n";
+			out << "  \"file\": \""      << cleanFile << "\",\n";
+			out << "  \"output\": \""    << cleanOut  << "\"\n";
 			out << "}";
 
 			if (i + 1 < commands.size()) out << ",";

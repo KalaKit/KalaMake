@@ -27,13 +27,15 @@ static void AddExternalCommands()
 		{
 			KalaMakeCore::OpenFile(params, TargetState::S_COMPILE);
 		};
+	/*
 	auto generate = [](const vector<string>& params)
 		{
 			KalaMakeCore::OpenFile(params, TargetState::S_GENERATE);
 		};
+	*/
 	auto version = [](const vector<string>& params)
 		{
-			Log::Print("prerelease 11");
+			Log::Print("KalaMake 1.0");
 		};
 
 	CommandManager::AddCommand(
@@ -47,6 +49,8 @@ static void AddExternalCommands()
 			.targetFunction = compile
 		});
 
+	/*
+	TODO: add generate
 	CommandManager::AddCommand(
 		{
 			.primaryParam = "generate",
@@ -58,6 +62,7 @@ static void AddExternalCommands()
 			.paramCount = 4,
 			.targetFunction = generate
 		});
+	*/
 
 	CommandManager::AddCommand(
 		{
