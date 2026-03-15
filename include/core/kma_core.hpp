@@ -33,26 +33,6 @@ namespace KalaMake::Core
 	//default object directory path relative to kmaPath if objpath is not added or filled
 	static const path defaultObjPath = "build/obj";
 
-	enum class TargetState : u8
-	{
-		S_INVALID = 0,
-
-		S_COMPILE = 1,
-		S_GENERATE = 2
-	};
-
-	enum class SolutionType : u8
-	{
-		S_INVALID = 0u,
-
-		//generates ninja solution files
-		S_NINJA = 1u,
-		//generates visual studio solution files
-		S_VS = 2u,
-		//generates visual studio code files
-		S_VSCODE = 3u
-	};
-
 	enum class Version : u8
 	{
 		V_INVALID = 0u,
@@ -257,7 +237,8 @@ namespace KalaMake::Core
 		W_ALL = 6u
 	};
 
-	//Allowed custom flags that can be added to the customflags field
+	//Allowed custom flags that can be added to the customflags field.
+	//TODO: add vs sln file support here as well
 	enum class CustomFlag : u8
 	{
 		F_INVALID = 0u,
@@ -265,18 +246,21 @@ namespace KalaMake::Core
 		//creates compile_commands.json in the same directory as the kmake file
 		F_EXPORT_COMPILE_COMMANDS = 1u,
 
+		//creates .vscode folder with launch.json and tasks.json inside it
+		F_EXPORT_VSCODE_SLN = 2u,
+
 		//treats all warnings as errors,
 		//only for C and C++
-		F_WARNINGS_AS_ERRORS = 2u,
+		F_WARNINGS_AS_ERRORS = 3u,
 
 		//uses msvc instead of the default gnu for cross-compiling linux binary to windows binary,
 		//only for C and C++, not used in msvc
-		F_USE_CLANG_ZIG_MSVC = 3u,
+		F_USE_CLANG_ZIG_MSVC = 4u,
 
 		//embed the C/C++ runtime into the binary,
 		//dynamic runtime is enabled by default unless this is added,
 		//only for C and C++, not used in linux
-		F_MSVC_STATIC_RUNTIME = 4u
+		F_MSVC_STATIC_RUNTIME = 5u
 	};
 	
 	struct ProfileData
@@ -336,6 +320,9 @@ namespace KalaMake::Core
 
 	struct GlobalData
 	{
+		//which kmake file was used
+		path projectFile{};
+
 		//final mixed data from global and/or target user profile
 		ProfileData targetProfile{};
 
@@ -346,20 +333,12 @@ namespace KalaMake::Core
 	class KalaMakeCore
 	{
 	public:
-		static void OpenFile(
-			const vector<string>& params, 
-			TargetState state);
+		static void OpenFile(const vector<string>& params);
 
 		static void Compile(
 			const path& filePath,
 			const vector<string>& lines);
 
-		static void Generate(
-			const path& filePath,
-			const vector<string>& lines,
-			SolutionType solutionType);
-
-		static const unordered_map<SolutionType, string_view, EnumHash<SolutionType>>& GetSolutionTypes();
 		static const unordered_map<Version,      string_view, EnumHash<Version>>&      GetVersions();
 		static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& GetCategoryTypes();
 		static const unordered_map<FieldType,    string_view, EnumHash<FieldType>>&    GetFieldTypes();

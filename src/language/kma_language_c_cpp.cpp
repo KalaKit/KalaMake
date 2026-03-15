@@ -18,6 +18,7 @@
 
 #include "language/kma_language.hpp"
 #include "core/kma_core.hpp"
+#include "core/kma_generate.hpp"
 
 using KalaHeaders::KalaCore::EnumToString;
 using KalaHeaders::KalaCore::RemoveDuplicates;
@@ -26,16 +27,12 @@ using KalaHeaders::KalaCore::ContainsValue;
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
-using KalaHeaders::KalaFile::DeletePath;
 using KalaHeaders::KalaFile::CreateNewDirectory;
-using KalaHeaders::KalaFile::CreateNewFile;
-using KalaHeaders::KalaFile::FileType;
 
 using KalaHeaders::KalaThread::lockwait_m;
 using KalaHeaders::KalaThread::unlock_m;
 
 using KalaHeaders::KalaString::RemoveFromString;
-using KalaHeaders::KalaString::ReplaceFromString;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
@@ -47,6 +44,10 @@ using KalaMake::Core::TargetType;
 using KalaMake::Core::BuildType;
 using KalaMake::Core::WarningLevel;
 using KalaMake::Core::CustomFlag;
+using KalaMake::Core::Generate;
+using KalaMake::Core::CompileCommand;
+using KalaMake::Core::VSCode_Launch;
+using KalaMake::Core::VSCode_Task;
 
 using std::string;
 using std::string_view;
@@ -68,30 +69,69 @@ using u16 = uint16_t;
 static void PreCheck(GlobalData& globalData);
 
 static void Compile_Final(const GlobalData& globalData);
-static void Generate_Final(const GlobalData& globalData);
 
 constexpr string_view objFolderName = "obj";
 
+#ifdef _WIN32
 constexpr string_view gcc_compiler_windows_to_linux = "x86_64-linux-gnu-gcc";
-constexpr string_view gcc_compiler_linux_to_windows = "x86_64-w64-mingw32-gcc";
 constexpr string_view gpp_compiler_windows_to_linux = "x86_64-linux-gnu-g++";
+constexpr string_view clang_zig_target_windows_to_linux = "x86_64-linux-gnu";
+#else
+constexpr string_view gcc_compiler_linux_to_windows = "x86_64-w64-mingw32-gcc";
 constexpr string_view gpp_compiler_linux_to_windows = "x86_64-w64-mingw32-g++";
 
-constexpr string_view clang_zig_target_windows_to_linux = "x86_64-linux-gnu";
 //used by default for clang linux-to-windows
 constexpr string_view clang_zig_target_linux_to_windows_gnu = "x86_64-windows-gnu";
 //optional for clang linux-to-windows, must add custom flag use-clang-zig-msvc to enable
 constexpr string_view clang_zig_target_linux_to_windows_msvc = "x86_64-windows-msvc";
-
-struct CompileCommand
-{
-	path dir{};
-	string command{};
-	path file{};
-	string output{};
-};
+#endif
 
 static vector<CompileCommand> commands{};
+
+static void GenerateSteps(
+	bool isMSVC,
+	const GlobalData& globalData)
+{
+	bool canGenerateCompComm = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_COMPILE_COMMANDS);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+
+	if (canGenerateCompComm)
+	{
+		Generate::GenerateCompileCommands(
+			isMSVC,
+			globalData.targetProfile.buildPath,
+			commands);
+
+		if (canGenerateVSCodeSln) Log::Print(" ");
+	}
+	if (canGenerateVSCodeSln)
+	{
+		path programPath = globalData.targetProfile.buildPath / globalData.targetProfile.binaryName;
+
+		VSCode_Launch launch
+		{
+			.name = globalData.targetProfile.profileName,
+			.program = "${workspaceFolder}/" + programPath.string()
+		};
+
+		VSCode_Task task
+		{
+			.label = globalData.targetProfile.profileName,
+			.projectFile = globalData.projectFile.stem().string()
+		};
+
+		Generate::GenerateVSCodeSolution(
+			isMSVC,
+			launch,
+			task);
+	}
+
+	if (canGenerateCompComm
+		|| canGenerateVSCodeSln)
+	{
+		Log::Print("===========================================================================\n");
+	}
+}
 
 namespace KalaMake::Language
 {
@@ -109,26 +149,10 @@ namespace KalaMake::Language
 			return;
 		}
 
+		commands.clear();
+
 		PreCheck(globalData);
 		Compile_Final(globalData);
-	}
-
-	void LanguageCore::Generate(GlobalData& globalData)
-	{
-		CompilerType c = globalData.targetProfile.compiler;
-		if (c != CompilerType::C_ZIG
-			&& c != CompilerType::C_CL
-			&& c != CompilerType::C_CLANG_CL
-			&& c != CompilerType::C_CLANG
-			&& c != CompilerType::C_CLANGPP
-			&& c != CompilerType::C_GCC
-			&& c != CompilerType::C_GPP)
-		{
-			return;
-		}
-
-		PreCheck(globalData);
-		Generate_Final(globalData);
 	}
 }
 
@@ -192,7 +216,9 @@ void PreCheck(GlobalData& globalData)
 			{
 				if (isSource
 					&& target.extension() != ".c"
-					&& target.extension() != ".cpp")
+					&& target.extension() != ".cpp"
+					&& target.extension() != ".cc"
+					&& target.extension() != ".cxx")
 				{
 					return true;
 				}
@@ -558,8 +584,6 @@ void Compile_Final(const GlobalData& globalData)
 			vector<path> compiledObj{};
 			mutex m_compiledObj;
 
-			Log::Print("\n===========================================================================\n");
-
 			auto headers_up_to_date = [&globalData](const auto& t) -> bool
 				{
 					for (const auto& h : globalData.targetProfile.headers)
@@ -587,6 +611,40 @@ void Compile_Final(const GlobalData& globalData)
 						|| !headers_up_to_date(t);
 				};
 
+			auto generate = [
+				&isMSVC,
+				&globalData,
+				&buildPath,
+				&extension,
+				&command,
+				&objFront]() -> void
+				{
+					if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+					{
+						for (int i = 0; i < globalData.targetProfile.sources.size(); i++)
+						{
+							const path& s = globalData.targetProfile.sources[i];
+
+							path objPath = buildPath / (s.stem().string() + extension);
+							
+							string perFileCommand = command;
+
+							perFileCommand += " \"" + s.string() + "\"";
+							perFileCommand += " " + objFront + " \"" + objPath.string() + "\"";
+
+							commands.push_back(
+							{
+								.dir = globalData.targetProfile.buildPath,
+								.command = RemoveFromString(perFileCommand, "\"", true),
+								.file = s,
+								.output = objPath.string()
+							});
+						}
+					}
+
+					GenerateSteps(isMSVC, globalData);
+				};
+
 			auto compile = [
 				&globalData,
 				&buildPath,
@@ -606,17 +664,6 @@ void Compile_Final(const GlobalData& globalData)
 
 					perFileCommand += " \"" + s.string() + "\"";
 					perFileCommand += " " + objFront + " \"" + objPath.string() + "\"";
-
-					if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
-					{
-						commands.push_back(
-						{
-							.dir = globalData.targetProfile.buildPath,
-							.command = RemoveFromString(perFileCommand, "\"", true),
-							.file = s,
-							.output = objPath.string()
-						});
-					}
 
 					//only recompile this object file when source and object timestamp differences occur
 					if (needs_compile(s, objPath))
@@ -647,6 +694,8 @@ void Compile_Final(const GlobalData& globalData)
 					compiledObj.push_back(objPath);
 					unlock_m(m_compiledObj);
 				};
+
+			generate();
 
 			if (globalData.targetProfile.sources.size() == 1) compile(0);
 			else
@@ -1008,92 +1057,6 @@ void Compile_Final(const GlobalData& globalData)
 	if (!objFiles.empty()) link(objFiles);
 
 	//
-	// EXPORT COMPILE COMMANDS
-	//
-
-	if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
-	{
-		Log::Print("\n===========================================================================\n");
-
-		Log::Print(
-			"Starting to create compile_commands.json.",
-			"LANGUAGE_C_CPP",
-			LogType::LOG_INFO);
-
-		path compComm = globalData.targetProfile.buildPath / "compile_commands.json";
-
-		if (exists(compComm))
-		{
-			string errorMsg = DeletePath(compComm);
-
-			if (!errorMsg.empty())
-			{
-				KalaMakeCore::CloseOnError(
-					"LANGUAGE_C_CPP",
-					"Failed to remove existing compile_commands.json! Reason: " + errorMsg);
-			}
-		}
-
-		ostringstream out{};
-
-		out << "[\n";
-
-		auto fix_msvc_slash = [&isMSVC](string_view input) -> string
-			{
-				return isMSVC
-					? ReplaceFromString(string(input), "\\", "\\\\", true)
-					: string(input);
-			};
-
-		auto fix_json_quotes = [](string_view input) -> string
-			{
-				return ReplaceFromString(string(input), "\"", "\\\"", true);
-			};
-
-		for (size_t i = 0; i < commands.size(); ++i)
-		{
-			const CompileCommand& s = commands[i];
-
-			string cleanDir = fix_json_quotes(fix_msvc_slash(s.dir.string()));
-			string cleanComm = fix_json_quotes(fix_msvc_slash(s.command));
-			string cleanFile = fix_json_quotes(fix_msvc_slash(s.file.string()));
-			string cleanOut = fix_json_quotes(fix_msvc_slash(s.output));
-
-			out << "{\n";
-			out << "  \"directory\": \"" << cleanDir  << "\",\n";
-			out << "  \"command\": \""   << cleanComm << "\",\n";
-			out << "  \"file\": \""      << cleanFile << "\",\n";
-			out << "  \"output\": \""    << cleanOut  << "\"\n";
-			out << "}";
-
-			if (i + 1 < commands.size()) out << ",";
-
-			out << "\n";
-		}
-
-		out << "]";
-
-		string errorMsg = CreateNewFile(
-			compComm,
-			FileType::FILE_TEXT,
-			{ .inText = out.str() });
-
-		if (!errorMsg.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"LANGUAGE_C_CPP",
-				"Failed to create new compile_commands.json! Reason: " + errorMsg);
-		}
-
-		Log::Print("\n");
-
-		Log::Print(
-			"Finished creating compile_commands.json!",
-			"LANGUAGE_C_CPP",
-			LogType::LOG_SUCCESS);
-	}
-
-	//
 	// POST BUILD ACTIONS
 	//
 
@@ -1125,9 +1088,4 @@ void Compile_Final(const GlobalData& globalData)
 			"LANGUAGE_C_CPP",
 			LogType::LOG_SUCCESS);
 	}
-}
-
-void Generate_Final(const GlobalData& globalData)
-{
-	
 }

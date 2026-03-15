@@ -16,7 +16,6 @@ using KalaCLI::Core;
 using KalaCLI::CommandManager;
 
 using KalaMake::Core::KalaMakeCore;
-using KalaMake::Core::TargetState;
 
 using std::vector;
 using std::string;
@@ -25,14 +24,8 @@ static void AddExternalCommands()
 {
 	auto compile = [](const vector<string>& params)
 		{
-			KalaMakeCore::OpenFile(params, TargetState::S_COMPILE);
+			KalaMakeCore::OpenFile(params);
 		};
-	/*
-	auto generate = [](const vector<string>& params)
-		{
-			KalaMakeCore::OpenFile(params, TargetState::S_GENERATE);
-		};
-	*/
 	auto version = [](const vector<string>& params)
 		{
 			Log::Print("KalaMake 1.0");
@@ -48,21 +41,6 @@ static void AddExternalCommands()
 			.paramCount = 3,
 			.targetFunction = compile
 		});
-
-	/*
-	TODO: add generate
-	CommandManager::AddCommand(
-		{
-			.primaryParam = "generate",
-			.description =
-				"Generate a solution file from a kalamake file, "
-				"second parameter must be valid path to a .kmake file, "
-				"third parameter must be a valid profile in the .kmake file, "
-				"fourth parameter must be a solution type.",
-			.paramCount = 4,
-			.targetFunction = generate
-		});
-	*/
 
 	CommandManager::AddCommand(
 		{

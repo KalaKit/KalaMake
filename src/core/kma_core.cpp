@@ -86,9 +86,6 @@ using std::function;
 
 using u16 = uint16_t;
 
-constexpr string_view solution_vs     = "vs";
-constexpr string_view solution_vscode = "vscode";
-
 constexpr string_view version_1_0 = "1.0";
 
 constexpr string_view category_version    = "version";
@@ -164,6 +161,7 @@ constexpr string_view warning_level_strict = "strict";
 constexpr string_view warning_level_all    = "all";
 
 constexpr string_view custom_export_comp_comm    = "export-compile-commands";
+constexpr string_view custom_export_vscode_sln   = "export-vscode-sln";
 constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
 constexpr string_view custom_clang_zig_msvc      = "use-clang-zig-msvc";
 constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
@@ -347,12 +345,6 @@ static string TranslateReferences(string_view value);
 
 namespace KalaMake::Core
 {
-	static const unordered_map<SolutionType, string_view, EnumHash<SolutionType>> solutionTypes =
-	{
-		{ SolutionType::S_VS,     solution_vs },
-		{ SolutionType::S_VSCODE, solution_vscode }
-	};
-
 	static const unordered_map<Version, string_view, EnumHash<Version>> versions =
 	{
 		{ Version::V_1_0, version_1_0 }
@@ -468,14 +460,13 @@ namespace KalaMake::Core
 	static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>> customFlags =
 	{
 		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS,     custom_export_comp_comm },
+		{ CustomFlag::F_EXPORT_VSCODE_SLN,           custom_export_vscode_sln },
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,          custom_warnings_as_err },
 		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,          custom_clang_zig_msvc },
 		{ CustomFlag::F_MSVC_STATIC_RUNTIME,         custom_msvc_static_runtime }
 	};
 
-	void KalaMakeCore::OpenFile(
-		const vector<string>& params, 
-		TargetState state)
+	void KalaMakeCore::OpenFile(const vector<string>& params)
 	{
 		ostringstream details{};
 
@@ -484,24 +475,10 @@ namespace KalaMake::Core
 		path projectFile = params[1];
 		targetProfile = params[2];
 
-		/*
-		SolutionType solutionType{};
-		if (state == TargetState::S_GENERATE)
-		{
-			if (!StringToEnum(params[3], solutionTypes, solutionType)
-				|| solutionType == SolutionType::S_INVALID)
-			{
-				KalaMakeCore::CloseOnError(
-					"KALAMAKE",
-					"Solution type '" + params[3] + "' is invalid!");
-			}
-		}
-		*/
-
 		string& currentDir = KalaCLI::Core::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
-		auto handle_state = [state](path filePath) -> void
+		auto handle_state = [](path filePath) -> void
 			{
 				if (is_directory(filePath))
 				{
@@ -539,15 +516,9 @@ namespace KalaMake::Core
 				}
 
 				kmaPath = filePath.parent_path();
+				globalData.projectFile = filePath;
 
-				if (state == TargetState::S_COMPILE) { Compile(filePath, content); }
-				//else if (state == TargetState::S_GENERATE) { Generate(filePath, content, solutionType); }
-				else
-				{
-					KalaMakeCore::CloseOnError(
-						"KALAMAKE",
-						"An unknown target state was passed!");
-				}
+				Compile(filePath, content);
 			};
 
 		//partial path was found
@@ -671,73 +642,6 @@ namespace KalaMake::Core
 		LanguageCore::Compile(globalData);
 	}
 
-	void KalaMakeCore::Generate(
-		const path& filePath,
-		const vector<string>& lines,
-		SolutionType solutionType)
-	{
-		Log::Print(
-			"Starting to parse the kalamake file '" + filePath.string() + "'"
-			"\n\n===========================================================================\n",
-			"KALAMAKE",
-			LogType::LOG_INFO);
-
-		FirstParse(lines);
-
-		if (globalData.targetProfile.binaryType == BinaryType::B_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No binary type was passed!");
-		}
-		if (globalData.targetProfile.compiler == CompilerType::C_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No compiler was passed!");
-		}
-		if (globalData.targetProfile.standard == StandardType::S_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No standard was passed!");
-		}
-		if (globalData.targetProfile.binaryName.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No binary name was passed!");
-		}
-		if (globalData.targetProfile.buildType == BuildType::B_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No build type was passed!");
-		}
-		if (globalData.targetProfile.buildPath.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No build path was passed!");
-		}
-		if (globalData.targetProfile.sources.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No sources were passed!");
-		}
-
-		Log::Print("\n===========================================================================\n");
-
-		Log::Print(
-			"Finished first parse! Cleaning up parsed data and parsing for generation.\n",
-			"KALAMAKE",
-			LogType::LOG_SUCCESS);
-
-		LanguageCore::Generate(globalData);
-	}
-
-	const unordered_map<SolutionType, string_view, EnumHash<SolutionType>>& KalaMakeCore::GetSolutionTypes() { return solutionTypes; }
 	const unordered_map<Version,      string_view, EnumHash<Version>>&      KalaMakeCore::GetVersions()      { return versions; }
 	const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& KalaMakeCore::GetCategoryTypes() { return categoryTypes; }
 	const unordered_map<FieldType,    string_view, EnumHash<FieldType>>&    KalaMakeCore::GetFieldTypes()    { return fieldTypes; }
@@ -1183,11 +1087,12 @@ void ExtractFieldData(
 	//all other standard fields with no paths
 	else 
 	{
-		if (trimmedValue.find('"') != string::npos)
+		if (name != field_defines
+			&& trimmedValue.find('"') != string::npos)
 		{
 			KalaMakeCore::CloseOnError(
 				"KALAMAKE",
-				"Field '" + name + "' is not allowed to use quotes or paths!");
+				"Field '" + name + "' is not allowed to use quotes!");
 		}
 		if (trimmedValue.find('*') != string::npos)
 		{
