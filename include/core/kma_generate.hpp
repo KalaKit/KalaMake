@@ -25,7 +25,6 @@ namespace KalaMake::Core
 
     //Values for launch.json per profile.
     //Values added that arent listed here:
-    //type: cppvsdbg (windows) or clangd (linux)
     //request: launch
     //args: []
     //cwd: "${workspaceFolder}"
@@ -35,6 +34,7 @@ namespace KalaMake::Core
     {
         //launch profile name, will be assigned as profile name
         string name{};
+        string type{};
         //workspace + build dir + binary name
         string program{};
     };
@@ -64,6 +64,7 @@ namespace KalaMake::Core
         //Updates existing launch.json and tasks.json or makes new ones
         static void GenerateVSCodeSolution(
             bool isMSVC,
+            bool isExe,
             const VSCode_Launch& launch,
             const VSCode_Task& task);
     };

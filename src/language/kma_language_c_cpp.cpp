@@ -53,6 +53,8 @@ using std::string;
 using std::string_view;
 using std::vector;
 using std::filesystem::path;
+using std::filesystem::current_path;
+using std::filesystem::relative;
 using std::filesystem::exists;
 using std::filesystem::is_regular_file;
 using std::filesystem::is_directory;
@@ -106,22 +108,25 @@ static void GenerateSteps(
 	}
 	if (canGenerateVSCodeSln)
 	{
-		path programPath = globalData.targetProfile.buildPath / globalData.targetProfile.binaryName;
+		path relativeBuildPath = relative(globalData.targetProfile.buildPath, current_path());
+		path programPath = relativeBuildPath / globalData.targetProfile.binaryName;
 
 		VSCode_Launch launch
 		{
 			.name = globalData.targetProfile.profileName,
+			.type = isMSVC ? "cppvsdbg" : "cppdbg",
 			.program = "${workspaceFolder}/" + programPath.string()
 		};
 
 		VSCode_Task task
 		{
 			.label = globalData.targetProfile.profileName,
-			.projectFile = globalData.projectFile.stem().string()
+			.projectFile = globalData.projectFile.string()
 		};
 
 		Generate::GenerateVSCodeSolution(
 			isMSVC,
+			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
 			launch,
 			task);
 	}

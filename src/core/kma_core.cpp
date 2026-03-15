@@ -177,6 +177,7 @@ static bool foundGlobal{};
 static bool foundTargetProfile{};
 
 static GlobalData globalData{};
+static path projectFile{};
 
 static u16 GetThreadCount()
 {
@@ -472,7 +473,7 @@ namespace KalaMake::Core
 
 		Log::Print(details.str());
 
-		path projectFile = params[1];
+		projectFile = params[1];
 		targetProfile = params[2];
 
 		string& currentDir = KalaCLI::Core::GetCurrentDir();
@@ -516,7 +517,6 @@ namespace KalaMake::Core
 				}
 
 				kmaPath = filePath.parent_path();
-				globalData.projectFile = filePath;
 
 				Compile(filePath, content);
 			};
@@ -638,6 +638,8 @@ namespace KalaMake::Core
 			"Finished first parse! Cleaning up parsed data and parsing for compiler.\n",
 			"KALAMAKE",
 			LogType::LOG_SUCCESS);
+
+		globalData.projectFile = projectFile;
 
 		LanguageCore::Compile(globalData);
 	}
