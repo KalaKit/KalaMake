@@ -195,6 +195,7 @@ Describes what KalaMake-specific flags will be added that will add extra actions
 
 Available values:
 - export-compile-commands - creates the compile-commands.json file at the build dir of your profile
+- export-vscode-sln - creates tasks.json and launch.json and their required .vscode folder if they dont exist, otherwise appends to existing files and overwrites profile with same name
 - warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
 - use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
 - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
