@@ -305,7 +305,12 @@ namespace KalaMake::Core
                 "            \"args\": [],",
                 "            \"cwd\": \"${workspaceFolder}\",",
                 "            \"stopAtEntry\": false,",
+#ifdef _WIN32
                 "            \"console\": \"integratedTerminal\"",
+#else
+                "            \"MIMode\": \"gdb\"",
+                "            \"miDebuggerPath\": \"/usr/bin/gdb\"",
+#endif
                 "        },"
             };
 

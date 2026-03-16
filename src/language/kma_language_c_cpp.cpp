@@ -388,7 +388,7 @@ void Compile_Final(const GlobalData& globalData)
 					: runtimeFlag);
 			}
 
-			//explicitly enable exceptions
+			//always enable exceptions for msvc
 			if (isMSVC) finalFlags.push_back("EHsc");
 
 			if (ContainsValue(
@@ -397,6 +397,12 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				if (isMSVC) finalFlags.push_back("WX");
 				else        finalFlags.push_back("Werror");
+			}
+
+			//always use NDEBUG for release, minsizerel and reldebug
+			if (globalData.targetProfile.buildType != BuildType::B_DEBUG)
+			{
+				finalFlags.push_back("DNDEBUG");
 			}
 
 			switch (globalData.targetProfile.buildType)
@@ -630,7 +636,7 @@ void Compile_Final(const GlobalData& globalData)
 							? buildPath
 							: current_path() / buildPath;
 
-						for (int i = 0; i < globalData.targetProfile.sources.size(); i++)
+						for (size_t i = 0; i < globalData.targetProfile.sources.size(); i++)
 						{
 							const path& s = globalData.targetProfile.sources[i];
 
