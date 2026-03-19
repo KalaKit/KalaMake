@@ -104,8 +104,11 @@ namespace KalaMake::Core
 		//what kalamake-specific flags will trigger extra actions
 		T_CUSTOM_FLAGS = 17u,
 
+		//pre-build action field, can add as many as you want, optional
+		T_PRE_BUILD_ACTION = 18u,
+
 		//post-build action field, can add as many as you want, optional
-		T_POST_BUILD_ACTION = 18u
+		T_POST_BUILD_ACTION = 19u
 	};
 
 	//Allowed binary types that can be added to the binarytype field
@@ -307,7 +310,11 @@ namespace KalaMake::Core
 		vector<string> linkFlags{};
 		//what kalamake-specific flags will trigger extra actions, optional
 		vector<CustomFlag> customFlags{};
-		//what actions will be done after the compilation and linking is complete
+
+		//what actions will be done before generation, compilation and linking starts
+		vector<string> preBuildActions{};
+
+		//what actions will be done after generation, compilation and linking is complete
 		vector<string> postBuildActions{};
 	};
 

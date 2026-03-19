@@ -277,6 +277,39 @@ void Compile_Final(const GlobalData& globalData)
 		: "-";
 
 	//
+	// PRE BUILD ACTIONS
+	//
+
+	if (!globalData.targetProfile.preBuildActions.empty())
+	{
+		Log::Print(
+			"Starting to run pre build actions.",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_INFO);
+
+		for (const auto& a : globalData.targetProfile.preBuildActions)
+		{
+			Log::Print("\naction: " + a);
+
+			if (system(a.c_str()) != 0)
+			{
+				KalaMakeCore::CloseOnError(
+					"LANGUAGE_C_CPP",
+					"Failed to run pre build action!");
+			}
+		}
+
+		Log::Print(" ");
+
+		Log::Print(
+			"Finished all pre build actions!",
+			"LANGUAGE_C_CPP",
+			LogType::LOG_SUCCESS);
+
+		Log::Print("\n===========================================================================\n");
+	}
+
+	//
 	// COMPILE
 	//
 
@@ -595,12 +628,16 @@ void Compile_Final(const GlobalData& globalData)
 			vector<path> compiledObj{};
 			mutex m_compiledObj;
 
-			auto headers_up_to_date = [&globalData](const auto& t) -> bool
+			vector<file_time_type> headerTimes{};
+			headerTimes.reserve(globalData.targetProfile.headers.size());
+			for (const auto& h : globalData.targetProfile.headers)
+			{
+				headerTimes.push_back(last_write_time(h));
+			}
+
+			auto headers_up_to_date = [headerTimes](const auto& t) -> bool
 				{
-					for (const auto& h : globalData.targetProfile.headers)
-					{
-						if (last_write_time(h) > t) return false;
-					}
+					for (const auto& ht : headerTimes) if (ht > t) return false;
 
 					return true;
 				};
@@ -610,16 +647,9 @@ void Compile_Final(const GlobalData& globalData)
 				const path& object
 				) -> bool
 				{
-					bool objExists = exists(object);
-
-					const auto t = objExists
-						? last_write_time(object)
-						: file_time_type{};
-
-					return 
-						!objExists
-						|| last_write_time(source) > t
-						|| !headers_up_to_date(t);
+					return !exists(object)
+						|| last_write_time(object) < last_write_time(source)
+						|| !headers_up_to_date(last_write_time(object));
 				};
 
 			auto generate = [
@@ -680,7 +710,6 @@ void Compile_Final(const GlobalData& globalData)
 					perFileCommand += " \"" + s.string() + "\"";
 					perFileCommand += " " + objFront + " \"" + objPath.string() + "\"";
 
-					//only recompile this object file when source and object timestamp differences occur
 					if (needs_compile(s, objPath))
 					{
 						Log::Print(
@@ -698,7 +727,7 @@ void Compile_Final(const GlobalData& globalData)
 					else
 					{
 						Log::Print(
-							"Skipping compilation of existing object file '" + objPath.string() + "'.",
+							"Skipping compilation of object file '" + objPath.string() + "' because it is newer than its source and header files.",
 							"LANGUAGE_C_CPP",
 							LogType::LOG_INFO);
 
@@ -1040,7 +1069,7 @@ void Compile_Final(const GlobalData& globalData)
 					"LANGUAGE_C_CPP",
 					LogType::LOG_INFO);
 
-				Log::Print("\n");
+				Log::Print(" ");
 
 				if (system(command.c_str()) != 0)
 				{
@@ -1057,7 +1086,7 @@ void Compile_Final(const GlobalData& globalData)
 			else
 			{
 				Log::Print(
-					"Skipping linking of up to date output '" + outputPath.string() + "'.",
+					"Skipping linking of output '" + outputPath.string() + "' because there are no new object files.",
 					"LANGUAGE_C_CPP",
 					LogType::LOG_INFO);
 			}
@@ -1091,11 +1120,11 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				KalaMakeCore::CloseOnError(
 					"LANGUAGE_C_CPP",
-					"Failed to run action!");
+					"Failed to run post build action!");
 			}
 		}
 
-		Log::Print("\n");
+		Log::Print(" ");
 
 		Log::Print(
 			"Finished all post build actions!",

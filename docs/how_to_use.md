@@ -69,6 +69,7 @@ Available fields:
 - compileflags (optional)
 - linkflags (optional)
 - customflags (optional)
+- prebuildaction (optional)
 - postbuildaction (optional)
     
 ### binarytype
@@ -200,9 +201,13 @@ Available values:
 - use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
 - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
     
+### prebuildaction
+
+Describes what console-triggered action to do before any generation, compilation or linking starts. Only one value is allowed but more than one prebuildaction can be added to your profile.
+    
 ### postbuildaction
 
-Describes what console-triggered action to do after the compilation and linking succeeds.  Only one value is allowed but more than one postbuildaction can be added to the profile.
+Same as prebuildaction but these actions run after generation, compilation and linking is done and succeeds.
 
 ---
 

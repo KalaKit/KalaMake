@@ -110,6 +110,7 @@ constexpr string_view field_defines           = "defines";
 constexpr string_view field_compile_flags     = "compileflags";
 constexpr string_view field_link_flags        = "linkflags";
 constexpr string_view field_custom_flags      = "customflags";
+constexpr string_view field_pre_build_action  = "prebuildaction";
 constexpr string_view field_post_build_action = "postbuildaction";
 
 constexpr string_view binary_type_executable = "executable";
@@ -379,6 +380,7 @@ namespace KalaMake::Core
 		{ FieldType::T_LINK_FLAGS,     field_link_flags },
 		{ FieldType::T_CUSTOM_FLAGS,   field_custom_flags },
 
+		{ FieldType::T_PRE_BUILD_ACTION, field_pre_build_action },
 		{ FieldType::T_POST_BUILD_ACTION, field_post_build_action }
 	};
 
@@ -630,14 +632,14 @@ namespace KalaMake::Core
 			"KALAMAKE",
 			LogType::LOG_INFO);
 
-		Log::Print("===========================================================================\n");
+		globalData.projectFile = weakly_canonical(projectFile);
 
 		Log::Print(
-			"Finished first parse! Cleaning up parsed data and parsing for compiler.\n",
+			"Finished first parse!\n",
 			"KALAMAKE",
 			LogType::LOG_SUCCESS);
 
-		globalData.projectFile = weakly_canonical(projectFile);
+		Log::Print("===========================================================================\n");
 
 		LanguageCore::Compile(globalData);
 	}
@@ -1071,6 +1073,18 @@ void ExtractFieldData(
 
 		outFieldName = name;
 		outFieldValues = { trimmedValue };
+	}
+	else if (name == field_pre_build_action)
+	{
+		if (trimmedValue.find(',') != string::npos)
+		{
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Pre build action '" + name  + "' is not allowed to have more than one value!");
+		}
+
+		outFieldName = name;
+		outFieldValues = { TranslateReferences(trimmedValue) };
 	}
 	else if (name == field_post_build_action)
 	{
@@ -1613,6 +1627,7 @@ void FirstParse(const vector<string>& lines)
 						fieldValues);
 
 					if (fields.contains(fieldName)
+						&& fieldName != field_pre_build_action
 						&& fieldName != field_post_build_action)
 					{
 						KalaMakeCore::CloseOnError(
@@ -1620,10 +1635,15 @@ void FirstParse(const vector<string>& lines)
 							"Field '" + fieldName + "' was duplicated!");
 					}
 
-					if (fieldName != field_post_build_action) fields[fieldName] = fieldValues;
+					if (fieldName != field_pre_build_action
+						&& fieldName != field_post_build_action)
+					{
+						fields[fieldName] = fieldValues;
+					}
 					else
 					{
-						if (!fields.contains(string(field_post_build_action)))
+						if (!fields.contains(string(field_pre_build_action))
+							&& !fields.contains(string(field_post_build_action)))
 						{
 							fields[fieldName] = fieldValues;
 						}
@@ -1753,6 +1773,10 @@ void FirstParse(const vector<string>& lines)
 					}
 					globalData.targetProfile.customFlags = std::move(customFlags);
 				}
+				if (fields.contains(string(field_pre_build_action)))
+				{
+					globalData.targetProfile.preBuildActions = std::move(fields[string(field_pre_build_action)]);
+				}
 				if (fields.contains(string(field_post_build_action)))
 				{
 					globalData.targetProfile.postBuildActions = std::move(fields[string(field_post_build_action)]);
@@ -1806,6 +1830,7 @@ void FirstParse(const vector<string>& lines)
 						fieldValues);
 
 					if (fields.contains(fieldName)
+						&& fieldName != field_pre_build_action
 						&& fieldName != field_post_build_action)
 					{
 						KalaMakeCore::CloseOnError(
@@ -1813,10 +1838,15 @@ void FirstParse(const vector<string>& lines)
 							"Field '" + fieldName + "' was duplicated!");
 					}
 
-					if (fieldName != field_post_build_action) fields[fieldName] = fieldValues;
+					if (fieldName != field_pre_build_action
+						&& fieldName != field_post_build_action)
+					{
+						fields[fieldName] = fieldValues;
+					}
 					else
 					{
-						if (!fields.contains(string(field_post_build_action)))
+						if (!fields.contains(string(field_pre_build_action))
+							&& !fields.contains(string(field_post_build_action)))
 						{
 							fields[fieldName] = fieldValues;
 						}
@@ -2015,6 +2045,19 @@ void FirstParse(const vector<string>& lines)
 						customFlags.end());
 
 					RemoveDuplicates(globalData.targetProfile.customFlags);
+				}
+				if (fields.contains(string(field_pre_build_action)))
+				{
+					const vector<string>& values = fields[string(field_pre_build_action)];
+
+					globalData.targetProfile.preBuildActions.reserve(
+						globalData.targetProfile.preBuildActions.size()
+						+ values.size());
+
+					globalData.targetProfile.preBuildActions.insert(
+						globalData.targetProfile.preBuildActions.end(),
+						values.begin(),
+						values.end());
 				}
 				if (fields.contains(string(field_post_build_action)))
 				{
