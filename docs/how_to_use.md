@@ -101,6 +101,7 @@ Available values:
 - gcc
 - g++
 - clang
+- clang++
 - zig
     
 ### standard
@@ -113,7 +114,6 @@ Available values:
 - c11
 - c17
 - c23
-- clatest
 - c++98
 - c++03
 - c++11
@@ -122,7 +122,6 @@ Available values:
 - c++20
 - c++23
 - c++26
-- c++latest
     
 ### targettype
 
@@ -199,7 +198,6 @@ Available values:
 - export-compile-commands - creates the compile-commands.json file at the build dir of your profile
 - export-vscode-sln - creates tasks.json and launch.json and their required .vscode folder if they dont exist, otherwise appends to existing files and overwrites profile with same name
 - warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
-- use-clang-zig-msvc - uses the `x86_64-windows-msvc` target instead of the `x86_64-windows-gnu` default when compiling a Windows binary on Linux
 - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
     
 ### prebuildaction
@@ -212,7 +210,14 @@ Same as prebuildaction but these actions run after generation, compilation and l
 
 ---
 
-Minimal global profile example:
+## Profile category
+
+The profile category describes an override to the global category or additional data the global category did not define. Duplicated fields already found in the global profile that were added to a user profile are overridden if they contain a single value, otherwise they are appended to the user profile. You can choose to compile with the global profile or with a specific user-defined profile. You must add a profile name after the `#profile` category name, you can add as many profiles as you want as long as they all have unique names. All global category fields can be added to each profile.
+
+## Examples
+
+Minimal global profile
+
 ```
 #global
 compiler: clang-cl
@@ -224,13 +229,8 @@ buildpath: "build"
 sources: "src/main.cpp"
 ```
 
----
+Full KalaMake project
 
-## Profile category
-
-The profile category describes an override to the global category or additional data the global category did not define. Duplicated fields already found in the global profile that were added to a user profile are overridden if they contain a single value, otherwise they are appended to the user profile. You can choose to compile with the global profile or with a specific user-defined profile. You must add a profile name after the `#profile` category name, you can add as many profiles as you want as long as they all have unique names. All global category fields can be added to each profile.
-
-Example:
 ```
 //Build script for use with kalamake. Read more at https://github.com/kalakit/kalamake
 
@@ -240,7 +240,7 @@ Example:
 name_bin: kalamake
 dir_release: build/release-
 dir_debug: build/debug-
-name_kc: KalaCLI1
+name_kc: kalacli
 dir_kc_rel: _external_shared/KalaCLI/release
 dir_kc_deb: _external_shared/KalaCLI/debug
 comm_objcopy: objcopy --remove-section .note.gnu.property
@@ -252,14 +252,15 @@ binarytype: executable
 binaryname: ${name_bin}
 sources: "src"
 headers: "include", "_external_shared/KalaHeaders", "_external_shared/KalaCLI/include"
+defines: LIB_STATIC
 warninglevel: normal
-customflags: export-compile-commands
+customflags: export-compile-commands, export-vscode-sln
 
 #profile debug-windows
 compiler: clang-cl
 buildtype: debug
 buildpath: "${dir_debug}windows"
-links: "${dir_kc_deb}/${name_kc}.lib"
+links: "${dir_kc_deb}/${name_kc}d.lib"
 
 #profile release-windows
 compiler: clang-cl
