@@ -33,6 +33,7 @@ using KalaHeaders::KalaCore::IsAssignable;
 using KalaHeaders::KalaCore::AnyEnumAndStringMap;
 using KalaHeaders::KalaCore::AnyEnum;
 using KalaHeaders::KalaCore::StringToEnum;
+using KalaHeaders::KalaCore::EnumToString;
 using KalaHeaders::KalaCore::RemoveDuplicates;
 
 using KalaHeaders::KalaLog::Log;
@@ -145,8 +146,10 @@ constexpr string_view standard_cpp20      = "c++20";
 constexpr string_view standard_cpp23      = "c++23";
 constexpr string_view standard_cpp26      = "c++26";
 
-constexpr string_view target_type_windows = "windows";
-constexpr string_view target_type_linux   = "linux";
+constexpr string_view target_type_linux_gnu    = "linux-gnu";
+constexpr string_view target_type_linux_musl   = "linux-musl";
+constexpr string_view target_type_windows_gnu  = "windows-gnu";
+constexpr string_view target_type_windows_msvc = "windows-msvc";
 
 constexpr string_view build_type_debug      = "debug";
 constexpr string_view build_type_release    = "release";
@@ -163,7 +166,6 @@ constexpr string_view warning_level_all    = "all";
 constexpr string_view custom_export_comp_comm    = "export-compile-commands";
 constexpr string_view custom_export_vscode_sln   = "export-vscode-sln";
 constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
-constexpr string_view custom_clang_zig_msvc      = "use-clang-zig-msvc";
 constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
 
 //kma path is the root directory where the kmake file is stored at
@@ -344,6 +346,8 @@ static void FirstParse(const vector<string>& lines);
 
 static string TranslateReferences(string_view value);
 
+static void VerifyCompilers(const GlobalData& globalData);
+
 namespace KalaMake::Core
 {
 	static const unordered_map<Version, string_view, EnumHash<Version>> versions =
@@ -405,10 +409,10 @@ namespace KalaMake::Core
 		{ CompilerType::C_CLANG_CL, compiler_clang_cl },
 		{ CompilerType::C_CL,       compiler_cl },
 
-		{ CompilerType::C_CLANG,    compiler_clang },
-		{ CompilerType::C_CLANGPP,  compiler_clangpp },
-		{ CompilerType::C_GCC,      compiler_gcc },
-		{ CompilerType::C_GPP,      compiler_gpp }
+		{ CompilerType::C_CLANG,   compiler_clang },
+		{ CompilerType::C_CLANGPP, compiler_clangpp },
+		{ CompilerType::C_GCC,     compiler_gcc },
+		{ CompilerType::C_GPP,     compiler_gpp }
 	};
 
 	static const unordered_map<StandardType, string_view, EnumHash<StandardType>> standardTypes =
@@ -420,20 +424,22 @@ namespace KalaMake::Core
 		{ StandardType::C_23,     standard_c23 },
 		{ StandardType::C_LATEST, standard_c_latest },
 
-		{ StandardType::CPP_98,      standard_cpp98 },
-		{ StandardType::CPP_03,      standard_cpp03 },
-		{ StandardType::CPP_11,      standard_cpp11 },
-		{ StandardType::CPP_14,      standard_cpp14 },
-		{ StandardType::CPP_17,     standard_cpp17 },
-		{ StandardType::CPP_20,     standard_cpp20 },
-		{ StandardType::CPP_23,     standard_cpp23 },
-		{ StandardType::CPP_26,     standard_cpp26 }
+		{ StandardType::CPP_98,  standard_cpp98 },
+		{ StandardType::CPP_03,  standard_cpp03 },
+		{ StandardType::CPP_11,  standard_cpp11 },
+		{ StandardType::CPP_14,  standard_cpp14 },
+		{ StandardType::CPP_17, standard_cpp17 },
+		{ StandardType::CPP_20, standard_cpp20 },
+		{ StandardType::CPP_23, standard_cpp23 },
+		{ StandardType::CPP_26, standard_cpp26 }
 	};
 
 	static const unordered_map<TargetType, string_view, EnumHash<TargetType>> targetTypes =
 	{
-		{ TargetType::T_WINDOWS, target_type_windows },
-		{ TargetType::T_LINUX,   target_type_linux }
+		{ TargetType::T_LINUX_GNU,    target_type_linux_gnu },
+		{ TargetType::T_LINUX_MUSL,   target_type_linux_musl },
+		{ TargetType::T_WINDOWS_GNU,  target_type_windows_gnu },
+		{ TargetType::T_WINDOWS_MSVC, target_type_windows_msvc }
 	};
 
 	static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
@@ -463,7 +469,6 @@ namespace KalaMake::Core
 		{ CustomFlag::F_EXPORT_COMPILE_COMMANDS,     custom_export_comp_comm },
 		{ CustomFlag::F_EXPORT_VSCODE_SLN,           custom_export_vscode_sln },
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,          custom_warnings_as_err },
-		{ CustomFlag::F_USE_CLANG_ZIG_MSVC,          custom_clang_zig_msvc },
 		{ CustomFlag::F_MSVC_STATIC_RUNTIME,         custom_msvc_static_runtime }
 	};
 
@@ -605,6 +610,12 @@ namespace KalaMake::Core
 				"KALAMAKE",
 				"No binary name was passed!");
 		}
+		if (globalData.targetProfile.binaryName.size() > 50)
+		{
+			KalaMakeCore::CloseOnError(
+				"KALAMAKE",
+				"Passed binary name is too long!");
+		}
 		if (globalData.targetProfile.buildType == BuildType::B_INVALID)
 		{
 			KalaMakeCore::CloseOnError(
@@ -623,6 +634,8 @@ namespace KalaMake::Core
 				"KALAMAKE",
 				"No sources were passed!");
 		}
+
+		VerifyCompilers(globalData);
 
 		//assign cpu thread count if none was assigned
 		if (globalData.targetProfile.jobs == 0) globalData.targetProfile.jobs = GetThreadCount();
@@ -1691,11 +1704,6 @@ void FirstParse(const vector<string>& lines)
 					TargetType result{};
 					StringToEnum(values.front(), KalaMake::Core::targetTypes, result);
 					globalData.targetProfile.targetType = result;
-#if _WIN32
-					if (globalData.targetProfile.targetType == TargetType::T_WINDOWS) globalData.targetProfile.targetType = TargetType::T_INVALID;
-#else
-					if (globalData.targetProfile.targetType == TargetType::T_LINUX) globalData.targetProfile.targetType = TargetType::T_INVALID;
-#endif
 				}
 				if (fields.contains(string(field_jobs)))
 				{
@@ -1894,11 +1902,6 @@ void FirstParse(const vector<string>& lines)
 					TargetType result{};
 					StringToEnum(values.front(), KalaMake::Core::targetTypes, result);
 					globalData.targetProfile.targetType = result;
-#if _WIN32
-					if (globalData.targetProfile.targetType == TargetType::T_WINDOWS) globalData.targetProfile.targetType = TargetType::T_INVALID;
-#else
-					if (globalData.targetProfile.targetType == TargetType::T_LINUX) globalData.targetProfile.targetType = TargetType::T_INVALID;
-#endif
 				}
 				if (fields.contains(string(field_jobs)))
 				{
@@ -2164,4 +2167,46 @@ string TranslateReferences(string_view value)
 	}
 
 	return result;
+}
+
+void VerifyCompilers(const GlobalData& globalData)
+{
+	string_view compilerStr{};
+	EnumToString(
+		globalData.targetProfile.compiler,
+		KalaMakeCore::GetCompilerTypes(),
+		compilerStr);
+
+	string_view targetTypeStr{};
+	EnumToString(
+		globalData.targetProfile.targetType,
+		KalaMakeCore::GetTargetTypes(),
+		targetTypeStr);
+
+#ifdef _WIN32
+	if ((globalData.targetProfile.compiler == CompilerType::C_CL
+		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
+		&& globalData.targetProfile.targetType != TargetType::T_WINDOWS_MSVC
+		&& globalData.targetProfile.targetType != TargetType::T_INVALID)
+	{
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"MSVC compiler '" + string(compilerStr) + "' is not allowed to add any non-MSVC target types!");
+	}
+#else
+	if (globalData.targetProfile.compiler == CompilerType::C_CL
+		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
+	{
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"MSVC compiler '" + string(compilerStr) + "' is not allowed on Linux!");
+	}
+
+	if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_MSVC)
+	{
+		KalaMakeCore::CloseOnError(
+			"KALAMAKE",
+			"Target type '" + string(targetTypeStr) + "' is not allowed on Linux!");
+	}
+#endif
 }

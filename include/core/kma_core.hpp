@@ -188,13 +188,22 @@ namespace KalaMake::Core
 		CPP_26 = 14u
 	};
 
-	//Allowed target types that can be added to the targettype field
+	//Allowed target types in C and C++ that can be added to the targettype field
 	enum class TargetType : u8
 	{
 		T_INVALID = 0u,
 
-		T_WINDOWS = 1u,
-		T_LINUX = 2u
+		//build a linux target on windows or linux (glibc)
+		T_LINUX_GNU = 1u,
+
+		//build a linux target on windows or linux (musl)
+		T_LINUX_MUSL = 2u,
+
+		//build a windows target on linux or windows (mingw)
+		T_WINDOWS_GNU = 3u,
+
+		//build a windows target on windows (msvc)
+		T_WINDOWS_MSVC = 4u
 	};
 
 	//Allowed build types that can be added to the buildtype field
@@ -255,14 +264,10 @@ namespace KalaMake::Core
 		//only for C and C++
 		F_WARNINGS_AS_ERRORS = 3u,
 
-		//uses msvc instead of the default gnu for cross-compiling linux binary to windows binary,
-		//only for C and C++, not used in msvc
-		F_USE_CLANG_ZIG_MSVC = 4u,
-
 		//embed the C/C++ runtime into the binary,
 		//dynamic runtime is enabled by default unless this is added,
 		//only for C and C++, not used in linux
-		F_MSVC_STATIC_RUNTIME = 5u
+		F_MSVC_STATIC_RUNTIME = 4u
 	};
 	
 	struct ProfileData

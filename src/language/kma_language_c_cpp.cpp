@@ -74,19 +74,25 @@ static void Compile_Final(const GlobalData& globalData);
 
 constexpr string_view objFolderName = "obj";
 
-#ifdef _WIN32
-constexpr string_view gcc_compiler_windows_to_linux = "x86_64-linux-gnu-gcc";
-constexpr string_view gpp_compiler_windows_to_linux = "x86_64-linux-gnu-g++";
-constexpr string_view clang_zig_target_windows_to_linux = "x86_64-linux-gnu";
-#else
-constexpr string_view gcc_compiler_linux_to_windows = "x86_64-w64-mingw32-gcc";
-constexpr string_view gpp_compiler_linux_to_windows = "x86_64-w64-mingw32-g++";
+//gcc + linux-gnu
+constexpr string_view target_type_linux_gnu_gcc = "x86_64-linux-gnu-gcc";
+//g++ + linux-gnu
+constexpr string_view target_type_linux_gnu_gpp = "x86_64-linux-gnu-g++";
+//clang/clang++/zig + linux-gnu
+constexpr string_view target_type_linux_gnu = "x86_64-linux-gnu";
+//gcc + linux-musl
+constexpr string_view target_type_linux_musl_gcc = "x86_64-linux-musl-gcc";
+//g++ + linux-musl
+constexpr string_view target_type_linux_musl_gpp = "x86_64-linux-musl-g++";
+//clang/clang++/zig + linux_musl
+constexpr string_view target_type_linux_musl = "x86_64-linux-musl";
 
-//used by default for clang linux-to-windows
-constexpr string_view clang_zig_target_linux_to_windows_gnu = "x86_64-windows-gnu";
-//optional for clang linux-to-windows, must add custom flag use-clang-zig-msvc to enable
-constexpr string_view clang_zig_target_linux_to_windows_msvc = "x86_64-windows-msvc";
-#endif
+//gcc + windows-gnu
+constexpr string_view target_type_win_gcc = "x86_64-w64-mingw32-gcc";
+//g++ + windows-gnu
+constexpr string_view target_type_win_gpp = "x86_64-w64-mingw32-g++";
+//clang/clang++/zig + windows-gnu
+constexpr string_view target_type_win_gnu = "x86_64-w64-windows-gnu";
 
 static vector<CompileCommand> commands{};
 
@@ -329,23 +335,27 @@ void Compile_Final(const GlobalData& globalData)
 
 			//set compiler
 
+			//TODO: call cl x64 bat correctly
+
 			string_view compiler{};
 			EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
-			
-#if _WIN32
-			if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+
+			if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 			{
-				if (compiler == "gcc")      compiler = gcc_compiler_windows_to_linux;
-				else if (compiler == "g++") compiler = gpp_compiler_windows_to_linux;
+				if (compiler == "gcc")      compiler = target_type_linux_gnu_gcc;
+				else if (compiler == "g++") compiler = target_type_linux_gnu_gpp;
 			}
-#else
-			if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+			else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 			{
-				if (compiler == "gcc")      compiler = gcc_compiler_linux_to_windows;
-				else if (compiler == "g++") compiler = gpp_compiler_linux_to_windows;
+				if (compiler == "gcc")      compiler = target_type_linux_musl_gcc;
+				else if (compiler == "g++") compiler = target_type_linux_musl_gpp;
 			}
-#endif
-			
+			else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+			{
+				if (compiler == "gcc")      compiler = target_type_win_gcc;
+				else if (compiler == "g++") compiler = target_type_win_gpp;
+			}
+
 			command += string(compiler);
 
 			if (compiler == "zig")
@@ -373,26 +383,22 @@ void Compile_Final(const GlobalData& globalData)
 			}
 
 			//set target type
-
 			if (compiler == "clang"
 				|| compiler == "clang++"
 				|| compiler == "zig")
 			{
-#if _WIN32
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 				{
-					command += " -target " + string(clang_zig_target_windows_to_linux);
+					command += " -target " + string(target_type_linux_gnu);
 				}
-#else
-				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
-					if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_USE_CLANG_ZIG_MSVC))
-					{
-						command += " -target " + string(clang_zig_target_linux_to_windows_msvc);
-					}
-					else command += " -target " + string(clang_zig_target_linux_to_windows_gnu);
+					command += " -target " + string(target_type_linux_musl);
 				}
-#endif
+				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+				{
+					command += " -target " + string(target_type_win_gnu);
+				}
 			}
 
 			//set standard
@@ -801,11 +807,32 @@ void Compile_Final(const GlobalData& globalData)
 
 			//set compiler
 
-			string_view compiler{};
+			//TODO: call cl x64 bat correctly
+
+			string compiler{};
 			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
 				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED)
 			{
-				EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
+				string_view nonStaticCompiler{};
+				EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), nonStaticCompiler);
+
+				compiler = nonStaticCompiler;
+
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
+				{
+					if (compiler == "gcc")      compiler = target_type_linux_gnu_gcc;
+					else if (compiler == "g++") compiler = target_type_linux_gnu_gpp;
+				}
+				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+				{
+					if (compiler == "gcc")      compiler = target_type_linux_musl_gcc;
+					else if (compiler == "g++") compiler = target_type_linux_musl_gpp;
+				}
+				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+				{
+					if (compiler == "gcc")      compiler = target_type_win_gcc;
+					else if (compiler == "g++") compiler = target_type_win_gpp;
+				}
 			}
 			else
 			{
@@ -816,21 +843,7 @@ void Compile_Final(const GlobalData& globalData)
 #endif
 			}
 
-#if _WIN32
-			if (globalData.targetProfile.targetType == TargetType::T_LINUX)
-			{
-				if (compiler == "gcc")      compiler = gcc_compiler_windows_to_linux;
-				else if (compiler == "g++") compiler = gpp_compiler_windows_to_linux;
-			}
-#else
-			if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
-			{
-				if (compiler == "gcc")      compiler = gcc_compiler_linux_to_windows;
-				else if (compiler == "g++") compiler = gpp_compiler_linux_to_windows;
-			}
-#endif
-
-			command += string(compiler);
+			command += compiler;
 
 			if (compiler == "zig")
 			{
@@ -857,26 +870,22 @@ void Compile_Final(const GlobalData& globalData)
 			}
 
 			//set target type
-
 			if (compiler == "clang"
 				|| compiler == "clang++"
 				|| compiler == "zig")
 			{
-#if _WIN32
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 				{
-					command += " -target " + string(clang_zig_target_windows_to_linux);
+					command += " -target " + string(target_type_linux_gnu);
 				}
-#else
-				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
+				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
-					if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_USE_CLANG_ZIG_MSVC))
-					{
-						command += " -target " + string(clang_zig_target_linux_to_windows_msvc);
-					}
-					else command += " -target " + string(clang_zig_target_linux_to_windows_gnu);
+					command += " -target " + string(target_type_linux_musl);
 				}
-#endif
+				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+				{
+					command += " -target " + string(target_type_win_gnu);
+				}
 			}
 
 			//set output
@@ -904,11 +913,18 @@ void Compile_Final(const GlobalData& globalData)
 			path buildPath = globalData.targetProfile.buildPath;
 			string binaryName = globalData.targetProfile.binaryName;
 
+			bool isOnLinux{};
+#ifdef __linux__
+			isOnLinux = true;
+#endif
+
 			string extension{};
 			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE)
 			{
-#ifdef _WIN32
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				if ((isOnLinux
+					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
 					
 					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
@@ -917,21 +933,13 @@ void Compile_Final(const GlobalData& globalData)
 				{
 					if (!binaryName.ends_with(".exe")) extension = ".exe";
 				}
-#else
-				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
-				{
-					if (!binaryName.ends_with(".exe")) extension = ".exe";
-				}
-				else
-				{
-					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
-				}
-#endif
 			}
 			else if (globalData.targetProfile.binaryType == BinaryType::B_SHARED)
 			{
-#ifdef _WIN32
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				if ((isOnLinux
+					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
 					if (!binaryName.ends_with(".so")) extension = ".so";
 				}
@@ -939,21 +947,14 @@ void Compile_Final(const GlobalData& globalData)
 				{
 					if (!binaryName.ends_with(".dll")) extension = ".dll";
 				}
-#else
-				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
-				{
-					if (!binaryName.ends_with(".dll")) extension = ".dll";
-				}
-				else
-				{
-					if (!binaryName.ends_with(".so")) extension = ".so";
-				}
-#endif
 			}
 			else if (globalData.targetProfile.binaryType == BinaryType::B_STATIC)
 			{
-#ifdef _WIN32
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX)
+				if ((isOnLinux
+					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL
+					|| globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
 				{
 					if (!binaryName.ends_with(".a")) extension = ".a";
 				}
@@ -961,16 +962,6 @@ void Compile_Final(const GlobalData& globalData)
 				{
 					if (!binaryName.ends_with(".lib")) extension = ".lib";
 				}
-#else
-				if (globalData.targetProfile.targetType == TargetType::T_WINDOWS)
-				{
-					if (!binaryName.ends_with(".lib")) extension = ".lib";
-				}
-				else
-				{
-					if (!binaryName.ends_with(".a")) extension = ".a";
-				}
-#endif
 			}
 
 			path outputPath = path(buildPath / string(binaryName + extension));
@@ -1081,7 +1072,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished linking to output '" + outputPath.string() + "'!",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_SUCCESS);	
+					LogType::LOG_SUCCESS);
 			}
 			else
 			{

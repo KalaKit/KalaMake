@@ -126,11 +126,13 @@ Available values:
     
 ### targettype
 
-Describes which target to aim for, used for cross-compilation. Only one value is allowed.
+Describes which target to aim for, used for cross-compilation. Only one value is allowed. Leave empty for current platform.
 
 Available values:
-- windows - build a windows binary on linux
-- linux - build a linux binary on windows
+- windows-msvc - create a regular windows binary on windows
+- windows-gnu - create a windows binary on windows or linux
+- linux-gnu - create a linux binary on windows or linux (uses glibc)
+- linux-musl - create a linux binary on windows or linux (uses musl)
     
 ### jobs
 
