@@ -2,9 +2,9 @@
 
 This document explains what KalaMake is in more depth, what categories and fields are available and how to use them.
 
-To run KalaMake you must first have a `.kmake` manifest file in your project root directory or wherever you wish to get all your files relative to when compiling softwarek, games and libraries from source code.
+To run KalaMake you must first have a `.kmake` manifest file in your project root directory or wherever you wish to get all your files relative to when compiling software, games and libraries from source code.
 
-To compile with KalaMake all you need is to launch KalaMake manually and type `--compile yourproject.kmake yourprofile` or directly type `kalamake --compile yourproject.kmake yourprofile`. Read below for more details.
+To compile with KalaMake all you need is to launch KalaMake manually and type `--compile yourproject.kmake yourprofile` or directly type `kalamake --compile yourproject.kmake yourprofile` into your console. Read below for more details.
 
 ## Introduction
 
