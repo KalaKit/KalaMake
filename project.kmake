@@ -7,8 +7,8 @@ name_bin: kalamake
 dir_release: build/release-
 dir_debug: build/debug-
 name_kc: kalacli
-dir_kc_rel: _external_shared/KalaCLI/release
-dir_kc_deb: _external_shared/KalaCLI/debug
+dir_kc_rel: ../external-shared/KalaCLI/release
+dir_kc_deb: ../external-shared/KalaCLI/debug
 comm_objcopy: objcopy --remove-section .note.gnu.property
 
 #global
@@ -17,7 +17,7 @@ standard: c++20
 binarytype: executable
 binaryname: ${name_bin}
 sources: "src"
-headers: "include", "_external_shared/KalaHeaders", "_external_shared/KalaCLI/include"
+headers: "include", "../external-shared/KalaHeaders", "../external-shared/KalaCLI/include"
 defines: LIB_STATIC
 warninglevel: normal
 customflags: export-compile-commands, export-vscode-sln

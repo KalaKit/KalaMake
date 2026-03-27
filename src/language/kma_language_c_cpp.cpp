@@ -403,8 +403,6 @@ void PreCheck(GlobalData& globalData)
 
 	if (foundInvalid) 
 	{
-		Log::Print("size before exclude remove: " + to_string(finalSources.size()));
-
 		if (!exclusions.empty())
 		{
 			finalSources.erase(
@@ -417,8 +415,6 @@ void PreCheck(GlobalData& globalData)
 					}),
 				finalSources.end());
 		}
-
-		Log::Print("size after exclude remove: " + to_string(finalSources.size()));
 
 		globalData.targetProfile.sources = std::move(finalSources);
 
