@@ -19,3 +19,5 @@
 - improved ignored source file rules to better handle different cases
 - target project is rebuilt if its kmake file is newer than its object files or output file
 - improved command param count detection, no longer giving error for invalid param count
+- display --help when directly launching kalamake
+- added --clean command which removes all found build paths from project file

@@ -33,6 +33,14 @@ namespace KalaMake::Core
 	//default object directory path relative to kmaPath if objpath is not added or filled
 	static const path defaultObjPath = "build/obj";
 
+	enum class StartType : u8
+	{
+		S_INVALID = 0u,
+
+		S_COMPILE = 1u,
+		S_CLEAN = 2u
+	};
+
 	enum class Version : u8
 	{
 		V_INVALID = 0u,
@@ -340,11 +348,9 @@ namespace KalaMake::Core
 	class KalaMakeCore
 	{
 	public:
-		static void OpenFile(const vector<string>& params);
-
-		static void Compile(
-			const path& filePath,
-			const vector<string>& lines);
+		static void OpenFile(
+			StartType type,
+			const vector<string>& params);
 
 		static const unordered_map<Version,      string_view, EnumHash<Version>>&      GetVersions();
 		static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>>& GetCategoryTypes();

@@ -44,6 +44,7 @@ using KalaHeaders::KalaFile::ToStringVector;
 using KalaHeaders::KalaFile::ToPathVector;
 using KalaHeaders::KalaFile::PathTarget;
 using KalaHeaders::KalaFile::CreateNewDirectory;
+using KalaHeaders::KalaFile::DeletePath;
 
 using KalaHeaders::KalaString::SplitString;
 using KalaHeaders::KalaString::ReplaceAfter;
@@ -465,19 +466,135 @@ namespace KalaMake::Core
 		{ CustomFlag::F_MSVC_STATIC_RUNTIME,         custom_msvc_static_runtime }
 	};
 
-	void KalaMakeCore::OpenFile(const vector<string>& params)
+	void KalaMakeCore::OpenFile(
+		StartType type,
+		const vector<string>& params)
 	{
 		ostringstream details{};
 
 		Log::Print(details.str());
 
 		projectFile = params[1];
-		targetProfile = params[2];
+		if (type == StartType::S_COMPILE) targetProfile = params[2];
 
 		string& currentDir = KalaCLI::Core::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
-		auto handle_state = [](path filePath) -> void
+		auto first_parse = [](
+			const path& filePath,
+			const vector<string>& lines) -> void
+			{
+				Log::Print(
+					"Starting to parse the kalamake file '" + filePath.string() + "'"
+					"\n\n===========================================================================\n",
+					"KALAMAKE",
+					LogType::LOG_INFO);
+
+				FirstParse(lines);
+
+				if (globalData.targetProfile.binaryType == BinaryType::B_INVALID)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No binary type was passed!");
+				}
+				if (globalData.targetProfile.compiler == CompilerType::C_INVALID)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No compiler was passed!");
+				}
+				if (globalData.targetProfile.standard == StandardType::S_INVALID)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No standard was passed!");
+				}
+				
+				if (globalData.targetProfile.binaryName.empty())
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No binary name was passed!");
+				}
+				if (globalData.targetProfile.binaryName.size() > 50)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Passed binary name is too long!");
+				}
+				if (globalData.targetProfile.buildType == BuildType::B_INVALID)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No build type was passed!");
+				}
+				if (globalData.targetProfile.buildPath.empty())
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No build path was passed!");
+				}
+				if (globalData.targetProfile.sources.empty())
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"No sources were passed!");
+				}
+
+				//assign cpu thread count if none was assigned
+				if (globalData.targetProfile.jobs == 0) globalData.targetProfile.jobs = GetThreadCount();
+
+				Log::Print(
+					"Using '" + to_string(globalData.targetProfile.jobs) + "' jobs for compilation.\n",
+					"KALAMAKE",
+					LogType::LOG_INFO);
+
+				globalData.projectFile = weakly_canonical(projectFile);
+
+				Log::Print(
+					"Finished first parse!\n",
+					"KALAMAKE",
+					LogType::LOG_SUCCESS);
+
+				Log::Print("===========================================================================\n");
+
+				LanguageCore::Compile(globalData);
+			};
+
+		auto require_quotes = [](const string& input) -> string
+			{
+				if (input.empty())
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Failed to parse path! Cannot remove '\"' from empty path.");
+				}
+
+				if (input.size() <= 2)
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Failed to parse path! Input path '" + input + "' was too small.");
+				}
+
+				if (input.front() != '"'
+					|| input.back() != '"')
+				{
+					KalaMakeCore::CloseOnError(
+						"KALAMAKE",
+						"Failed to parse path! Input path '" + input + "' did not have the '\"' symbol at the front or back.");
+				}
+
+				string result = input;
+
+				result.erase(0, 1);
+				result.pop_back();
+
+				return result;
+			};
+
+		auto handle_state = [first_parse, require_quotes, type](path filePath) -> void
 			{
 				if (is_directory(filePath))
 				{
@@ -504,7 +621,7 @@ namespace KalaMake::Core
 				{
 					KalaMakeCore::CloseOnError(
 						"KALAMAKE",
-						"Project '" + filePath.string() + "' could not be compiled! Reason: " + result);
+						"Project '" + filePath.string() + "' is invalid! Reason: " + result);
 				}
 
 				if (content.empty())
@@ -516,7 +633,237 @@ namespace KalaMake::Core
 
 				kmaPath = filePath.parent_path();
 
-				Compile(filePath, content);
+				switch (type)
+				{
+					default:
+					case StartType::S_INVALID:
+					{
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Invalid start type was used!");
+					}
+					case StartType::S_COMPILE:
+					{
+						first_parse(
+							filePath, 
+							content);
+						break;
+					}
+					case StartType::S_CLEAN:
+					{
+						vector<path> buildPaths{};
+						string_view bp = "buildpath: ";
+
+							auto clean_line = [](
+								string& line, 
+								string& name, 
+								string& value, 
+								CategoryType& type) -> void
+								{
+									if (line.empty()
+										|| line.starts_with("//")
+										|| !line.starts_with('#'))
+									{
+										return;
+									}
+
+									line = TrimString(ReplaceAfter(line, "//"));
+
+									ExtractCategoryData(
+										line, 
+										name,
+										value);
+
+									if (!StringToEnum(name, categoryTypes, type)
+										|| type == CategoryType::C_INVALID)
+									{
+										KalaMakeCore::CloseOnError(
+											"KALAMAKE",
+											"Category type '" + name + "' is invalid!");
+									}
+								};
+
+							auto get_all_category_content = [&content](
+								string_view categoryName,
+								string_view categoryValue = {}) -> vector<string>
+								{
+									bool collecting{};
+									vector<string> collected{};
+
+									for (const string& li : content)
+									{
+										if (li.empty()
+											|| li.starts_with("//"))
+										{
+											continue;
+										}
+
+										string cli = TrimString(ReplaceAfter(li, "//"));
+										if (cli.empty()) continue;
+
+										if (!collecting)
+										{
+											if (categoryValue.empty())
+											{
+												if (cli == "#" + string(categoryName)) collecting = true;
+											}
+											else if (cli == "#" + string(categoryName) + " " + string(categoryValue)) collecting = true;
+											
+											continue;
+										}
+
+										if (cli[0] == '#') break;
+
+										collected.push_back(cli);
+									}
+
+									return collected;
+								};
+
+						for (const string& l : content)
+						{
+							string line = l;
+							string name{};
+							string value{};
+
+							CategoryType type{};
+							clean_line(line, name, value, type);
+
+							if (type == CategoryType::C_REFERENCES)
+							{
+								vector<string> content = get_all_category_content(name);
+
+								unordered_map<string, path> fields{};
+								for (const auto& c : content)
+								{
+									string fieldName{};
+									vector<string> fieldValues{};
+									ExtractFieldData(
+										c, 
+										fieldName, 
+										fieldValues,
+										true);
+
+									if (fields.contains(fieldName))
+									{
+										KalaMakeCore::CloseOnError(
+											"KALAMAKE",
+											"Reference field '" + fieldName + "' was duplicated!");
+									}
+
+									fields[fieldName] = fieldValues[0];
+								}
+
+								globalData.references.reserve(globalData.references.size() + fields.size());
+
+								for (const auto& [k, v] : fields)
+								{
+									ReferenceData ref
+									{
+										.name = k,
+										.value = v.string()
+									};
+
+									globalData.references.push_back(ref);	
+								}
+
+								foundReferences = true;
+
+								break;
+							}
+						}
+
+						for (const string& l : content)
+						{
+							if (l.empty()
+								|| l.starts_with("//"))
+							{
+								continue;
+							}
+
+							string line = TrimString(ReplaceAfter(l, "//"));
+							if (line.empty()) continue;
+
+							if (line[0] == '#') continue;
+
+							if (!line.starts_with("buildpath: ")) continue;
+
+							if (line.find(',') != string::npos)
+							{
+								KalaMakeCore::CloseOnError(
+									"KALAMAKE",
+									"Build path '" + line  + "' is not allowed to have more than one path!");
+							}
+							if (line.find('*') != string::npos)
+							{
+								KalaMakeCore::CloseOnError(
+									"KALAMAKE",
+									"Build path '" + line + "' is not allowed to use wildcards!");
+							}
+
+							line.erase(0, bp.size());
+
+							if (line.starts_with('"'))
+							{
+								if (!line.ends_with('"'))
+								{
+									KalaMakeCore::CloseOnError(
+										"KALAMAKE",
+										"Build path '" + line + "' must end with quotes!");
+								}
+
+								line = TranslateReferences(require_quotes(line));
+
+								vector<path> resolvedPaths{};
+								if (!exists(line)) continue;
+								else
+								{
+									string errorMsg = ResolveAnyPath(
+										line, 
+										kmaPath.string(), 
+										resolvedPaths);
+
+									if (!errorMsg.empty())
+									{
+										KalaMakeCore::CloseOnError(
+											"KALAMAKE",
+											"Build path '" + line + "' could not be resolved! Reason: " + errorMsg);
+									}
+								}
+
+								vector<string> result{};
+								ToStringVector(resolvedPaths, result);
+
+								buildPaths.push_back(result[0]);
+							}
+							else
+							{
+								KalaMakeCore::CloseOnError(
+									"KALAMAKE",
+									"Build path '" + l + "' has an illegal structure!");
+							}
+						}
+
+						for (const auto& p : buildPaths)
+						{
+							if (exists(p))
+							{
+								string err = DeletePath(p);
+								if (!err.empty())
+								{
+									KalaMakeCore::CloseOnError(
+										"KALAMAKE",
+										"Failed to delete build path '" + p.string() + "'! Reason: " + err);
+								}
+							}
+						}
+
+						Log::Print(
+							"Finished cleaning '" + to_string(buildPaths.size()) + "' build paths!",
+							"KALAMAKE",
+							LogType::LOG_SUCCESS);
+					}
+				}
 			};
 
 		//partial path was found
@@ -564,88 +911,6 @@ namespace KalaMake::Core
 		KalaMakeCore::CloseOnError(
 			"KALAMAKE",
 			"Project path '" + projectFile.string() + "' does not exist!");
-	}
-
-	void KalaMakeCore::Compile(
-		const path& filePath,
-		const vector<string>& lines)
-	{
-		Log::Print(
-			"Starting to parse the kalamake file '" + filePath.string() + "'"
-			"\n\n===========================================================================\n",
-			"KALAMAKE",
-			LogType::LOG_INFO);
-
-		FirstParse(lines);
-
-		if (globalData.targetProfile.binaryType == BinaryType::B_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No binary type was passed!");
-		}
-		if (globalData.targetProfile.compiler == CompilerType::C_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No compiler was passed!");
-		}
-		if (globalData.targetProfile.standard == StandardType::S_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No standard was passed!");
-		}
-		
-		if (globalData.targetProfile.binaryName.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No binary name was passed!");
-		}
-		if (globalData.targetProfile.binaryName.size() > 50)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"Passed binary name is too long!");
-		}
-		if (globalData.targetProfile.buildType == BuildType::B_INVALID)
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No build type was passed!");
-		}
-		if (globalData.targetProfile.buildPath.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No build path was passed!");
-		}
-		if (globalData.targetProfile.sources.empty())
-		{
-			KalaMakeCore::CloseOnError(
-				"KALAMAKE",
-				"No sources were passed!");
-		}
-
-		//assign cpu thread count if none was assigned
-		if (globalData.targetProfile.jobs == 0) globalData.targetProfile.jobs = GetThreadCount();
-
-		Log::Print(
-			"Using '" + to_string(globalData.targetProfile.jobs) + "' jobs for compilation.\n",
-			"KALAMAKE",
-			LogType::LOG_INFO);
-
-		globalData.projectFile = weakly_canonical(projectFile);
-
-		Log::Print(
-			"Finished first parse!\n",
-			"KALAMAKE",
-			LogType::LOG_SUCCESS);
-
-		Log::Print("===========================================================================\n");
-
-		LanguageCore::Compile(globalData);
 	}
 
 	const unordered_map<Version,      string_view, EnumHash<Version>>&      KalaMakeCore::GetVersions()      { return versions; }
@@ -803,8 +1068,7 @@ void ExtractFieldData(
 			trimmedValue = TranslateReferences(require_quotes(trimmedValue));
 
 			vector<path> resolvedPaths{};
-			if (trimmedValue.find('*') == string::npos
-				&& !exists(trimmedValue))
+			if (!exists(trimmedValue))
 			{
 				string errorMsg = CreateNewDirectory(trimmedValue);
 							
