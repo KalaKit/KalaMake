@@ -1120,11 +1120,15 @@ void ExtractFieldData(
 			return;
 		}
 
-		vector<string> splitPaths = SplitString(TranslateReferences(trimmedValue), ", ");
+		string ref = TranslateReferences(trimmedValue);
+		vector<string> split{};
+
+		if (ref.find(", ") != string::npos) split = SplitString(ref, ", ");
+		else split = SplitString(ref, ",");
 
 		vector<string> result{};
 
-		for (const string& l : splitPaths)
+		for (const string& l : split)
 		{
 			string trimmedLine = TrimString(l);
 
@@ -1251,7 +1255,11 @@ void ExtractFieldData(
 			return;
 		}
 
-		vector<string> splitPaths = SplitString(TranslateReferences(trimmedValue), ", ");
+		string ref = TranslateReferences(trimmedValue);
+		vector<string> split{};
+
+		if (ref.find(", ") != string::npos) split = SplitString(ref, ", ");
+		else split = SplitString(ref, ",");
 
 		vector<string> result{};
 
@@ -1312,7 +1320,7 @@ void ExtractFieldData(
 				return {};
 			};
 
-		for (const string& l : splitPaths)
+		for (const string& l : split)
 		{
 			string trimmedLine = TrimString(l);
 
@@ -1544,9 +1552,13 @@ void ExtractFieldData(
 		}
 
 		vector<string> result{};
-		if (cleanValue.find(',') != string::npos)
+		if (cleanValue.find(", ") != string::npos)
 		{
 			result = SplitString(cleanValue, ", ");
+		}
+		else if (cleanValue.find(",") != string::npos)
+		{
+			result = SplitString(cleanValue, ",");
 		}
 		else result.push_back(cleanValue);
 

@@ -21,3 +21,4 @@
 - improved command param count detection, no longer giving error for invalid param count
 - display --help when directly launching kalamake
 - added --clean command which removes all found build paths from project file
+- fixed issues with "," not working between paths in some scenarios
