@@ -11,7 +11,7 @@
 - removed linux and windows from targettype and added linux-gnu, linux-musl and windows-gnu, removed dumb custom flag use-clang-zig-msvc
 - added proper cl compiler support on windows by requiring the user to pass vcvars64.bat or similar before calling kalamake if using cl compiler
 
-##  1.2
+## 1.2
 
 - removed (somehow still) leftover clatest that isnt supported
 - fixed c/cpp headers not correctly contributing to deciding if compilation should happen
@@ -21,8 +21,9 @@
 - improved command param count detection, no longer giving error for invalid param count
 - display --help when directly launching kalamake
 - added --clean command which removes all found build paths from project file
-- fixed issues with "," not working between paths in some 
-- added java 8-26 support
-- added new custom flag package-jar
-- added new compiletypes java8 - java26
-- added new compiler java
+- fixed issues with "," not working between paths in some
+- added new compiler: java
+- added new standards: java8 - java26
+- added new custom flags: 'package-jar', 'java-win-console'
+
+

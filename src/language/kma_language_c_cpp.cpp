@@ -171,6 +171,14 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_C_CPP",
 			"Custom flag 'package-jar' is not supported in C and C++!");
 	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
+		CustomFlag::F_JAVA_WIN_CONSOLE))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_C_CPP",
+			"Custom flag 'java-win-console' is not supported in C and C++!");
+	}
 
 	//
 	// VERIFY COMPILER LOGIC

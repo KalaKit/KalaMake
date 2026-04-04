@@ -321,7 +321,11 @@ namespace KalaMake::Core
 
 		//package the created jar file into an executable,
 		//only for java
-		F_PACKAGE_JAR = 5u
+		F_PACKAGE_JAR = 5u,
+
+		//attaches the jpackage-made exe to windows console,
+		//only for java
+		F_JAVA_WIN_CONSOLE = 6u
 	};
 	
 	struct ProfileData

@@ -22,6 +22,7 @@ using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
 using KalaHeaders::KalaFile::CreateNewDirectory;
+using KalaHeaders::KalaFile::DeletePath;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
@@ -139,6 +140,18 @@ void PreCheck(GlobalData& globalData)
     //
 	// FILTER OUT BAD SOURCE FILES 
 	//
+
+	for (const auto& j : globalData.targetProfile.sources)
+	{
+		if ((j.stem() == "Main"
+			|| j.stem() == "main")
+			&& is_empty(j))
+		{
+			KalaMakeCore::CloseOnError(
+				"LANGUAGE_JAVA",
+				"Main.java was empty!");
+		}
+	}
 
 	auto should_exclude = [](const path& target) -> bool
 		{
@@ -538,13 +551,15 @@ void Compile_Final(const GlobalData& globalData)
 			string jarName = jarPath.filename().string();
 
 			path buildPath = 
+#ifdef _WIN32
+				globalData.targetProfile.buildPath 
+				/ globalData.targetProfile.binaryName
+				/ (globalData.targetProfile.binaryName + ".exe");
+#else
 				globalData.targetProfile.buildPath 
 				/ globalData.targetProfile.binaryName 
 				/ "bin" 
 				/ globalData.targetProfile.binaryName;
-
-#ifdef _WIN32
-			buildPath += ".exe";
 #endif
 
 			//set input
@@ -563,6 +578,15 @@ void Compile_Final(const GlobalData& globalData)
 			//set package name and type
 
 			command += " --name " + globalData.targetProfile.binaryName + " --type app-image";
+
+			//allow win-console
+
+			if (ContainsValue(
+				globalData.targetProfile.customFlags, 
+				CustomFlag::F_JAVA_WIN_CONSOLE))
+			{
+				command += " --win-console";
+			}
 
 			//package jar file
 
@@ -593,6 +617,18 @@ void Compile_Final(const GlobalData& globalData)
 					"Starting to package jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
 					LogType::LOG_INFO);
+
+				path packageDir = globalData.targetProfile.buildPath / globalData.targetProfile.binaryName;
+				if (exists(packageDir))
+				{
+					string errorMsg = DeletePath(packageDir);
+					if (!errorMsg.empty())
+					{
+						KalaMakeCore::CloseOnError(
+							"LANGUAGE_JAVA",
+							"Failed to delete package dir for repacking! Reason: " + errorMsg);
+					}
+				}
 
 				if (system(command.c_str()) != 0)
 				{

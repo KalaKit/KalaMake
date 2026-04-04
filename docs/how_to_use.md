@@ -241,9 +241,11 @@ Available values:
 - export-vscode-sln - creates tasks.json and launch.json and their required .vscode folder if they dont exist, otherwise appends to existing files and overwrites profile with same name
 - warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
 - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
-- package-jar - optional post-jar task to also package the created jar file into an executable.
+- package-jar - optional post-jar task to also package the created jar file into an executable
+- java-win-console - print java executable logs to console on windows
 
-Export-compile-commands is not supported in Java, package-jar is not supported in C and C++.
+Export-compile-commands is not supported in Java.
+Package-jar and java-win-console are not supported in C and C++.
     
 ### prebuildaction
 
