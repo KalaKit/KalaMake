@@ -38,3 +38,4 @@
 - add lib in front of .so and .a for zig and c/cpp if missing in binary name
 - compile and link flags are allowed to use quotes
 - can use variables with just $ at their start and with no brackets (example: $ORIGIN) as long as they dont contain a starting curly bracket
+- fixed global profile creating a nameless task and launch profile for export-vscode-sln

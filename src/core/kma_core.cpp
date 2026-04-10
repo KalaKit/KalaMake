@@ -602,6 +602,12 @@ namespace KalaMake::Core
 
 				globalData.projectFile = weakly_canonical(projectFile);
 
+				//assume global profile if none was set
+				if (globalData.targetProfile.profileName.empty())
+				{
+					globalData.targetProfile.profileName = "global";
+				}
+
 				Log::Print(
 					"Finished first parse!\n",
 					"KALAMAKE",
@@ -2006,7 +2012,6 @@ void FirstParse(const vector<string>& lines)
 					}
 				}
 
-				globalData.targetProfile.profileName = value;
 				if (fields.contains(string(field_binary_type)))
 				{
 					const vector<string>& values = fields[string(field_binary_type)];
