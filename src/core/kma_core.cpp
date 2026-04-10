@@ -187,6 +187,7 @@ constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
 constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
 constexpr string_view custom_package_jar         = "package-jar";
 constexpr string_view custom_java_win_console    = "java-win-console";
+constexpr string_view custom_export_java_sln     = "export-java-sln";
 
 //kma path is the root directory where the kmake file is stored at
 static path kmaPath{};
@@ -509,7 +510,8 @@ namespace KalaMake::Core
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
 		{ CustomFlag::F_MSVC_STATIC_RUNTIME,     custom_msvc_static_runtime },
 		{ CustomFlag::F_PACKAGE_JAR,             custom_package_jar },
-		{ CustomFlag::F_JAVA_WIN_CONSOLE,        custom_java_win_console }
+		{ CustomFlag::F_JAVA_WIN_CONSOLE,        custom_java_win_console },
+		{ CustomFlag::F_EXPORT_JAVA_SLN,         custom_export_java_sln }
 	};
 
 	void KalaMakeCore::OpenFile(

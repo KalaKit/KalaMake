@@ -35,7 +35,10 @@ using KalaMake::Core::TargetType;
 using KalaMake::Core::BuildType;
 using KalaMake::Core::WarningLevel;
 using KalaMake::Core::CustomFlag;
-using KalaMake::Core::CompileCommand;
+using KalaMake::Core::Generate;
+using KalaMake::Core::JavaClassPath;
+using KalaMake::Core::VSCode_Launch;
+using KalaMake::Core::VSCode_Task;
 
 using std::string;
 using std::string_view;
@@ -56,8 +59,6 @@ using u16 = uint16_t;
 
 constexpr string_view classFolderName = "class";
 
-static vector<CompileCommand> commands{};
-
 static file_time_type kmakeTime{};
 static file_time_type jarTime{};
 
@@ -69,12 +70,80 @@ static void PreCheck(GlobalData& globalData);
 
 static void Compile_Final(const GlobalData& globalData);
 
+static void GenerateSteps(const GlobalData& globalData)
+{
+	bool isMSVC =
+#ifdef _WIN32
+		true;
+#else
+		false;
+#endif
+
+	bool canGenerateExportSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_JAVA_SLN);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+
+	if (canGenerateExportSln)
+	{
+		string package = mainClassValue.find('.') != string::npos
+			? mainClassValue.substr(0, mainClassValue.rfind('.'))
+			: "";
+		size_t depth = count(package.begin(), package.end(), '.') + 1;
+
+		path srcRoot = mainJava.parent_path();
+		for (size_t i = 0; i < depth; i++)
+		{
+			srcRoot = srcRoot.parent_path();
+		}
+
+		JavaClassPath jcp
+		{
+			.binaryName = globalData.targetProfile.binaryName,
+			.srcDir = relative(srcRoot, current_path()),
+			.outputDir = relative(globalData.targetProfile.buildPath, current_path())
+		};
+
+		Generate::GenerateJavaClassPath(jcp);
+
+		if (canGenerateVSCodeSln) Log::Print(" ");
+	}
+
+	if (canGenerateVSCodeSln)
+	{
+		path relativeBuildPath = relative(globalData.targetProfile.buildPath, current_path());
+		path programPath = relativeBuildPath / globalData.targetProfile.binaryName;
+
+		VSCode_Launch launch
+		{
+			.name = globalData.targetProfile.profileName,
+			.type = "java",
+			.program = "${workspaceFolder}/" + programPath.string(),
+			.mainClass = mainClassValue
+		};
+
+		VSCode_Task task
+		{
+			.label = globalData.targetProfile.profileName,
+			.projectFile = globalData.projectFile.string()
+		};
+
+		Generate::GenerateVSCodeSolution(
+			isMSVC,
+			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			launch,
+			task);
+	}
+
+	if (canGenerateExportSln
+		|| canGenerateVSCodeSln)
+	{
+		Log::Print("===========================================================================\n");
+	}
+}
+
 namespace KalaMake::Language
 {
 	void LanguageCore::Compile_Java(GlobalData& globalData)
 	{
-		commands.clear();
-
 		PreCheck(globalData);
 		Compile_Final(globalData);
 	}
@@ -143,14 +212,6 @@ void PreCheck(GlobalData& globalData)
         KalaMakeCore::CloseOnError(
 			"LANGUAGE_JAVA",
 			"Custom flag 'export-compile-commands' is not supported in Java!");
-	}
-	if (ContainsValue(
-			globalData.targetProfile.customFlags, 
-			CustomFlag::F_EXPORT_VSCODE_SLN))
-	{
-        KalaMakeCore::CloseOnError(
-			"LANGUAGE_JAVA",
-			"Custom flag 'export-vscode-sln' is not supported in Java!");
 	}
 
 	if (!globalData.targetProfile.links.empty())
@@ -411,6 +472,12 @@ void Compile_Final(const GlobalData& globalData)
 
 		Log::Print("\n===========================================================================\n");
 	}
+
+	//
+	// GENERATE STEPS
+	//
+
+	GenerateSteps(globalData);
 
 	//
 	// COMPILE

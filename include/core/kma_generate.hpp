@@ -15,6 +15,8 @@ namespace KalaMake::Core
     using std::string;
     using std::vector;
 
+    //Values for compile_commands.json,
+    //C and C++ only
     struct CompileCommand
     {
         path dir{};
@@ -23,13 +25,15 @@ namespace KalaMake::Core
         string output{};
     };
 
-    //Values for launch.json per profile.
-    //Values added that arent listed here:
-    //request: launch
-    //args: []
-    //cwd: "${workspaceFolder}"
-    //stopAtEntry: false
-    //console: integratedTerminal
+    //Values for classpath file, Java only
+    struct JavaClassPath
+    {
+        string binaryName{};
+        path srcDir{};
+        path outputDir{};
+    };
+
+    //Values for launch.json per profile
     struct VSCode_Launch
     {
         //launch profile name, will be assigned as profile name
@@ -37,13 +41,12 @@ namespace KalaMake::Core
         string type{};
         //workspace + build dir + binary name
         string program{};
+
+        //java-only
+        string mainClass{};
     };
 
-    //Values for tasks.json per profile.
-    //Values added that arent listed here:
-    //type: shell
-    //command: kalamake --compile projectFile label (reuses project file path and label value)
-    //group: "build"
+    //Values for tasks.json per profile
     struct VSCode_Task
     {
         //task label name, will be assigned as profile name
@@ -58,8 +61,9 @@ namespace KalaMake::Core
         //Exports compile_commands.json
         static void GenerateCompileCommands(
             bool isMSVC,
-            const path& buildPath,
             const vector<CompileCommand>& commands);
+
+        static void GenerateJavaClassPath(const JavaClassPath& javaData);
 
         //Updates existing launch.json and tasks.json or makes new ones
         static void GenerateVSCodeSolution(

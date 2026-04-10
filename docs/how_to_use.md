@@ -247,9 +247,10 @@ Available values:
 - msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
 - package-jar - optional post-jar task to also package the created jar file into an executable
 - java-win-console - print java executable logs to console on windows
+- export-java-sln - creates a .classpath and .project file in project root
 
 Export-compile-commands is not supported in Java and Zig.
-Package-jar and java-win-console are not supported in C, C++ and Zig.
+Package-jar, java-win-console and export-java-sln are not supported in C, C++ and Zig.
     
 ### prebuildaction
 

@@ -325,7 +325,11 @@ namespace KalaMake::Core
 
 		//attaches the jpackage-made exe to windows console,
 		//only for java
-		F_JAVA_WIN_CONSOLE = 6u
+		F_JAVA_WIN_CONSOLE = 6u,
+
+		//creates .classpath file in project root like compile_commans.json,
+		//only for java
+		F_EXPORT_JAVA_SLN = 7u
 	};
 	
 	struct ProfileData

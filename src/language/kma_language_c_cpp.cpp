@@ -113,7 +113,6 @@ static void GenerateSteps(
 
 		Generate::GenerateCompileCommands(
 			isMSVC,
-			projectFileDir,
 			commands);
 
 		if (canGenerateVSCodeSln) Log::Print(" ");
@@ -185,6 +184,14 @@ void PreCheck(GlobalData& globalData)
         KalaMakeCore::CloseOnError(
 			"LANGUAGE_C_CPP",
 			"Custom flag 'java-win-console' is not supported in C and C++!");
+	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
+		CustomFlag::F_EXPORT_JAVA_SLN))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_C_CPP",
+			"Custom flag 'export-java-sln' is not supported in C and C++!");
 	}
 
 	//

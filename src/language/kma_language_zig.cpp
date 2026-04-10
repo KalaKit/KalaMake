@@ -187,6 +187,14 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_ZIG",
 			"Custom flag 'java-win-console' is not supported in Zig!");
 	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
+		CustomFlag::F_EXPORT_JAVA_SLN))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_ZIG",
+			"Custom flag 'export-java-sln' is not supported in Zig!");
+	}
 
     //
 	// FILTER OUT BAD SOURCE FILES 

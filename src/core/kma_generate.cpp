@@ -33,14 +33,13 @@ namespace KalaMake::Core
 {
     void Generate::GenerateCompileCommands(
         bool isMSVC,
-        const path& buildPath,
         const vector<CompileCommand>& commands)
     {
-		path compComm = buildPath / "compile_commands.json";
+		path compComm = current_path() / "compile_commands.json";
 
 		Log::Print(
 			"Starting to create compile commands file at '" + compComm.string() + "'.",
-			"GENERATE_COMP_COMM",
+			"GENERATE",
 			LogType::LOG_INFO);
 
 		if (exists(compComm))
@@ -50,7 +49,7 @@ namespace KalaMake::Core
 			if (!errorMsg.empty())
 			{
 				KalaMakeCore::CloseOnError(
-					"GENERATE_COMP_COMM",
+					"GENERATE",
 					"Failed to remove existing compile_commands.json! Reason: " + errorMsg);
 			}
 		}
@@ -104,14 +103,144 @@ namespace KalaMake::Core
 		if (!errorMsg.empty())
 		{
 			KalaMakeCore::CloseOnError(
-				"GENERATE_COMP_COMM",
+				"GENERATE",
 				"Failed to create new compile_commands.json! Reason: " + errorMsg);
 		}
 
 		Log::Print(
 			"Finished generating compile_commands.json!",
-			"GENERATE_COMP_COMM",
+			"GENERATE",
 			LogType::LOG_SUCCESS);
+    }
+
+    void Generate::GenerateJavaClassPath(const JavaClassPath& javaData)
+    {
+        auto create_class_path = [&javaData]() -> void
+            {
+                path classPath = current_path() / ".classpath";
+
+                Log::Print(
+                    "Starting to create classpath file at '" + classPath.string() + "'.",
+                    "GENERATE",
+                    LogType::LOG_INFO);
+
+                if (exists(classPath))
+                {
+                    string errorMsg = DeletePath(classPath);
+
+                    if (!errorMsg.empty())
+                    {
+                        KalaMakeCore::CloseOnError(
+                            "GENERATE",
+                            "Failed to remove existing .classpath! Reason: " + errorMsg);
+                    }
+                }
+
+                ostringstream out{};
+
+                string srcDir = javaData.srcDir;
+                string outputDir = javaData.outputDir;
+
+                auto fix_slashes = [](string_view input) -> string
+                    {
+                        return ReplaceFromString(
+                            string(input), 
+                            "\\", 
+                            "/", 
+                            true);
+                    };
+
+                srcDir = fix_slashes(srcDir);
+                outputDir = fix_slashes(outputDir);
+
+                out << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    << "<classpath>\n"
+                    << "    <classpathentry kind=\"src\" path=\"" + srcDir + "\"/>\n"
+                    << "    <classpathentry kind=\"output\" path=\"" + outputDir + "\"/>\n"
+                    << "    <classpathentry kind=\"con\" path=\"org.eclipse.jdt.launching.JRE_CONTAINER\"/>\n"
+                    << "</classpath>";
+
+                string errorMsg = CreateNewFile(
+                    classPath,
+                    FileType::FILE_TEXT,
+                    { .inText = out.str() });
+
+                if (!errorMsg.empty())
+                {
+                    KalaMakeCore::CloseOnError(
+                        "GENERATE",
+                        "Failed to create new .classpath! Reason: " + errorMsg);
+                }
+
+                Log::Print(
+                    "Finished generating .classpath!",
+                    "GENERATE",
+                    LogType::LOG_SUCCESS);
+
+                Log::Print(" ");
+            };
+
+        auto create_project = [&javaData]() -> void
+            {
+                path projectPath = current_path() / ".project";
+
+                Log::Print(
+                    "Starting to create project file at '" + projectPath.string() + "'.",
+                    "GENERATE",
+                    LogType::LOG_INFO);
+
+                if (exists(projectPath))
+                {
+                    string errorMsg = DeletePath(projectPath);
+
+                    if (!errorMsg.empty())
+                    {
+                        KalaMakeCore::CloseOnError(
+                            "GENERATE",
+                            "Failed to remove existing .project! Reason: " + errorMsg);
+                    }
+                }
+
+                ostringstream out{};
+
+                out << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    << "<projectDescription>\n"
+                    << "    <name>" + javaData.binaryName + "</name>\n"
+                    << "    <comment></comment>\n"
+                    << "    <projects>\n"
+                    << "    </projects>\n"
+                    << "    <buildSpec>\n"
+                    << "        <buildCommand>\n"
+                    << "            <name>org.eclipse.jdt.core.javabuilder</name>\n"
+                    << "            <arguments>\n"
+                    << "            </arguments>\n"
+                    << "        </buildCommand>\n"
+                    << "    </buildSpec>\n"
+                    << "    <natures>\n"
+                    << "        <nature>org.eclipse.jdt.core.javanature</nature>\n"
+                    << "    </natures>\n"
+                    << "</projectDescription>";
+
+                string errorMsg = CreateNewFile(
+                    projectPath,
+                    FileType::FILE_TEXT,
+                    { .inText = out.str() });
+
+                if (!errorMsg.empty())
+                {
+                    KalaMakeCore::CloseOnError(
+                        "GENERATE",
+                        "Failed to create new .project! Reason: " + errorMsg);
+                }
+
+                Log::Print(
+                    "Finished generating .project!",
+                    "GENERATE",
+                    LogType::LOG_SUCCESS);
+            };
+
+        create_class_path();
+        create_project();
     }
 
     void Generate::GenerateVSCodeSolution(
@@ -128,7 +257,7 @@ namespace KalaMake::Core
             if (!dirErr.empty())
             {
                 KalaMakeCore::CloseOnError(
-                    "GENERATE_VSCODE_SLN", 
+                    "GENERATE", 
                     "Failed to create vs code dir at '" + vscodeDir.string() + "'! Reason: " + dirErr);
             }
         }
@@ -178,7 +307,7 @@ namespace KalaMake::Core
         {
             Log::Print(
                 "Starting to generate launch.json.",
-                "GENERATE_VSCODE_SLN",
+                "GENERATE",
                 LogType::LOG_INFO);
 
             path launchJson = vscodeDir / "launch.json";
@@ -193,7 +322,7 @@ namespace KalaMake::Core
                 if (!readLaunchErr.empty())
                 {
                     KalaMakeCore::CloseOnError(
-                        "GENERATE_VSCODE_SLN", 
+                        "GENERATE", 
                         "Failed to read launch.json at '" + launchJson.string() + "'! Reason: " + readLaunchErr);
                 }
             }
@@ -290,7 +419,7 @@ namespace KalaMake::Core
             if (!isValidLaunch)
             {
                 KalaMakeCore::CloseOnError(
-                    "GENERATE_VSCODE_SLN", 
+                    "GENERATE", 
                     "Failed to update existing launch.json at '" + launchJson.string() + "' because it was malformed!");
             }
 
@@ -303,6 +432,11 @@ namespace KalaMake::Core
                 "            \"request\": \"launch\","
                 
             };
+
+            if (launch.type == "java")
+            {
+                newProfileLines.push_back("            \"mainClass\": \"" + launch.mainClass + "\"");
+            }
 
             if (launch.type == "cppvsdbg"
                 || launch.type == "cppdbg"
@@ -351,7 +485,7 @@ namespace KalaMake::Core
                 if (!launchErr.empty())
                 {
                     KalaMakeCore::CloseOnError(
-                        "GENERATE_VSCODE_SLN", 
+                        "GENERATE", 
                         "Failed to delete old launch.json at '" + launchJson.string() + "' before generating new one! Reason: " + launchErr);
                 }
             }
@@ -364,7 +498,7 @@ namespace KalaMake::Core
             if (!launchErr.empty())
             {
                 KalaMakeCore::CloseOnError(
-                    "GENERATE_VSCODE_SLN", 
+                    "GENERATE", 
                     "Failed to generate new launch.json at '" + launchJson.string() + "'! Reason: " + launchErr);
             }
 
@@ -379,7 +513,7 @@ namespace KalaMake::Core
         {
             Log::Print(
                 "Skipping launch.json generation because target is not an executable.",
-                "GENERATE_VSCODE_SLN",
+                "GENERATE",
                 LogType::LOG_INFO);
         }
 
@@ -391,7 +525,7 @@ namespace KalaMake::Core
 
         Log::Print(
 			"Starting to generate tasks.json.",
-			"GENERATE_VSCODE_SLN",
+			"GENERATE",
 			LogType::LOG_INFO);
 
         path tasksJson = vscodeDir / "tasks.json";
@@ -406,7 +540,7 @@ namespace KalaMake::Core
             if (!readTasksErr.empty())
             {
                 KalaMakeCore::CloseOnError(
-                    "GENERATE_VSCODE_SLN", 
+                    "GENERATE", 
                     "Failed to read tasks.json at '" + tasksJson.string() + "'! Reason: " + readTasksErr);
             }
         }
@@ -503,7 +637,7 @@ namespace KalaMake::Core
         if (!isValidTasks)
         {
             KalaMakeCore::CloseOnError(
-                "GENERATE_VSCODE_SLN", 
+                "GENERATE", 
                 "Failed to update existing tasks.json at '" + tasksJson.string() + "' because it was malformed!");
         }
 
@@ -542,7 +676,7 @@ namespace KalaMake::Core
             if (!tasksErr.empty())
             {
                 KalaMakeCore::CloseOnError(
-                    "GENERATE_VSCODE_SLN", 
+                    "GENERATE", 
                     "Failed to delete old tasks.json at '" + tasksJson.string() + "' before generating new one! Reason: " + tasksErr);
             }
         }
@@ -555,7 +689,7 @@ namespace KalaMake::Core
         if (!tasksErr.empty())
         {
             KalaMakeCore::CloseOnError(
-                "GENERATE_VSCODE_SLN", 
+                "GENERATE", 
                 "Failed to generate new tasks.json at '" + tasksJson.string() + "'! Reason: " + tasksErr);
         }
 
@@ -568,7 +702,7 @@ namespace KalaMake::Core
 
         Log::Print(
 			"Finished generating vscode solution files!",
-			"GENERATE_VSCODE_SLN",
+			"GENERATE",
 			LogType::LOG_SUCCESS);
 
         Log::Print(" ");
