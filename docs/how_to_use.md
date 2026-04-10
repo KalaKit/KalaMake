@@ -112,6 +112,8 @@ Available values:
 - clang++
 - zig (also used for the zig language)
 - java
+- python
+- rust
     
 ### standard
 
@@ -134,6 +136,11 @@ Available values:
 - c++26
 
 - java8 to java26
+
+- rust15
+- rust18
+- rust21
+- rust24
 
 Standard is not supported in Zig.
     
@@ -249,12 +256,14 @@ Available values:
 - java-win-console - print java executable logs to console on windows
 - export-java-sln - creates a .classpath and .project file in project root
 - python-one-file - creates a single file output instead of the default dir, slower to launch because it extracts each time the exe is ran
+- rust-c-static - uses staticlib instead of rlib
 
 Export-compile-commands is not supported in Java, Zig and Python.
 Warnings-as-errors is not supported in Zig and Python.
 Msvc-static-runtime is not supported in Java, Zig and Python.
 Package-jar, java-win-console and export-java-sln are not supported in C, C++, Zig and Python.
-python-one-file is not supported in C, C++, Java and Zig.
+Python-one-file is not supported in C, C++, Java and Zig.
+Rust-c-static is not supported in C, C++, Java, Zig and Python.
     
 ### prebuildaction
 

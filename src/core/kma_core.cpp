@@ -132,6 +132,7 @@ constexpr string_view compiler_gcc      = "gcc";
 constexpr string_view compiler_gpp      = "g++";
 constexpr string_view compiler_java     = "java";
 constexpr string_view compiler_python   = "python";
+constexpr string_view compiler_rust     = "rust";
 
 constexpr string_view standard_c89    = "c89";
 constexpr string_view standard_c99    = "c99";
@@ -165,6 +166,10 @@ constexpr string_view standard_java23 = "java23";
 constexpr string_view standard_java24 = "java24";
 constexpr string_view standard_java25 = "java25";
 constexpr string_view standard_java26 = "java26";
+constexpr string_view standard_rust15 = "rust15";
+constexpr string_view standard_rust18 = "rust18";
+constexpr string_view standard_rust21 = "rust21";
+constexpr string_view standard_rust24 = "rust24";
 
 constexpr string_view target_type_linux_gnu    = "linux-gnu";
 constexpr string_view target_type_linux_musl   = "linux-musl";
@@ -436,7 +441,8 @@ namespace KalaMake::Core
 		{ CompilerType::C_GPP,     compiler_gpp },
 
 		{ CompilerType::C_JAVA,   compiler_java },
-		{ CompilerType::C_PYTHON, compiler_python }
+		{ CompilerType::C_PYTHON, compiler_python },
+		{ CompilerType::C_RUST,   compiler_rust }
 	};
 
 	static const unordered_map<StandardType, string_view, EnumHash<StandardType>> standardTypes =
@@ -474,7 +480,11 @@ namespace KalaMake::Core
 		{ StandardType::JAVA_23, standard_java23 },
 		{ StandardType::JAVA_24, standard_java24 },
 		{ StandardType::JAVA_25, standard_java25 },
-		{ StandardType::JAVA_26, standard_java26 }
+
+		{ StandardType::RUST_15, standard_rust15 },
+		{ StandardType::RUST_18, standard_rust18 },
+		{ StandardType::RUST_21, standard_rust21 },
+		{ StandardType::RUST_24, standard_rust24 }
 	};
 
 	static const unordered_map<TargetType, string_view, EnumHash<TargetType>> targetTypes =

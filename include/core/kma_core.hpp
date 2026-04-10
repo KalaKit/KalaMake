@@ -194,7 +194,10 @@ namespace KalaMake::Core
 		C_JAVA = 8u,
 
 		//general python compiler
-		C_PYTHON = 9u
+		C_PYTHON = 9u,
+
+		//general rust compiler
+		C_RUST = 10u
 	};
 
 	//Allowed standard types that can be added to the standard field,
@@ -244,7 +247,16 @@ namespace KalaMake::Core
 		JAVA_23 = 37u,
 		JAVA_24 = 38u,
 		JAVA_25 = 39u,
-		JAVA_26 = 40u
+		JAVA_26 = 40u,
+
+		//
+		// RUST
+		//
+
+		RUST_15 = 41u,
+		RUST_18 = 42u,
+		RUST_21 = 43u,
+		RUST_24 = 44u
 	};
 
 	//Allowed target types in C and C++ that can be added to the targettype field,
@@ -345,7 +357,11 @@ namespace KalaMake::Core
 		//pyinstaller bundles everything into a single exe, all files are extracted at each run,
 		//otherwise it creates a dir with all content with faster startup.
 		//only for Python
-		F_PYTHON_ONE_FILE = 8u
+		F_PYTHON_ONE_FILE = 8u,
+
+		//switches --crate-type from bin to staticlib, only goes into effect if build type is also static,
+		//only for Rust
+		F_RUST_C_STATIC = 9u
 	};
 	
 	struct ProfileData
