@@ -8,17 +8,20 @@ This project relies on several [external dependencies](https://github.com/greeen
 
 ## Supported languages
 
-- C89 to C23
-- C++98 to C++26
-- Java 8 to Java 26
+- C (89 to 23)
+- C++ (98 to 26)
+- Java (8 to 26)
 - Zig (the language)
-- Python
+- Python (Requires PyInstaller)
+- Rust (2015 to 2024)
 
 ## Upcoming languages
 
-- Rust
 - C#
 - Go
+- Assembly
+- Odin
+- Nim
 
 Currently only Windows (x86_64) and Linux (x86_64) are supported. There are no plans to support BSD, mobile, console, ARM, x86 or macOS.
 
