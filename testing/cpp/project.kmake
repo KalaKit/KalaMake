@@ -1,0 +1,11 @@
+#version 1.0
+
+#global
+binaryname: cpp-test
+binarytype: executable
+buildtype: release
+buildpath: "build"
+compiler: clang++
+standard: c++20
+sources: "src"
+headers: "include"
