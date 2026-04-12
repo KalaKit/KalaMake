@@ -779,7 +779,7 @@ void Compile_Final(const GlobalData& globalData)
                 if (has_shared_lib())
                 {
 #ifdef __linux__
-                    command += " -C rpath";
+                    command += " -C link-arg=-Wl,-rpath,\\$ORIGIN";
 #endif
                     command += " -C prefer-dynamic";
 
