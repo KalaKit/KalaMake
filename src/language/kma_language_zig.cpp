@@ -543,9 +543,6 @@ void Compile_Final(const GlobalData& globalData)
 					path lpathDir = lpath.parent_path();
 					string lpathName = lpath.stem().string();
 
-					//trim off remaining suffix because rust likes to do .dll.lib on Windows
-                    //if (lpathName.ends_with(".dll")) lpathName = lpathName.substr(0, lpathName.size() - 4);
-
                     if (lpathName.starts_with("lib")) lpathName = lpathName.substr(3);
 
 					command += " -L\"" + lpathDir.string() + "\" -l" + lpathName;
@@ -587,6 +584,7 @@ void Compile_Final(const GlobalData& globalData)
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
+					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".so")) extension = ".so";
 				}
 				else
@@ -602,6 +600,7 @@ void Compile_Final(const GlobalData& globalData)
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL
 					|| globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
 				{
+					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".a")) extension = ".a";
 				}
 				else

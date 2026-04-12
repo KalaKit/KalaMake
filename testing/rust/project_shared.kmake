@@ -4,6 +4,7 @@
 compiler: rust
 standard: rust24
 sources: "src/lib"
+customflags: export-vscode-sln
 
 #profile test-sha-release
 binaryname: test_sha

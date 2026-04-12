@@ -4,6 +4,7 @@
 binarytype: shared
 compiler: zig
 sources: "src/lib"
+customflags: export-vscode-sln
 
 #profile test-sha-release
 binaryname: test_sha

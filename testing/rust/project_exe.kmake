@@ -13,6 +13,7 @@ binaryname: test_exe
 binarytype: executable
 compiler: rust
 standard: rust24
+customflags: export-vscode-sln
 
 //---------------------------
 // EXECUTABLE WITH SHARED LIB
@@ -23,15 +24,11 @@ buildtype: release
 buildpath: "build/exe-sha-release"
 sources: "src/exe/shared"
 
-//windows version
-//links: "${dir-win-shared}release/${name-shared}.dll"
-//linux version
-//links: "${dir-lin-shared}release/lib${name-shared}.so"
+//links: "${dir-win-shared}release/${name-shared}.dll" //WINDOWS
+links: "${dir-lin-shared}release/lib${name-shared}.so" //LINUX
 
-//windows version
-//postbuildaction: copy /Y ${dir-win-shared}release\${name-shared}.dll build\exe-sha-release\${name-shared}.dll
-//linux version
-//postbuildaction: cp -f ${dir-lin-shared}release/lib${name-shared}.so build/exe-sha-release/lib${name-shared}.so
+//postbuildaction: copy /Y ${dir-win-shared}release\${name-shared}.dll build\exe-sha-release\${name-shared}.dll //WINDOWS
+postbuildaction: cp -f ${dir-lin-shared}release/lib${name-shared}.so build/exe-sha-release/lib${name-shared}.so //LINUX
 
 //---------------------------
 // EXECUTABLE WITH STATIC LIB
@@ -42,7 +39,5 @@ buildtype: release
 buildpath: "build/exe-sta-release"
 sources: "src/exe/static"
 
-//windows version
-//links: "${dir-win-static}release\lib${name-static}.rlib"
-//linux version
-//links: "${dir-lin-static}release/lib${name-static}.rlib"
+//links: "${dir-win-static}release\lib${name-static}.rlib" //WINDOWS
+links: "${dir-lin-static}release/lib${name-static}.rlib" //LINUX

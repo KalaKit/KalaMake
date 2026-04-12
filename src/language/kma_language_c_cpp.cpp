@@ -1149,6 +1149,7 @@ void Compile_Final(const GlobalData& globalData)
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
+					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".so")) extension = ".so";
 				}
 				else
@@ -1171,6 +1172,7 @@ void Compile_Final(const GlobalData& globalData)
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL
 					|| globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
 				{
+					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".a")) extension = ".a";
 				}
 				else

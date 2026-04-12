@@ -26,31 +26,25 @@
     compiler: cl
 
     links: "${dir-win-shared}cl/${name-shared}.lib" //WINDOWS
-    //links: "${dir-lin-shared}cl/lib${name-shared}.so" //LINUX
-
     postbuildaction: copy /Y ${dir-win-shared}cl\${name-shared}.dll build\exe-sha-release-cl\${name-shared}.dll //WINDOWS
-    //postbuildaction: cp -f ${dir-lin-shared}cl/lib${name-shared}.so build/exe-sha-release-cl/lib${name-shared}.so //LINUX
 
 #profile test-exe-sha-release-clang-cl
     buildtype: release
     buildpath: "build/exe-sha-release-clang-cl"
     compiler: clang-cl
 
-    links: "${dir-win-shared}clang-cl/${name-shared}.lib" //WINDOWS
-    //links: "${dir-lin-shared}clang-cl/lib${name-shared}.so" //LINUX
-
+    links: "${dir-win-shared}clang-cl/${name-shared}.lib"
     postbuildaction: copy /Y ${dir-win-shared}clang-cl\${name-shared}.dll build\exe-sha-release-clang-cl\${name-shared}.dll //WINDOWS
-    //postbuildaction: cp -f ${dir-lin-shared}clang-cl/lib${name-shared}.so build/exe-sha-release-clang-cl/lib${name-shared}.so //LINUX
 
 #profile test-exe-sha-release-clangpp
     buildtype: release
     buildpath: "build/exe-sha-release-clangpp"
     compiler: clang++
 
-    links: "${dir-win-shared}clangpp/${name-shared}.lib" //WINDOWS
+    //links: "${dir-win-shared}clangpp/${name-shared}.lib" //WINDOWS
     //links: "${dir-lin-shared}clangpp/lib${name-shared}.so" //LINUX
 
-    postbuildaction: copy /Y ${dir-win-shared}clangpp\${name-shared}.dll build\exe-sha-release-clangpp\${name-shared}.dll //WINDOWS
+    //postbuildaction: copy /Y ${dir-win-shared}clangpp\${name-shared}.dll build\exe-sha-release-clangpp\${name-shared}.dll //WINDOWS
     //postbuildaction: cp -f ${dir-lin-shared}clangpp/lib${name-shared}.so build/exe-sha-release-clangpp/lib${name-shared}.so //LINUX
 
 #profile test-exe-sha-release-gpp
@@ -58,10 +52,10 @@
     buildpath: "build/exe-sha-release-gpp"
     compiler: g++
 
-    links: "${dir-win-shared}gpp/${name-shared}.lib" //WINDOWS
+    //links: "${dir-win-shared}gpp/${name-shared}.lib" //WINDOWS
     //links: "${dir-lin-shared}gpp/lib${name-shared}.so" //LINUX
 
-    postbuildaction: copy /Y ${dir-win-shared}gpp\${name-shared}.dll build\exe-sha-release-gpp\${name-shared}.dll //WINDOWS
+    //postbuildaction: copy /Y ${dir-win-shared}gpp\${name-shared}.dll build\exe-sha-release-gpp\${name-shared}.dll //WINDOWS
     //postbuildaction: cp -f ${dir-lin-shared}gpp/lib${name-shared}.so build/exe-sha-release-gpp/lib${name-shared}.so //LINUX
 
 #profile test-exe-sha-release-zig
@@ -69,10 +63,10 @@
     buildpath: "build/exe-sha-release-zig"
     compiler: zig
 
-    links: "${dir-win-shared}zig/${name-shared}.lib" //WINDOWS
+    //links: "${dir-win-shared}zig/${name-shared}.lib" //WINDOWS
     //links: "${dir-lin-shared}zig/lib${name-shared}.so" //LINUX
 
-    postbuildaction: copy /Y ${dir-win-shared}zig\${name-shared}.dll build\exe-sha-release-zig\${name-shared}.dll //WINDOWS
+    //postbuildaction: copy /Y ${dir-win-shared}zig\${name-shared}.dll build\exe-sha-release-zig\${name-shared}.dll //WINDOWS
     //postbuildaction: cp -f ${dir-lin-shared}zig/lib${name-shared}.so build/exe-sha-release-zig/lib${name-shared}.so //LINUX
 
 //---------------------------
@@ -84,37 +78,35 @@
     buildpath: "build/exe-sta-release-cl"
     compiler: cl
 
-    links: "${dir-win-static}cl/${name-static}.lib" //WINDOWS
-    //links: "${dir-lin-static}cl/lib${name-static}.so" //LINUX
+    links: "${dir-win-static}cl/${name-static}.lib"
 
 #profile test-exe-sta-release-clang-cl
     buildtype: release
     buildpath: "build/exe-sta-release-clang-cl"
     compiler: clang-cl
 
-    links: "${dir-win-static}clang-cl/${name-static}.lib" //WINDOWS
-    //links: "${dir-lin-static}clang-cl/lib${name-static}.so" //LINUX
+    links: "${dir-win-static}clang-cl/${name-static}.lib"
 
 #profile test-exe-sta-release-clangpp
     buildtype: release
     buildpath: "build/exe-sta-release-clangpp"
     compiler: clang++
 
-    links: "${dir-win-static}clangpp/${name-static}.lib" //WINDOWS
-    //links: "${dir-lin-static}clangpp/lib${name-static}.so" //LINUX
+    //links: "${dir-win-static}clangpp/${name-static}.lib" //WINDOWS
+    //links: "${dir-lin-static}clangpp/lib${name-static}.a" //LINUX
 
 #profile test-exe-sta-release-gpp
     buildtype: release
     buildpath: "build/exe-sta-release-gpp"
     compiler: g++
 
-    links: "${dir-win-static}gpp/${name-static}.lib" //WINDOWS
-    //links: "${dir-lin-static}gpp/lib${name-static}.so" //LINUX
+    //links: "${dir-win-static}gpp/${name-static}.lib" //WINDOWS
+    //links: "${dir-lin-static}gpp/lib${name-static}.a" //LINUX
 
 #profile test-exe-sta-release-zig
     buildtype: release
     buildpath: "build/exe-sta-release-zig"
     compiler: zig
 
-    links: "${dir-win-static}zig/${name-static}.lib" //WINDOWS
-    //links: "${dir-lin-static}zig/lib${name-static}.so" //LINUX
+    //links: "${dir-win-static}zig/${name-static}.lib" //WINDOWS
+    //links: "${dir-lin-static}zig/lib${name-static}.a" //LINUX

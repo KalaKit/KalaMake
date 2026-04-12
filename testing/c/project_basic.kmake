@@ -6,7 +6,7 @@ binarytype: executable
 buildtype: release
 compiler: clang
 standard: c11
-sources: "src/main.c"
+sources: "src/exe"
 headers: "include"
 customflags: export-vscode-sln, export-compile-commands
 

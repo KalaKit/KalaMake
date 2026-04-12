@@ -4,6 +4,7 @@
 binarytype: static
 compiler: zig
 sources: "src/lib"
+customflags: export-vscode-sln
 
 #profile test-sta-release
 binaryname: test_sta
