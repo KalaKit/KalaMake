@@ -97,7 +97,7 @@ static void AddExternalCommands()
 				return;
 			}
 
-			Log::Print("KalaMake 1.3");
+			Log::Print("KalaMake 1.4");
 		};
 	auto command_list_profiles = [](const vector<string>& params)
 		{

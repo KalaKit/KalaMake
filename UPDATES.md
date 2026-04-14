@@ -43,3 +43,7 @@
 - removed support for C++ standards c++98, c++03 and c++11
 - fixed zig using c instead of correct cc for compiling C
 - fixed gcc and g++ compilers not creating .lib file in shared mode on Windows
+
+## 1.4
+
+-- added list-profiles (by jake)
