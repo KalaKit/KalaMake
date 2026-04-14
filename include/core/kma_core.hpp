@@ -28,9 +28,9 @@ namespace KalaMake::Core
 	enum class StartType : u8
 	{
 		S_INVALID = 0u,
-
 		S_COMPILE = 1u,
-		S_CLEAN = 2u
+		S_CLEAN = 2u,
+		S_LIST_PROFILES = 3u
 	};
 
 	enum class Version : u8

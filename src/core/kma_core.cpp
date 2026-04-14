@@ -721,28 +721,7 @@ namespace KalaMake::Core
 
 				kmaPath = filePath.parent_path();
 
-				switch (type)
-				{
-					default:
-					case StartType::S_INVALID:
-					{
-						KalaMakeCore::CloseOnError(
-							"KALAMAKE",
-							"Invalid start type was used!");
-					}
-					case StartType::S_COMPILE:
-					{
-						first_parse(
-							filePath, 
-							content);
-						break;
-					}
-					case StartType::S_CLEAN:
-					{
-						vector<path> buildPaths{};
-						string_view bp = "buildpath: ";
-
-							auto clean_line = [](
+				auto clean_line = [](
 								string& line, 
 								string& name, 
 								string& value, 
@@ -771,6 +750,51 @@ namespace KalaMake::Core
 									}
 								};
 
+
+				switch (type)
+				{
+					default:
+					case StartType::S_INVALID:
+					{
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"Invalid start type was used!");
+					}
+					case StartType::S_COMPILE:
+					{
+						first_parse(
+							filePath, 
+							content);
+						break;
+					}
+					case StartType::S_LIST_PROFILES:
+					{
+						Log::Print("Available profiles in '" + filePath.string() + "':");
+    					Log::Print("    global");
+
+						for (const string& l : content)
+						{
+							string line = l;
+							string name{};
+							string value{};
+
+							CategoryType type{};
+							clean_line(line, name, value, type);
+
+							if (type == CategoryType::C_PROFILE)
+							{
+								Log::Print("    " + value);
+							}
+
+						}
+
+						 break;
+					}
+					case StartType::S_CLEAN:
+					{
+						vector<path> buildPaths{};
+						string_view bp = "buildpath: ";
+					
 							auto get_all_category_content = [&content](
 								string_view categoryName,
 								string_view categoryValue = {}) -> vector<string>

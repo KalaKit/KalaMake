@@ -99,6 +99,31 @@ static void AddExternalCommands()
 
 			Log::Print("KalaMake 1.3");
 		};
+	auto command_list_profiles = [](const vector<string>& params)
+		{
+			if (params.size() == 1)
+			{
+				Log::Print(
+					"Command 'list-profiles' got no arguments! You must pass a .kmake path!",
+					"PARSE",
+					LogType::LOG_ERROR,
+					2);
+
+				return;
+			}
+			if (params.size() > 2)
+			{
+				Log::Print(
+					"Command 'list-profiles' only allows one argument! You must pass a .kmake path!",
+					"PARSE",
+					LogType::LOG_ERROR,
+					2);
+
+				return;
+			}
+
+			KalaMakeCore::OpenFile(StartType::S_LIST_PROFILES, params);
+		};
 
 	CommandManager::AddCommand(
 		{
@@ -122,6 +147,15 @@ static void AddExternalCommands()
 			.primaryParam = "version",
 			.description = "Prints current KalaMake version.",
 			.targetFunction = command_version
+		});
+
+	CommandManager::AddCommand(
+		{
+			.primaryParam = "list-profiles",
+			.description =
+				"Lists all profiles in a kalamake file, "
+				"second parameter must be valid path to a .kmake file.",
+			.targetFunction = command_list_profiles
 		});
 }
 
