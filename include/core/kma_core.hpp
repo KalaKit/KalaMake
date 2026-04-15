@@ -30,7 +30,8 @@ namespace KalaMake::Core
 		S_INVALID = 0u,
 		S_COMPILE = 1u,
 		S_CLEAN = 2u,
-		S_LIST_PROFILES = 3u
+		S_LIST_PROFILES = 3u,
+		S_VALIDATE = 4u
 	};
 
 	enum class Version : u8

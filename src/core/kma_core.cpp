@@ -202,6 +202,7 @@ static bool foundVersion{};
 static bool foundReferences{};
 static bool foundGlobal{};
 static bool foundTargetProfile{};
+static bool foundAnyUserProfile{};
 
 static GlobalData globalData{};
 static path projectFile{};
@@ -220,7 +221,7 @@ static void CleanEverything()
 	foundVersion = false;
 	foundReferences = false;
 	foundGlobal = false;
-
+	foundAnyUserProfile = false;
 	globalData = GlobalData{};
 }
 
@@ -532,14 +533,16 @@ namespace KalaMake::Core
 		Log::Print(details.str());
 
 		projectFile = params[1];
-		if (type == StartType::S_COMPILE) targetProfile = params[2];
+		if (type == StartType::S_COMPILE 
+			|| type == StartType::S_VALIDATE) targetProfile = params[2];
 
 		string& currentDir = KalaCLI::Core::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
 		auto first_parse = [](
 			const path& filePath,
-			const vector<string>& lines) -> void
+			const vector<string>& lines,
+			StartType type) -> void
 			{
 				Log::Print(
 					"Starting to parse the kalamake file '" + filePath.string() + "'"
@@ -555,13 +558,26 @@ namespace KalaMake::Core
 						"KALAMAKE",
 						"No binary type was passed!");
 				}
-				if (globalData.targetProfile.compiler == CompilerType::C_INVALID)
+
+				//assume global profile if none was set
+				if (globalData.targetProfile.profileName.empty())
 				{
-					KalaMakeCore::CloseOnError(
-						"KALAMAKE",
-						"No compiler was passed!");
+					globalData.targetProfile.profileName = "global";
 				}
-				
+
+				//always check for a compiler unless global profile is used and a user profile is found.
+				if (type == StartType::S_COMPILE 
+					|| globalData.targetProfile.profileName != "global"
+					|| !foundAnyUserProfile)
+				{
+					if (globalData.targetProfile.compiler == CompilerType::C_INVALID)
+					{	
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"No compiler was passed!");
+					}
+
+				}
 				if (globalData.targetProfile.binaryName.empty())
 				{
 					KalaMakeCore::CloseOnError(
@@ -574,11 +590,17 @@ namespace KalaMake::Core
 						"KALAMAKE",
 						"Passed binary name is too long!");
 				}
-				if (globalData.targetProfile.buildPath.empty())
+				//always check for a build path unless global profile is used and a user profile is found.
+				if (type == StartType::S_COMPILE 
+					|| globalData.targetProfile.profileName != "global"
+					|| !foundAnyUserProfile)
 				{
-					KalaMakeCore::CloseOnError(
-						"KALAMAKE",
-						"No build path was passed!");
+					if (globalData.targetProfile.buildPath.empty())
+					{
+						KalaMakeCore::CloseOnError(
+							"KALAMAKE",
+							"No build path was passed!");
+					}
 				}
 				if (globalData.targetProfile.sources.empty())
 				{
@@ -607,12 +629,6 @@ namespace KalaMake::Core
 
 				globalData.projectFile = weakly_canonical(projectFile);
 
-				//assume global profile if none was set
-				if (globalData.targetProfile.profileName.empty())
-				{
-					globalData.targetProfile.profileName = "global";
-				}
-
 				Log::Print(
 					"Finished first parse!\n",
 					"KALAMAKE",
@@ -621,6 +637,17 @@ namespace KalaMake::Core
 				Log::Print("===========================================================================\n");
 
 				CompilerType c = globalData.targetProfile.compiler;
+
+				if (type == StartType::S_VALIDATE)
+				{
+						Log::Print(
+					"Finished validating, kalamake file is valid!",
+					"KALAMAKE",
+					LogType::LOG_SUCCESS);
+
+					return;
+				}
+
 				if (c == CompilerType::C_ZIG
 					|| c == CompilerType::C_CL
 					|| c == CompilerType::C_CLANG_CL
@@ -762,9 +789,7 @@ namespace KalaMake::Core
 					}
 					case StartType::S_COMPILE:
 					{
-						first_parse(
-							filePath, 
-							content);
+						first_parse(filePath, content, type);
 						break;
 					}
 					case StartType::S_LIST_PROFILES:
@@ -789,6 +814,11 @@ namespace KalaMake::Core
 						}
 
 						 break;
+					}
+					case StartType::S_VALIDATE:
+					{
+						first_parse(filePath, content, type);
+						break;
 					}
 					case StartType::S_CLEAN:
 					{
@@ -1729,6 +1759,17 @@ void FirstParse(const vector<string>& lines)
 	//always a fresh build
 	CleanEverything();
 
+	//look for any user profiles before continuing
+	for (const string& l : lines)
+	{
+		if (l.starts_with("#profile "))
+		{
+			foundAnyUserProfile = true;
+			break;
+		}
+		
+	}
+	
 	auto get_all_category_content = [&lines](
 		string_view categoryName,
 		string_view categoryValue = {}) -> vector<string>

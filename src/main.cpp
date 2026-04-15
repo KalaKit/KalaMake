@@ -124,6 +124,41 @@ static void AddExternalCommands()
 
 			KalaMakeCore::OpenFile(StartType::S_LIST_PROFILES, params);
 		};
+	auto command_validate = [](const vector<string>& params)
+		{
+			if (params.size() == 1)
+			{
+				Log::Print(
+					"Command 'validate' got no arguments! You must pass a .kmake path and target profile!",
+					"PARSE",
+					LogType::LOG_ERROR,
+					2);
+
+				return;
+			}
+			if (params.size() == 2)
+			{
+				Log::Print(
+					"Command 'validate' requires two arguments! You must pass a .kmake path and target profile!",
+					"PARSE",
+					LogType::LOG_ERROR,
+					2);
+
+				return;
+			}
+			if (params.size() > 3)
+			{
+				Log::Print(
+					"Command 'validate' only allows two arguments! You must pass a .kmake path and target profile!",
+					"PARSE",
+					LogType::LOG_ERROR,
+					2);
+
+				return;
+			}
+
+			KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
+		};
 
 	CommandManager::AddCommand(
 		{
@@ -156,6 +191,16 @@ static void AddExternalCommands()
 				"Lists all profiles in a kalamake file, "
 				"second parameter must be valid path to a .kmake file.",
 			.targetFunction = command_list_profiles
+		});
+
+	CommandManager::AddCommand(
+		{
+			.primaryParam = "validate",
+			.description =
+				"Validates a kalamake file, "
+				"second parameter must be valid path to a .kmake file, "
+				"third parameter must be a valid profile in the .kmake file.",
+			.targetFunction = command_validate
 		});
 }
 

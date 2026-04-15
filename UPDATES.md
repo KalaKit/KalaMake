@@ -44,6 +44,8 @@
 - fixed zig using c instead of correct cc for compiling C
 - fixed gcc and g++ compilers not creating .lib file in shared mode on Windows
 
-## 1.4
+## 1.4 
 
--- added list-profiles (by jake)
+- list-profiles command - lists all available profiles in a .kmake file (by jake)
+- force argument only for compile command - skips incremental building and recompiles everything
+- validate command - checks if a .kmake file is valid without compiling (by jake)
