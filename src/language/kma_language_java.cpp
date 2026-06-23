@@ -224,6 +224,14 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_JAVA",
 			"Custom flag 'msvc-static-runtime' is not supported in Java!");
 	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
+		CustomFlag::F_GENERATE_SYMBOLS))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_JAVA",
+			"Custom flag 'generate-symbols' is not supported in Java!");
+	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))

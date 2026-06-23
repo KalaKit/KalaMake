@@ -193,6 +193,14 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
+		CustomFlag::F_GENERATE_SYMBOLS))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_PYTHON",
+			"Custom flag 'generate-symbols' is not supported in Python!");
+	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
         KalaMakeCore::CloseOnError(

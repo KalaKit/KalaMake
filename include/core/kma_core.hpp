@@ -338,22 +338,26 @@ namespace KalaMake::Core
 		//only for C and C++, not used in linux
 		F_MSVC_STATIC_RUNTIME = 4u,
 
+		//creates a .pdb file for debug symbols or embeds the symbols directly to the exe in any build type,
+		//only for C and C++
+		F_GENERATE_SYMBOLS = 5u,
+
 		//package the created jar file into an executable,
 		//only for Java
-		F_PACKAGE_JAR = 5u,
+		F_PACKAGE_JAR = 6u,
 
 		//attaches the jpackage-made exe to windows console,
 		//only for Java
-		F_JAVA_WIN_CONSOLE = 6u,
+		F_JAVA_WIN_CONSOLE = 7u,
 
 		//creates .classpath file in project root like compile_commans.json,
 		//only for Java
-		F_EXPORT_JAVA_SLN = 7u,
+		F_EXPORT_JAVA_SLN = 8u,
 
 		//pyinstaller bundles everything into a single exe, all files are extracted at each run,
 		//otherwise it creates a dir with all content with faster startup.
 		//only for Python
-		F_PYTHON_ONE_FILE = 8u
+		F_PYTHON_ONE_FILE = 9u
 	};
 	
 	struct ProfileData

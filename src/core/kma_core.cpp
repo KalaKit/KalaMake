@@ -188,6 +188,7 @@ constexpr string_view custom_export_comp_comm    = "export-compile-commands";
 constexpr string_view custom_export_vscode_sln   = "export-vscode-sln";
 constexpr string_view custom_warnings_as_err     = "warnings-as-errors";
 constexpr string_view custom_msvc_static_runtime = "msvc-static-runtime";
+constexpr string_view custom_generate_symbols    = "generate-symbols";
 constexpr string_view custom_package_jar         = "package-jar";
 constexpr string_view custom_java_win_console    = "java-win-console";
 constexpr string_view custom_export_java_sln     = "export-java-sln";
@@ -518,6 +519,7 @@ namespace KalaMake::Core
 		{ CustomFlag::F_EXPORT_VSCODE_SLN,       custom_export_vscode_sln },
 		{ CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
 		{ CustomFlag::F_MSVC_STATIC_RUNTIME,     custom_msvc_static_runtime },
+		{ CustomFlag::F_GENERATE_SYMBOLS,        custom_generate_symbols },
 		{ CustomFlag::F_PACKAGE_JAR,             custom_package_jar },
 		{ CustomFlag::F_JAVA_WIN_CONSOLE,        custom_java_win_console },
 		{ CustomFlag::F_EXPORT_JAVA_SLN,         custom_export_java_sln },

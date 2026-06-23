@@ -184,6 +184,14 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
+		CustomFlag::F_GENERATE_SYMBOLS))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_ZIG",
+			"Custom flag 'generate-symbols' is not supported in Zig!");
+	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
         KalaMakeCore::CloseOnError(

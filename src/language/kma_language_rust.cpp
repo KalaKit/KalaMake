@@ -204,6 +204,14 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
+		CustomFlag::F_GENERATE_SYMBOLS))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_RUST",
+			"Custom flag 'generate-symbols' is not supported in Rust!");
+	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
         KalaMakeCore::CloseOnError(

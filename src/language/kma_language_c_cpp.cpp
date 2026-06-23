@@ -662,19 +662,27 @@ void Compile_Final(const GlobalData& globalData)
 				finalFlags.push_back("DNDEBUG");
 			}
 
+			bool generateSymbols = ContainsValue(
+				globalData.targetProfile.customFlags,
+				CustomFlag::F_GENERATE_SYMBOLS);
+
 			switch (globalData.targetProfile.buildType)
 			{
 			case BuildType::B_DEBUG:
 			{
 				if (isMSVC)
 				{
-					finalFlags.push_back("Zi");
-					finalFlags.push_back("Od");
+					finalFlags.push_back("Zi"); //generate full debugging info
+					finalFlags.push_back("Od"); //turn off all code optimizations
 				}
 				else
 				{
-					finalFlags.push_back("g");
-					finalFlags.push_back("O0");
+					finalFlags.push_back("g"); //full symbols for GCC, CLang and Zig
+#ifdef _WIN32
+					finalFlags.push_back("gcodeview"); //generate Microsoft format debug data
+#endif
+					finalFlags.push_back("fno-omit-frame-pointer"); //allows to trace the exact function and script line that caused an error
+					finalFlags.push_back("O0"); //turn off all code optimizations
 				}
 				break;
 			}
@@ -682,13 +690,18 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				if (isMSVC)
 				{
-					finalFlags.push_back("Zi");
-					finalFlags.push_back("O2");
+					finalFlags.push_back("Zi"); //generate full debugging info
+					finalFlags.push_back("O2"); //full speed optimization
+					finalFlags.push_back("Oy-"); //force MSVC to preseve stack frame structures
 				}
 				else
 				{
-					finalFlags.push_back("g");
-					finalFlags.push_back("O2");
+					finalFlags.push_back("g"); //full symbols for GCC, CLang and Zig
+#ifdef _WIN32
+					finalFlags.push_back("gcodeview"); //generate Microsoft format debug data
+#endif
+					finalFlags.push_back("fno-omit-frame-pointer"); //allows to trace the exact function and script line that caused an error
+					finalFlags.push_back("O2"); //full speed optimization
 				}
 				break;
 			}
@@ -696,12 +709,21 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				if (isMSVC)
 				{
-					finalFlags.push_back("O2");
+					if (generateSymbols) finalFlags.push_back("Zi"); //generate full debugging info
+					finalFlags.push_back("O2"); //full speed optimization
+					if (generateSymbols) finalFlags.push_back("Oy-"); //force MSVC to preseve stack frame structures
 				}
 				else
 				{
-					finalFlags.push_back("g0");
-					finalFlags.push_back("O2");
+					if (generateSymbols)
+					{
+						finalFlags.push_back("g"); //full symbols for GCC, CLang and Zig
+#ifdef _WIN32
+						finalFlags.push_back("gcodeview"); //generate Microsoft format debug data
+#endif
+						finalFlags.push_back("fno-omit-frame-pointer"); //allows to trace the exact function and script line that caused an error
+					}
+					finalFlags.push_back("O2"); //full speed optimization
 				}
 				break;
 			}
@@ -709,12 +731,21 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				if (isMSVC)
 				{
-					finalFlags.push_back("O1");
+					if (generateSymbols) finalFlags.push_back("Zi"); //generate full debugging info
+					finalFlags.push_back("O1"); //size optimization
+					if (generateSymbols) finalFlags.push_back("Oy-"); //force MSVC to preseve stack frame structures
 				}
 				else
 				{
-					finalFlags.push_back("g0");
-					finalFlags.push_back("Os");
+					if (generateSymbols)
+					{
+						finalFlags.push_back("g"); //full symbols for GCC, CLang and Zig
+#ifdef _WIN32
+						finalFlags.push_back("gcodeview"); //generate Microsoft format debug data
+#endif
+						finalFlags.push_back("fno-omit-frame-pointer"); //allows to trace the exact function and script line that caused an error
+					}
+					finalFlags.push_back("Os"); //size optimization
 				}
 				break;
 			}
@@ -1228,11 +1259,21 @@ void Compile_Final(const GlobalData& globalData)
 				if (isMSVC)
 				{
 					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
-						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_RELDEBUG)
+						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_RELDEBUG
+						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_GENERATE_SYMBOLS))
 					{
 						finalFlags.push_back("DEBUG");
 					}
 					else finalFlags.push_back("RELEASE");
+				}
+				else
+				{
+					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
+						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_RELDEBUG
+						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_GENERATE_SYMBOLS))
+					{
+						finalFlags.push_back("g");
+					}
 				}
 			}
 

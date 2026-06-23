@@ -248,12 +248,13 @@ Describes what KalaMake-specific flags will be added that will add extra actions
 Available values:
 - export-compile-commands - creates the compile-commands.json file at the build dir of your profile
 - export-vscode-sln - creates tasks.json and launch.json and their required .vscode folder if they dont exist, otherwise appends to existing files and overwrites profile with same name
-- warnings-as-errors - all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
-- msvc-static-runtime - uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
-- package-jar - optional post-jar task to also package the created jar file into an executable
-- java-win-console - print java executable logs to console on windows
-- export-java-sln - creates a .classpath and .project file in project root
-- python-one-file - creates a single file output instead of the default dir, slower to launch because it extracts each time the exe is ran
+- warnings-as-errors - only for C/C++, all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
+- msvc-static-runtime - only for C/C++, uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
+- generate-symbols - only for C/C++, creates a .pdb file (Windows) for debug symbols or embeds the symbols directly to the exe (Linux) in any build type
+- package-jar - only for java, optional post-jar task to also package the created jar file into an executable
+- java-win-console - only for java, print java executable logs to console on windows
+- export-java-sln - only for java, creates a .classpath and .project file in project root
+- python-one-file - only for python, creates a single file output instead of the default dir, slower to launch because it extracts each time the exe is ran
 
 Export-compile-commands is not supported in Java, Zig and Python.
 Warnings-as-errors is not supported in Zig and Python.
