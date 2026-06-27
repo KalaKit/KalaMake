@@ -1277,6 +1277,19 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
+#ifdef _WIN32
+			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
+				&& ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_NO_CONSOLE))
+			{
+				if (isMSVC)
+				{
+					finalFlags.push_back("SUBSYSTEM:WINDOWS");
+					finalFlags.push_back("ENTRY:mainCRTStartup");
+				}
+				else finalFlags.push_back("Wl,-subsystem:windows,-entry:mainCRTStartup");
+			}
+#endif
+
 			if (isMSVC
 				&& !finalFlags.empty())
 			{

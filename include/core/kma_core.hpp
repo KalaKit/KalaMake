@@ -342,22 +342,26 @@ namespace KalaMake::Core
 		//only for C and C++
 		F_GENERATE_SYMBOLS = 5u,
 
+		//does not show the console on Windows when launching an executable,
+		//only for C and C++
+		F_NO_CONSOLE = 6u,
+
 		//package the created jar file into an executable,
 		//only for Java
-		F_PACKAGE_JAR = 6u,
+		F_PACKAGE_JAR = 7u,
 
 		//attaches the jpackage-made exe to windows console,
 		//only for Java
-		F_JAVA_WIN_CONSOLE = 7u,
+		F_JAVA_WIN_CONSOLE = 8u,
 
 		//creates .classpath file in project root like compile_commans.json,
 		//only for Java
-		F_EXPORT_JAVA_SLN = 8u,
+		F_EXPORT_JAVA_SLN = 9u,
 
 		//pyinstaller bundles everything into a single exe, all files are extracted at each run,
 		//otherwise it creates a dir with all content with faster startup.
 		//only for Python
-		F_PYTHON_ONE_FILE = 9u
+		F_PYTHON_ONE_FILE = 10u
 	};
 	
 	struct ProfileData

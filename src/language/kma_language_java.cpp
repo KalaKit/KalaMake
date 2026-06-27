@@ -232,6 +232,14 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_JAVA",
 			"Custom flag 'generate-symbols' is not supported in Java!");
 	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
+		CustomFlag::F_NO_CONSOLE))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_JAVA",
+			"Custom flag 'no-console' is not supported in Java!");
+	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))

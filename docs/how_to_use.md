@@ -250,7 +250,8 @@ Available values:
 - export-vscode-sln - creates tasks.json and launch.json and their required .vscode folder if they dont exist, otherwise appends to existing files and overwrites profile with same name
 - warnings-as-errors - only for C/C++, all compiler or linker displayed warnings will be displayed as errors and will stop the build if encountered
 - msvc-static-runtime - only for C/C++, uses /MT or /MTd with cl and clang-cl instead of the default /MD or /MDd, unused in Linux
-- generate-symbols - only for C/C++, creates a .pdb file (Windows) for debug symbols or embeds the symbols directly to the exe (Linux) in any build type
+- generate-symbols - only for C/C++, creates a .pdb file for debug symbols (Windows) or embeds the symbols directly to the exe (Linux), only for MinSizeRel and Release mode
+- no-console - only for C/C++, does not show the console on Windows when launching an executable
 - package-jar - only for java, optional post-jar task to also package the created jar file into an executable
 - java-win-console - only for java, print java executable logs to console on windows
 - export-java-sln - only for java, creates a .classpath and .project file in project root

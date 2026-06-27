@@ -212,6 +212,14 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
+		CustomFlag::F_NO_CONSOLE))
+	{
+        KalaMakeCore::CloseOnError(
+			"LANGUAGE_RUST",
+			"Custom flag 'no-console' is not supported in Java!");
+	}
+	if (ContainsValue(
+		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
         KalaMakeCore::CloseOnError(
