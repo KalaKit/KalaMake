@@ -6,6 +6,13 @@ KalaMake currently accepts several commands, most of which come from [KalaCLI](h
 
 This project relies on several [external dependencies](https://github.com/greeenlaser/external-shared), they are not shipped inside this project, please make sure you have that repository cloned into a folder inside the same parent directory as this project folder before compiling this project from source.
 
+## Minimal compile example
+
+To compile Kalamake on Windows without Kalamake:
+```
+clang++ -DLIB_STATIC -fms-runtime-lib=dll -std=c++20 src/* src/core/* src/language/* -Iinclude -I../external-shared/kalacli/include -I../external-shared/kalaheaders ../external-shared/kalacli/release/kalacli.lib -o kalamake.exe
+```
+
 ## Supported languages
 
 - C (89 to 23)
