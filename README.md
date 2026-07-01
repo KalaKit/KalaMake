@@ -36,7 +36,7 @@ Currently only Windows (x86_64) and Linux (x86_64) are supported. There are no p
 
 [Donate on PayPal](https://www.paypal.com/donate/?hosted_button_id=QWG8SAYX5TTP6)
 
-[Official Discord server](https://discord.gg/jkvasmTND5)
+[Official Discord server](https://discord.gg/BZ2eJ5Cdr8)
 
 [Official Youtube channel](https://youtube.com/greenlaser)
 
