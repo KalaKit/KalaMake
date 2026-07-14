@@ -12,6 +12,10 @@ To compile Kalamake on Windows without Kalamake:
 ```
 clang++ -DLIB_STATIC -fms-runtime-lib=dll -std=c++20 src/* src/core/* src/language/* -Iinclude -I../external-shared/kalacli/include -I../external-shared/kalaheaders ../external-shared/kalacli/release/kalacli.lib -o kalamake.exe
 ```
+And on Linux:
+```
+clang++ -DLIB_STATIC -std=c++20 -fuse-ld=lld  src/**.cpp -Iinclude -I../external-shared/KalaCLI/include -I../external-shared/KalaHeaders ../external-shared/KalaCLI/release/libkalacli.a -o kalamake
+```
 
 ## Supported languages
 
