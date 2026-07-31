@@ -132,6 +132,12 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_ZIG",
 			"Field 'headers' is not supported in Zig!");
     }
+    if (!globalData.targetProfile.links.empty())
+	{
+		KalaMakeCore::CloseOnError(
+			"LANGUAGE_ZIG",
+			"Field 'links' is not supported in Zig!");
+	}
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
         KalaMakeCore::CloseOnError(

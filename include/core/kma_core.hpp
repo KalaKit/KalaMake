@@ -99,7 +99,7 @@ namespace KalaMake::Core
 		//only for C and C++
 		T_HEADERS = 11u,
 		//what links will be added to the binary,
-		//only for C, C++ and Java
+		//only for C, C++, Java and Rust
 		T_LINKS = 12u,
 		//what warning level will compilation and linking use, defaults to 'none',
 		//only for C and C++

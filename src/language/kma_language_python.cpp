@@ -135,6 +135,12 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_PYTHON",
 			"Field 'headers' is not supported in Python!");
     }
+    if (!globalData.targetProfile.links.empty())
+	{
+		KalaMakeCore::CloseOnError(
+			"LANGUAGE_PYTHON",
+			"Field 'links' is not supported in Python!");
+	}
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
         KalaMakeCore::CloseOnError(

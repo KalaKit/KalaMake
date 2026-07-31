@@ -49,9 +49,9 @@ using KalaHeaders::KalaFile::DeletePath;
 using KalaHeaders::KalaString::SplitString;
 using KalaHeaders::KalaString::ReplaceAfter;
 using KalaHeaders::KalaString::TrimString;
-using KalaHeaders::KalaString::HasAnyWhiteSpace;
-using KalaHeaders::KalaString::HasAnyUnsafeFieldChar;
-using KalaHeaders::KalaString::HasAnyWhiteSpace;
+using KalaHeaders::KalaString::ContainsSpace;
+using KalaHeaders::KalaString::ContainsUnsafeFileChar;
+using KalaHeaders::KalaString::ContainsAlpha;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::ReferenceData;
@@ -1111,17 +1111,17 @@ void ExtractFieldData(
 	string name = split[0];
 	string trimmedValue = TrimString(split[1]);
 
-	if (HasAnyWhiteSpace(name))
+	if (ContainsSpace(name))
 	{
 		KalaMakeCore::CloseOnError(
 			"KALAMAKE",
 			"Field name '" + name + "' cannot have spaces!");
 	}
-	if (HasAnyUnsafeFieldChar(name))
+	if (ContainsUnsafeFileChar(name))
 	{
 		KalaMakeCore::CloseOnError(
 			"KALAMAKE",
-			"Field name '" + name + "' must only contain A-Z, a-z, 0-9, _ or -!");
+			"Field name '" + name + "' must only contain 'A-Z', 'a-z', '0-9', '_', '-' or '.'!");
 	}
 
 	FieldType t{};
@@ -1453,11 +1453,13 @@ void ExtractFieldData(
 					}
 #endif
 
-					if (path(trimmedLine).has_extension())
+					path tlpath = path(trimmedLine);
+					if (tlpath.has_extension()
+						&& ContainsAlpha(tlpath.extension().string()))
 					{
 						KalaMakeCore::CloseOnError(
 							"KALAMAKE",
-							"Link system path '" + trimmedLine + "' is not allowed to use extensions!");
+							"Link system path '" + trimmedLine + "' is not allowed to use letters in extension!");
 					}
 
 					return { trimmedLine };
@@ -1862,11 +1864,11 @@ void FirstParse(const vector<string>& lines)
 					"User profile name is not allowed to be 'global'!");
 			}
 
-			if (HasAnyUnsafeFieldChar(value))
+			if (ContainsUnsafeFileChar(value))
 			{
 				KalaMakeCore::CloseOnError(
 					"KALAMAKE",
-					"User profile name '" + value + "' must only contain A-Z, a-z, 0-9, _ or -!");
+					"User profile name '" + value + "' must only contain 'A-Z', 'a-z', '0-9', '_', '-' or '.'!");
 			}
 
 			if (value != targetProfile) continue;
@@ -2548,7 +2550,7 @@ string TranslateReferences(string_view value)
 				refBracketPos + 1,
 				refBracketEndPos - refBracketPos - 1);
 
-			if (HasAnyWhiteSpace(refValue))
+			if (ContainsSpace(refValue))
 			{
 				KalaMakeCore::CloseOnError(
 					"KALAMAKE",

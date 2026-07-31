@@ -34,6 +34,7 @@ using KalaHeaders::KalaThread::lockwait_m;
 using KalaHeaders::KalaThread::unlock_m;
 
 using KalaHeaders::KalaString::RemoveFromString;
+using KalaHeaders::KalaString::ContainsAlpha;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Language::GlobalData;
@@ -1241,7 +1242,15 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				for (const auto& l : globalData.targetProfile.links)
 				{
-					if (path(l).has_extension()) command += " \"" + l.string() + "\"";
+					if (path(l).has_extension())
+					{
+						if (ContainsAlpha(path(l).extension().string())) command += " \"" + l.string() + "\"";
+						else
+						{
+							if (isMSVC) command += " " + l.string() + ".lib";
+							else        command += " -l" + l.string();
+						}
+					}
 					else
 					{
 						if (isMSVC) command += " " + l.string() + ".lib";

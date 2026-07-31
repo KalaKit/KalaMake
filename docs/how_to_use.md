@@ -207,7 +207,7 @@ Describes what libraries this binary will link to. Supports quoted relative and 
 
 Java only supports one directory value in the links field. Use it as the directory where your jar libraries are that you wish to include during jpackage phase.
 
-Links are not supported in Zig, Python and Rust.
+Links are not supported in Zig and Python.
 
 ### warninglevel
 

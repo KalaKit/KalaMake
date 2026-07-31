@@ -48,6 +48,9 @@
 
 - added new command list-profiles: lists all available profiles in a .kmake file (by jake)
 - added new command validate: checks if a .kmake file is valid without compiling (by jake)
-- added missing static vs dynamic linking for C/C++ on windows for GCC, G++, Clang, Clang++ and Zig compilers
 - added new custom flag generate-symbols: creates a .pdb file for debug symbols (Windows) or embeds the symbols directly to the exe (Linux), only for MinSizeRel and Release mode, only for c/c++
 - addded new custom flag no-console: does not show the console on Windows when launching an executable, only for C/C++
+
+- added missing static vs dynamic linking for C/C++ on windows for GCC, G++, Clang, Clang++ and Zig compilers
+- added extension support for system libraries on linux with digits at the end like '.0'
+- add missing rule for no links on zig and python
