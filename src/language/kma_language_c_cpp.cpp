@@ -1213,8 +1213,7 @@ void Compile_Final(const GlobalData& globalData)
 				if ((!isWindows
 					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
 					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL
-					|| globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
 					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".a")) extension = ".a";

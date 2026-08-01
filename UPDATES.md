@@ -55,3 +55,4 @@
 - added extension support for system libraries on linux with digits at the end like '.0'
 - add missing rule for no links on zig and python
 - fixed incorrect windows-gnu target triple
+- build as .lib for c/c++ if build type is static and target triple is windows-gnu when on linux
