@@ -100,7 +100,7 @@ constexpr string_view target_type_win_gcc = "x86_64-w64-mingw32-gcc";
 //g++ + windows-gnu
 constexpr string_view target_type_win_gpp = "x86_64-w64-mingw32-g++";
 //clang/clang++/zig + windows-gnu
-constexpr string_view target_type_win_gnu = "x86_64-w64-windows-gnu";
+constexpr string_view target_type_win_gnu = "x86_64-windows-gnu";
 
 static vector<CompileCommand> commands{};
 

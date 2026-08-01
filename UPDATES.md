@@ -54,3 +54,4 @@
 - added missing static vs dynamic linking for C/C++ on windows for GCC, G++, Clang, Clang++ and Zig compilers
 - added extension support for system libraries on linux with digits at the end like '.0'
 - add missing rule for no links on zig and python
+- fixed incorrect windows-gnu target triple
