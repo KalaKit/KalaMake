@@ -50,9 +50,13 @@
 - added new command validate: checks if a .kmake file is valid without compiling (by jake)
 - added new custom flag generate-symbols: creates a .pdb file for debug symbols (Windows) or embeds the symbols directly to the exe (Linux), only for MinSizeRel and Release mode, only for c/c++
 - addded new custom flag no-console: does not show the console on Windows when launching an executable, only for C/C++
+- added new target type windows-msvc: build as real msvc windows binary
 
 - added missing static vs dynamic linking for C/C++ on windows for GCC, G++, Clang, Clang++ and Zig compilers
 - added extension support for system libraries on linux with digits at the end like '.0'
 - add missing rule for no links on zig and python
 - fixed incorrect windows-gnu target triple
 - build as .lib for c/c++ if build type is static and target triple is windows-gnu when on linux
+- default to linux-gnu target type on linux and windows-msvc on windows
+- can pass directories into links field
+- removed "must not start with lib" from links in C/C++ on linux

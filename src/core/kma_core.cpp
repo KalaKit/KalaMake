@@ -171,6 +171,7 @@ constexpr string_view standard_rust24 = "rust24";
 constexpr string_view target_type_linux_gnu    = "linux-gnu";
 constexpr string_view target_type_linux_musl   = "linux-musl";
 constexpr string_view target_type_windows_gnu  = "windows-gnu";
+constexpr string_view target_type_windows_msvc = "windows-msvc";
 
 constexpr string_view build_type_debug      = "debug";
 constexpr string_view build_type_release    = "release";
@@ -489,7 +490,8 @@ namespace KalaMake::Core
 	{
 		{ TargetType::T_LINUX_GNU,    target_type_linux_gnu },
 		{ TargetType::T_LINUX_MUSL,   target_type_linux_musl },
-		{ TargetType::T_WINDOWS_GNU,  target_type_windows_gnu }
+		{ TargetType::T_WINDOWS_GNU,  target_type_windows_gnu },
+		{ TargetType::T_WINDOWS_MSVC, target_type_windows_msvc }
 	};
 
 	static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
@@ -1444,15 +1446,6 @@ void ExtractFieldData(
 				}
 				else
 				{
-#ifdef __linux__
-					if (trimmedLine.starts_with("lib"))
-					{
-						KalaMakeCore::CloseOnError(
-							"KALAMAKE",
-							"Link system path '" + trimmedLine + "' must not start with 'lib'!");
-					}
-#endif
-
 					path tlpath = path(trimmedLine);
 					if (tlpath.has_extension()
 						&& ContainsAlpha(tlpath.extension().string()))

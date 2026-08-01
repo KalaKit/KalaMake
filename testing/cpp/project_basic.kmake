@@ -29,3 +29,7 @@ targettype: linux-musl
 #profile windows-gnu
 buildpath: "build/exe-basic-windows-gnu"
 targettype: windows-gnu
+
+#profile windows-msvc
+buildpath: "build/exe-basic-windows-msvc"
+targettype: windows-msvc

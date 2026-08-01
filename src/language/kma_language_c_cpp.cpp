@@ -87,20 +87,26 @@ constexpr string_view target_type_linux_gnu_gcc = "x86_64-linux-gnu-gcc";
 //g++ + linux-gnu
 constexpr string_view target_type_linux_gnu_gpp = "x86_64-linux-gnu-g++";
 //clang/clang++/zig + linux-gnu
-constexpr string_view target_type_linux_gnu = "x86_64-linux-gnu";
+constexpr string_view target_type_linux_gnu_clang_zig = "x86_64-linux-gnu";
+
 //gcc + linux-musl
 constexpr string_view target_type_linux_musl_gcc = "x86_64-linux-musl-gcc";
 //g++ + linux-musl
 constexpr string_view target_type_linux_musl_gpp = "x86_64-linux-musl-g++";
 //clang/clang++/zig + linux_musl
-constexpr string_view target_type_linux_musl = "x86_64-linux-musl";
+constexpr string_view target_type_linux_musl_clang_zig = "x86_64-linux-musl";
 
 //gcc + windows-gnu
-constexpr string_view target_type_win_gcc = "x86_64-w64-mingw32-gcc";
+constexpr string_view target_type_win_gnu_gcc = "x86_64-w64-mingw32-gcc";
 //g++ + windows-gnu
-constexpr string_view target_type_win_gpp = "x86_64-w64-mingw32-g++";
+constexpr string_view target_type_win_gnu_gpp = "x86_64-w64-mingw32-g++";
 //clang/clang++/zig + windows-gnu
-constexpr string_view target_type_win_gnu = "x86_64-windows-gnu";
+constexpr string_view target_type_win_gnu_clang_zig = "x86_64-windows-gnu";
+
+//clang/clang++ + windows-msvc
+constexpr string_view target_type_win_msvc_clang = "x86_64-pc-windows-msvc";
+//zig + windows-msvc
+constexpr string_view target_type_win_msvc_zig = "x86_64-windows-msvc";
 
 static vector<CompileCommand> commands{};
 
@@ -183,6 +189,14 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_C_CPP",
 			"Field 'buildtype' must be assigned in C and C++!");
     }
+	if (globalData.targetProfile.targetType == TargetType::T_INVALID)
+	{
+#ifdef _WIN32
+		globalData.targetProfile.targetType = TargetType::T_WINDOWS_MSVC;
+#else
+		globalData.targetProfile.targetType = TargetType::T_LINUX_GNU;
+#endif
+	}
 
     //
     // ENSURE UNSUPPORTED FIELDS ARE NOT USED
@@ -540,22 +554,36 @@ void Compile_Final(const GlobalData& globalData)
 			//set compiler
 
 			string_view compiler{};
+			string targetTriple{};
+
 			EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
 
 			if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 			{
 				if (compiler == "gcc")      compiler = target_type_linux_gnu_gcc;
 				else if (compiler == "g++") compiler = target_type_linux_gnu_gpp;
+				else                        targetTriple = target_type_linux_gnu_clang_zig;
 			}
 			else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 			{
 				if (compiler == "gcc")      compiler = target_type_linux_musl_gcc;
 				else if (compiler == "g++") compiler = target_type_linux_musl_gpp;
+				else                        targetTriple = target_type_linux_musl_clang_zig;
 			}
 			else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
 			{
-				if (compiler == "gcc")      compiler = target_type_win_gcc;
-				else if (compiler == "g++") compiler = target_type_win_gpp;
+				if (compiler == "gcc")      compiler = target_type_win_gnu_gcc;
+				else if (compiler == "g++") compiler = target_type_win_gnu_gpp;
+				else                        targetTriple = target_type_win_gnu_clang_zig;
+			}
+			else
+			{
+				if (compiler == "clang"
+					|| compiler == "clang++")
+				{
+					targetTriple = target_type_win_msvc_clang;
+				}
+				else targetTriple = target_type_win_msvc_zig;
 			}
 
 			command += string(compiler);
@@ -582,24 +610,8 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
-			//set target type
-			if (compiler == "clang"
-				|| compiler == "clang++"
-				|| compiler == "zig")
-			{
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
-				{
-					command += " -target " + string(target_type_linux_gnu);
-				}
-				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
-				{
-					command += " -target " + string(target_type_linux_musl);
-				}
-				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
-				{
-					command += " -target " + string(target_type_win_gnu);
-				}
-			}
+			//-target only for clang/clang++/zig
+			if (!targetTriple.empty()) command += " -target " + targetTriple;
 
 			//set standard
 
@@ -1067,28 +1079,53 @@ void Compile_Final(const GlobalData& globalData)
 			//set compiler
 
 			string compiler{};
+			string targetTriple{};
+
 			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
 				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED)
 			{
 				string_view nonStaticCompiler{};
 				EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), nonStaticCompiler);
 
-				compiler = nonStaticCompiler;
-
 				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 				{
-					if (compiler == "gcc")      compiler = target_type_linux_gnu_gcc;
-					else if (compiler == "g++") compiler = target_type_linux_gnu_gpp;
+					if (nonStaticCompiler == "gcc")      compiler = target_type_linux_gnu_gcc;
+					else if (nonStaticCompiler == "g++") compiler = target_type_linux_gnu_gpp;
+					else
+					{
+						compiler = nonStaticCompiler;
+						targetTriple = target_type_linux_gnu_clang_zig;
+					}
 				}
 				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
 				{
-					if (compiler == "gcc")      compiler = target_type_linux_musl_gcc;
-					else if (compiler == "g++") compiler = target_type_linux_musl_gpp;
+					if (nonStaticCompiler == "gcc")      compiler = target_type_linux_musl_gcc;
+					else if (nonStaticCompiler == "g++") compiler = target_type_linux_musl_gpp;
+					else
+					{
+						compiler = nonStaticCompiler;
+						targetTriple = target_type_linux_musl_clang_zig;
+					}
 				}
 				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
 				{
-					if (compiler == "gcc")      compiler = target_type_win_gcc;
-					else if (compiler == "g++") compiler = target_type_win_gpp;
+					if (nonStaticCompiler == "gcc")      compiler = target_type_win_gnu_gcc;
+					else if (nonStaticCompiler == "g++") compiler = target_type_win_gnu_gpp;
+					else
+					{
+						compiler = nonStaticCompiler;
+						targetTriple = target_type_win_gnu_clang_zig;
+					}
+				}
+				else
+				{
+					compiler = nonStaticCompiler;
+					if (compiler == "clang"
+						|| compiler == "clang++")
+					{
+						targetTriple = target_type_win_msvc_clang;
+					}
+					else targetTriple = target_type_win_msvc_zig;
 				}
 			}
 			else
@@ -1124,24 +1161,8 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
-			//set target type
-			if (compiler == "clang"
-				|| compiler == "clang++"
-				|| compiler == "zig")
-			{
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
-				{
-					command += " -target " + string(target_type_linux_gnu);
-				}
-				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
-				{
-					command += " -target " + string(target_type_linux_musl);
-				}
-				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
-				{
-					command += " -target " + string(target_type_win_gnu);
-				}
-			}
+			//-target only for clang/clang++/zig
+			if (!targetTriple.empty()) command += " -target " + targetTriple;
 
 			//set output
 
@@ -1239,11 +1260,16 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (!globalData.targetProfile.links.empty())
 			{
-				for (const auto& l : globalData.targetProfile.links)
+				for (const path& l : globalData.targetProfile.links)
 				{
-					if (path(l).has_extension())
+					if (is_directory(l))
 					{
-						if (ContainsAlpha(path(l).extension().string())) command += " \"" + l.string() + "\"";
+						if (isMSVC) command += " /LIBPATH:\"" + l.string() + "\"";
+						else        command += " -L\"" + l.string() + "\"";
+					}
+					else if (l.has_extension())
+					{
+						if (ContainsAlpha(l.extension().string())) command += " \"" + l.string() + "\"";
 						else
 						{
 							if (isMSVC) command += " " + l.string() + ".lib";

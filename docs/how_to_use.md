@@ -148,9 +148,10 @@ Standard is not supported in Zig and Python.
 Describes which target to aim for, used for cross-compilation. Only one value is allowed. Leave empty for current platform. Windows doesnt have a 'windows-msvc' equivalent so that cannot be passed as a target type.
 
 Available values:
-- windows-gnu - create a windows binary on windows or linux
-- linux-gnu - create a linux binary on windows or linux (uses glibc)
-- linux-musl - create a linux binary on windows or linux (uses musl)
+- linux-gnu    - create a linux binary on windows or linux (uses glibc)
+- linux-musl   - create a linux binary on windows or linux (uses musl)
+- windows-gnu  - create a msvc-style windows binary on windows or linux
+- windows-msvc - create a gnu-style windows binary on windows or linux
 
 Target type is not supported in Java and Python.
     

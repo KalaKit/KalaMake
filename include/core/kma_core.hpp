@@ -268,7 +268,10 @@ namespace KalaMake::Core
 		T_LINUX_MUSL = 2u,
 
 		//build a windows target on linux or windows (mingw)
-		T_WINDOWS_GNU = 3u
+		T_WINDOWS_GNU = 3u,
+
+		//build a windows target on linux or windows (msvc)
+		T_WINDOWS_MSVC = 4u
 	};
 
 	//Allowed build types that can be added to the buildtype field,
