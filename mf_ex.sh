@@ -16,12 +16,12 @@ case "$1" in
         EXE_EXT=
         EXE_ORIGIN=build/release-linux
         ;;
-    --win-on-linux)
-        OUT_NAME=KalaMake-Win-on-Linux
+    --windows-gnu)
+        OUT_NAME=KalaMake-Windows-Gnu
 
         EXE_NAME=kalamake
         EXE_EXT=.exe
-        EXE_ORIGIN=build/release-win-on-linux
+        EXE_ORIGIN=build/release-windows-gnu
         ;;
     --windows)
         OUT_NAME=KalaMake-Windows
@@ -31,7 +31,7 @@ case "$1" in
         EXE_ORIGIN=build/release-windows
         ;;
     *)
-        echo "Error: Argument must be --linux, --win-on-linux or --windows" >&2
+        echo "Error: Argument must be --linux, --windows-gnu or --windows" >&2
         exit 1
         ;;
 esac
@@ -67,7 +67,7 @@ mf --f "${EXE_ORIGIN}/${EXE_NAME}${EXE_EXT}" --t "${OUT_DIR}/${EXE_NAME}${EXE_EX
 
 # Copy windows-gnu dlls
 case "$1" in
-    --win-on-linux)
+    --windows-gnu)
         mf --f "${EXE_ORIGIN}/libgcc_s_seh-1.dll" --t "${OUT_DIR}/libgcc_s_seh-1.dll"
         mf --f "${EXE_ORIGIN}/libstdc++-6.dll" --t "${OUT_DIR}/libstdc++-6.dll"
         mf --f "${EXE_ORIGIN}/libwinpthread-1.dll" --t "${OUT_DIR}/libwinpthread-1.dll"

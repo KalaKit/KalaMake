@@ -39,23 +39,23 @@ buildtype: minsizerel
 buildpath: "${dir_release}windows"
 links: "${dir_kc_rel}/${name_kc}.lib", ${links_win_only}
 
-#profile debug-win-on-linux
+#profile debug-windows-gnu
 targettype: windows-gnu
 buildtype: debug
-buildpath: "${dir_debug}win-on-linux"
+buildpath: "${dir_debug}windows-gnu"
 links: "${dir_kc_deb}/${name_kc}-gnud.lib", ${links_win_on_linux_only}
-postbuildaction: cp "${lib_libgcc}" "${dir_debug}win-on-linux"
-postbuildaction: cp "${lib_libstdcpp}" "${dir_debug}win-on-linux"
-postbuildaction: cp "${lib_libwinp}" "${dir_debug}win-on-linux"
+postbuildaction: cp "${lib_libgcc}" "${dir_debug}windows-gnu"
+postbuildaction: cp "${lib_libstdcpp}" "${dir_debug}windows-gnu"
+postbuildaction: cp "${lib_libwinp}" "${dir_debug}windows-gnu"
 
-#profile release-win-on-linux
+#profile release-windows-gnu
 targettype: windows-gnu
 buildtype: minsizerel
-buildpath: "${dir_release}win-on-linux"
+buildpath: "${dir_release}windows-gnu"
 links: "${dir_kc_rel}/${name_kc}-gnu.lib", ${links_win_on_linux_only}
-postbuildaction: cp "${lib_libgcc}" "${dir_release}win-on-linux"
-postbuildaction: cp "${lib_libstdcpp}" "${dir_release}win-on-linux"
-postbuildaction: cp "${lib_libwinp}" "${dir_release}win-on-linux"
+postbuildaction: cp "${lib_libgcc}" "${dir_release}windows-gnu"
+postbuildaction: cp "${lib_libstdcpp}" "${dir_release}windows-gnu"
+postbuildaction: cp "${lib_libwinp}" "${dir_release}windows-gnu"
 
 #profile debug-linux
 buildtype: debug
