@@ -7,13 +7,13 @@
 #include <vector>
 #include <filesystem>
 #include <atomic>
+#include <mutex>
 #include <thread>
 #include <sstream>
 
 #include "core_utils.hpp"
 #include "log_utils.hpp"
 #include "file_utils.hpp"
-#include "thread_utils.hpp"
 #include "string_utils.hpp"
 
 #include "language/kma_language.hpp"
@@ -29,9 +29,6 @@ using KalaHeaders::KalaLog::LogType;
 
 using KalaHeaders::KalaFile::CreateNewDirectory;
 using KalaHeaders::KalaFile::RenamePath;
-
-using KalaHeaders::KalaThread::lockwait_m;
-using KalaHeaders::KalaThread::unlock_m;
 
 using KalaHeaders::KalaString::RemoveFromString;
 using KalaHeaders::KalaString::ContainsAlpha;
@@ -994,9 +991,9 @@ void Compile_Final(const GlobalData& globalData)
 							LogType::LOG_INFO);
 					}
 
-					lockwait_m(m_compiledObj);
+					m_compiledObj.lock();
 					compiledObj.push_back(objPath);
-					unlock_m(m_compiledObj);
+					m_compiledObj.unlock();
 				};
 
 			generate();
