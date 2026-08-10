@@ -25,7 +25,7 @@ binarytype: executable
 binaryname: ${name_bin}
 sources: "src"
 headers: "include", "../external-shared/KalaHeaders/include", "../external-shared/KalaCLI/include"
-defines: LIB_STATIC
+defines: LIB_STATIC, __USE_VULKAN__
 warninglevel: normal
 customflags: export-compile-commands, export-vscode-sln
 
