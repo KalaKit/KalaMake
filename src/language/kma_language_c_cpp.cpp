@@ -478,15 +478,6 @@ void Compile_Final(const GlobalData& globalData)
 		globalData.targetProfile.compiler == CompilerType::C_CL
 		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL;
 
-	if ((globalData.targetProfile.compiler == CompilerType::C_CL
-		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
-		&& globalData.targetProfile.targetType != TargetType::T_INVALID)
-	{
-		KalaMakeCore::CloseOnError(
-			"LANGUAGE_C_CPP",
-			"Cannot assign target type for cl or clang-cl compiler!");
-	}
-
 	string frontArg = isMSVC
 		? "/"
 		: "-";
