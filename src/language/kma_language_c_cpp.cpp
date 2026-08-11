@@ -1286,6 +1286,12 @@ void Compile_Final(const GlobalData& globalData)
 						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_GENERATE_SYMBOLS))
 					{
 						finalFlags.push_back("g");
+
+						if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
+							|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+						{
+							finalFlags.push_back("rdynamic");
+						}
 					}
 				}
 			}

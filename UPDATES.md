@@ -60,3 +60,4 @@
 - default to linux-gnu target type on linux and windows-msvc on windows
 - can pass directories into links field
 - removed "must not start with lib" from links in C/C++ on linux
+- added missing c/c++ linker flag 'rdynamic' for debug/reldebug mode or if generate symbols is on to help with crash call stack
