@@ -56,6 +56,7 @@ mkdir "${OUT_DIR}"
 # The base files
 mf --f "${README}" --t "${OUT_DIR}/${README}"
 mf --f "${LICENSE}" --t "${OUT_DIR}/${LICENSE}"
+mf --f "${CHANGES}" --t "${OUT_DIR}/${CHANGES}"
 mf --f "${DOCS}" --t "${OUT_DIR}"
 
 # The binary
