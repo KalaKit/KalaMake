@@ -1,6 +1,10 @@
 # KalaMake updates
 
-## 1.4
+## 1.4.1
+
+- fixed invalid error 'Linux compiler is not allowed to add any non-MSVC target types'
+
+## 1.4.0
 
 - added new command list-profiles: lists all available profiles in a .kmake file (by jake)
 - added new command validate: checks if a .kmake file is valid without compiling (by jake)

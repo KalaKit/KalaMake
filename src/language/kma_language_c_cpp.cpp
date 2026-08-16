@@ -276,14 +276,6 @@ void PreCheck(GlobalData& globalData)
 			"Compiler '" + string(compilerStr) + "' requires to use vcvars64.bat or vcvarsall.bat before it can be used with KalaMake!");
 	}
 
-	if ((globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-		|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
-		&& globalData.targetProfile.compiler != CompilerType::C_ZIG)
-	{
-		KalaMakeCore::CloseOnError(
-			"LANGUAGE_C_CPP",
-			"Linux compiler '" + string(compilerStr) + "' is not allowed to add any non-MSVC target types!");
-	}
 #else
 	if (globalData.targetProfile.compiler == CompilerType::C_CL
 		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
