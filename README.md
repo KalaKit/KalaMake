@@ -10,11 +10,45 @@ This project relies on several [external dependencies](https://github.com/greeen
 
 To compile Kalamake on Windows without Kalamake:
 ```
-clang++ -DLIB_STATIC -fms-runtime-lib=dll -std=c++20 src/* src/core/* src/language/* -Iinclude -I../external-shared/kalacli/include -I../external-shared/kalaheaders ../external-shared/kalacli/release/kalacli.lib -o kalamake.exe
+//create the root build dir
+mkdir build
+
+//create the target binary dir
+mkdir build\release-windows
+
+//create the object dir
+mkdir build\release-windows\obj
+
+//go to the target binary dir
+cd build\release-windows
+
+//compile cpp files
+for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\..\external-shared\KalaHeaders\include" -I"..\..\..\external-shared\KalaCLI\include" -o "obj\%~nf.obj"
+
+//link into executable
+clang++ -o kalamake.exe "obj\*.obj" "..\..\..\external-shared\KalaCLI\release\kalacli.lib"
 ```
 And on Linux:
 ```
-clang++ -DLIB_STATIC -std=c++20 -fuse-ld=lld  src/**.cpp -Iinclude -I../external-shared/KalaCLI/include -I../external-shared/KalaHeaders ../external-shared/KalaCLI/release/libkalacli.a -o kalamake
+//create the root build dir
+mkdir build
+
+//create the target binary dir
+mkdir build\release-linux
+
+//create the object dir
+mkdir build\release-linux\obj
+
+//go to the target binary dir
+cd build\release-linux
+
+//compile cpp files
+for f in ../../src/**/*.cpp
+    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I../../../external-shared/KalaHeaders/include -I"../../../external-shared/KalaCLI/include" -o obj/(basename $f .cpp).o
+end
+
+//link into executable
+clang++ -o kalamake obj/*.o ../../../external-shared/KalaCLI/release/libkalacli.a
 ```
 
 ## Supported languages
