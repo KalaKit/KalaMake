@@ -53,7 +53,7 @@ namespace KalaMake::Core
 
 			if (!errorMsg.empty())
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"GENERATE",
 					"Failed to remove existing compile_commands.json! Reason: " + errorMsg);
 			}
@@ -65,16 +65,42 @@ namespace KalaMake::Core
 
         auto fix_slashes = [](string_view input) -> string
 			{
-                return ReplaceFromString(
+                string rfs{};
+                string err = ReplaceFromString(
                     string(input), 
                     "\\", 
-                    (isWindows ? "\\\\" : "/"), 
+                    (isWindows ? "\\\\" : "/"),
+                    rfs,
                     true);
+
+                if (!err.empty())
+                {
+                    KalaMakeCore::ForceClose(
+                        "KALAMAKE",
+                        "Failed to fix slashes because ReplaceFromString failed! Reason: " + err);
+                }
+
+                return rfs;
 			};
 
 		auto fix_json_quotes = [](string_view input) -> string
 			{
-				return ReplaceFromString(string(input), "\"", "\\\"", true);
+                string rfs{};
+                string err = ReplaceFromString(
+                    string(input), 
+                    "\"", 
+                    "\\\"",
+                    rfs,
+                    true);
+
+                if (!err.empty())
+                {
+                    KalaMakeCore::ForceClose(
+                        "KALAMAKE",
+                        "Failed to fix json quotes because ReplaceFromString failed! Reason: " + err);
+                }
+
+				return rfs;
 			};
 
 		for (size_t i = 0; i < commands.size(); ++i)
@@ -107,7 +133,7 @@ namespace KalaMake::Core
 
 		if (!errorMsg.empty())
 		{
-			KalaMakeCore::CloseOnError(
+			KalaMakeCore::ForceClose(
 				"GENERATE",
 				"Failed to create new compile_commands.json! Reason: " + errorMsg);
 		}
@@ -135,7 +161,7 @@ namespace KalaMake::Core
 
                     if (!errorMsg.empty())
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
                             "GENERATE",
                             "Failed to remove existing .classpath! Reason: " + errorMsg);
                     }
@@ -148,11 +174,22 @@ namespace KalaMake::Core
 
                 auto fix_slashes = [](string_view input) -> string
                     {
-                        return ReplaceFromString(
+                        string rfs{};
+                        string err = ReplaceFromString(
                             string(input), 
                             "\\", 
-                            "/", 
+                            "/",
+                            rfs,
                             true);
+
+                        if (!err.empty())
+                        {
+                            KalaMakeCore::ForceClose(
+                                "KALAMAKE",
+                                "Failed to fix slashes because ReplaceFromString failed! Reason: " + err);
+                        }
+                        
+                        return rfs;
                     };
 
                 srcDir = fix_slashes(srcDir);
@@ -172,7 +209,7 @@ namespace KalaMake::Core
 
                 if (!errorMsg.empty())
                 {
-                    KalaMakeCore::CloseOnError(
+                    KalaMakeCore::ForceClose(
                         "GENERATE",
                         "Failed to create new .classpath! Reason: " + errorMsg);
                 }
@@ -200,7 +237,7 @@ namespace KalaMake::Core
 
                     if (!errorMsg.empty())
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
                             "GENERATE",
                             "Failed to remove existing .project! Reason: " + errorMsg);
                     }
@@ -233,7 +270,7 @@ namespace KalaMake::Core
 
                 if (!errorMsg.empty())
                 {
-                    KalaMakeCore::CloseOnError(
+                    KalaMakeCore::ForceClose(
                         "GENERATE",
                         "Failed to create new .project! Reason: " + errorMsg);
                 }
@@ -260,7 +297,7 @@ namespace KalaMake::Core
             string dirErr = CreateNewDirectory(vscodeDir);
             if (!dirErr.empty())
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "GENERATE", 
                     "Failed to create vs code dir at '" + vscodeDir.string() + "'! Reason: " + dirErr);
             }
@@ -268,11 +305,22 @@ namespace KalaMake::Core
 
         auto fix_slashes = [](string_view input) -> string
 			{
-                return ReplaceFromString(
+                string rfs{};
+                string err = ReplaceFromString(
                     string(input), 
                     "\\", 
-                    (isWindows ? "\\\\" : "/"), 
+                    (isWindows ? "\\\\" : "/"),
+                    rfs,
                     true);
+
+                if (!err.empty())
+                {
+                    KalaMakeCore::ForceClose(
+                        "KALAMAKE",
+                        "Failed to fix slashes because ReplaceFromString failed! Reason: " + err);
+                }
+                
+                return rfs;
 			};
 
         auto remove_useless_lines = [](vector<string>& fields) -> void
@@ -325,7 +373,7 @@ namespace KalaMake::Core
 
                 if (!readLaunchErr.empty())
                 {
-                    KalaMakeCore::CloseOnError(
+                    KalaMakeCore::ForceClose(
                         "GENERATE", 
                         "Failed to read launch.json at '" + launchJson.string() + "'! Reason: " + readLaunchErr);
                 }
@@ -422,7 +470,7 @@ namespace KalaMake::Core
 
             if (!isValidLaunch)
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "GENERATE", 
                     "Failed to update existing launch.json at '" + launchJson.string() + "' because it was malformed!");
             }
@@ -493,7 +541,7 @@ namespace KalaMake::Core
 
                 if (!launchErr.empty())
                 {
-                    KalaMakeCore::CloseOnError(
+                    KalaMakeCore::ForceClose(
                         "GENERATE", 
                         "Failed to delete old launch.json at '" + launchJson.string() + "' before generating new one! Reason: " + launchErr);
                 }
@@ -506,7 +554,7 @@ namespace KalaMake::Core
 
             if (!launchErr.empty())
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "GENERATE", 
                     "Failed to generate new launch.json at '" + launchJson.string() + "'! Reason: " + launchErr);
             }
@@ -548,7 +596,7 @@ namespace KalaMake::Core
 
             if (!readTasksErr.empty())
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "GENERATE", 
                     "Failed to read tasks.json at '" + tasksJson.string() + "'! Reason: " + readTasksErr);
             }
@@ -645,7 +693,7 @@ namespace KalaMake::Core
 
         if (!isValidTasks)
         {
-            KalaMakeCore::CloseOnError(
+            KalaMakeCore::ForceClose(
                 "GENERATE", 
                 "Failed to update existing tasks.json at '" + tasksJson.string() + "' because it was malformed!");
         }
@@ -684,7 +732,7 @@ namespace KalaMake::Core
 
             if (!tasksErr.empty())
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "GENERATE", 
                     "Failed to delete old tasks.json at '" + tasksJson.string() + "' before generating new one! Reason: " + tasksErr);
             }
@@ -697,7 +745,7 @@ namespace KalaMake::Core
 
         if (!tasksErr.empty())
         {
-            KalaMakeCore::CloseOnError(
+            KalaMakeCore::ForceClose(
                 "GENERATE", 
                 "Failed to generate new tasks.json at '" + tasksJson.string() + "'! Reason: " + tasksErr);
         }

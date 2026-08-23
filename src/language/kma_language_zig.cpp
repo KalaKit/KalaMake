@@ -105,7 +105,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'buildtype' must be assigned in Zig!");
     }
@@ -116,50 +116,50 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.standard != StandardType::S_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'standard' is not supported in Zig!");
     }
     if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'compilerlauncher' is not supported in Zig!");
     }
     if (!globalData.targetProfile.headers.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'headers' is not supported in Zig!");
     }
     if (!globalData.targetProfile.links.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'links' is not supported in Zig!");
 	}
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'warninglevel' is not supported in Zig!");
     }
     if (!globalData.targetProfile.linkFlags.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'linkflags' is not supported in Zig!");
     }
 
     if (!globalData.targetProfile.defines.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'defines' is not supported in Zig!");
     }
     if (globalData.targetProfile.jobs != 0)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'jobs' is not supported in Zig!");
     }
@@ -168,7 +168,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_COMPILE_COMMANDS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'export-compile-commands' is not supported in Zig!");
 	}
@@ -176,7 +176,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_WARNINGS_AS_ERRORS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'warnings-as-errors' is not supported in Zig!");
 	}
@@ -184,7 +184,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_MSVC_STATIC_RUNTIME))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'msvc-static-runtime' is not supported in Zig!");
 	}
@@ -192,7 +192,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_GENERATE_SYMBOLS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'generate-symbols' is not supported in Zig!");
 	}
@@ -200,7 +200,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_NO_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'no-console' is not supported in Java!");
 	}
@@ -208,7 +208,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'package-jar' is not supported in Zig!");
 	}
@@ -216,7 +216,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_JAVA_WIN_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'java-win-console' is not supported in Zig!");
 	}
@@ -224,7 +224,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_JAVA_SLN))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'export-java-sln' is not supported in Zig!");
 	}
@@ -232,7 +232,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Custom flag 'python-one-file' is not supported in Zig!");
 	}
@@ -248,14 +248,14 @@ void PreCheck(GlobalData& globalData)
 		{
 			if (!mainZig.empty())
 			{
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_ZIG",
 				    "Cannot have more than one main Zig script! Please ensure you only have one main.zig or root.zig script, and not both.");
 			}
 
             if (is_empty(p))
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_ZIG",
 				    "Main Zig script was empty!");
             }
@@ -266,7 +266,7 @@ void PreCheck(GlobalData& globalData)
 
     if (mainZig.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
             "LANGUAGE_ZIG",
             "Did not find main Zig script! Please ensure main.zig or root.zig is added to sources.");
     }
@@ -317,7 +317,7 @@ void PreCheck(GlobalData& globalData)
 
 				if (itMatch == sources.end())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_ZIG",
 						"Cannot ignore target '" + target.string() + "' if it hasn't already been added to sources list!");
 				}
@@ -371,7 +371,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (finalSources.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"No sources were remaining after cleaning source scripts list!");
 	}
@@ -416,7 +416,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_ZIG",
 					"Failed to run pre build action '" + a + "'!");
 			}
@@ -695,7 +695,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 if (system(command.c_str()) != 0)
                 {
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_ZIG",
 						"Failed to compile '" + outputPath.string() + "'!");
                 }
@@ -735,7 +735,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_ZIG",
 					"Failed to run post build action '" + a + "'!");
 			}

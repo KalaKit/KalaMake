@@ -470,7 +470,7 @@ namespace KalaMake::Core
 		static const unordered_map<WarningLevel,         string_view, EnumHash<WarningLevel>>&         GetWarningLevels();
 		static const unordered_map<CustomFlag,           string_view, EnumHash<CustomFlag>>&           GetCustomFlags();
 
-		static void CloseOnError(
+		static void ForceClose(
 			string_view target,
 			string_view message);
 	};

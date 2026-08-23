@@ -120,14 +120,14 @@ void PreCheck(GlobalData& globalData)
 #ifdef _WIN32
     if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Target type 'linux-gnu' is not supported for Rust on Windows! Use 'linux-musl' instead.");
     }
 #else
     if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Target type 'windows-gnu' is not supported for Rust on Linux!");
     }
@@ -139,13 +139,13 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.standard == StandardType::S_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'standard' must be assigned in Rust!");
     }
 	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'buildtype' must be assigned in Rust!");
     }
@@ -156,32 +156,32 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'compilerlauncher' is not supported in Rust!");
     }
     if (!globalData.targetProfile.headers.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'headers' is not supported in Rust!");
     }
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'warninglevel' is not supported in Rust!");
     }
     if (!globalData.targetProfile.linkFlags.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'linkflags' is not supported in Rust!");
     }
 
     if (globalData.targetProfile.jobs != 0)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'jobs' is not supported in Rust!");
     }
@@ -190,7 +190,7 @@ void PreCheck(GlobalData& globalData)
 			globalData.targetProfile.customFlags, 
 			CustomFlag::F_EXPORT_COMPILE_COMMANDS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'export-compile-commands' is not supported in Rust!");
 	}
@@ -198,7 +198,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_MSVC_STATIC_RUNTIME))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'msvc-static-runtime' is not supported in Rust!");
 	}
@@ -206,7 +206,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_GENERATE_SYMBOLS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'generate-symbols' is not supported in Rust!");
 	}
@@ -214,7 +214,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_NO_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'no-console' is not supported in Java!");
 	}
@@ -222,7 +222,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'package-jar' is not supported in Rust!");
 	}
@@ -230,7 +230,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_JAVA_WIN_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'java-win-console' is not supported in Rust!");
 	}
@@ -238,7 +238,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_JAVA_SLN))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'export-java-sln' is not supported in Rust!");
 	}
@@ -246,7 +246,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Custom flag 'python-one-file' is not supported in Rust!");
 	}
@@ -262,14 +262,14 @@ void PreCheck(GlobalData& globalData)
 		{
 			if (!mainRust.empty())
 			{
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_RUST",
 				    "Cannot have more than one main Rust script! Please ensure you only have one main.rs or lib.rs script, and not both.");
 			}
 
             if (is_empty(p))
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_RUST",
 				    "Main Rust script was empty!");
             }
@@ -280,7 +280,7 @@ void PreCheck(GlobalData& globalData)
 
     if (mainRust.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
             "LANGUAGE_RUST",
             "Did not find main Rust script! Please ensure main.rs or lib.rs is added to sources.");
     }
@@ -331,7 +331,7 @@ void PreCheck(GlobalData& globalData)
 
 				if (itMatch == sources.end())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_RUST",
 						"Cannot ignore target '" + target.string() + "' if it hasn't already been added to sources list!");
 				}
@@ -385,7 +385,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (finalSources.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"No sources were remaining after cleaning source scripts list!");
 	}
@@ -430,7 +430,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_RUST",
 					"Failed to run pre build action '" + a + "'!");
 			}
@@ -517,14 +517,20 @@ void Compile_Final(const GlobalData& globalData)
             {
                 string_view standard;
             
-                EnumToString(
+                string err = EnumToString(
                     globalData.targetProfile.standard, 
                     KalaMakeCore::GetStandardTypes(),
                     standard);
+                if (!err.empty())
+                {
+                    KalaMakeCore::ForceClose(
+                        "LANGUAGE_RUST",
+                        "Failed to get standard because its string was invalid! Reason: " + err);
+                }
 
                 if (!standard.starts_with("rust"))
                 {
-                    KalaMakeCore::CloseOnError(
+                    KalaMakeCore::ForceClose(
                         "LANGUAGE_RUST",
                         "Unsupported standard type '" + string(standard) + "' was passed to Rust compiler!");
                 }
@@ -677,14 +683,14 @@ void Compile_Final(const GlobalData& globalData)
                         }
                         else if (origin.empty())
                         {
-                            KalaMakeCore::CloseOnError(
+                            KalaMakeCore::ForceClose(
                                 "LANGUAGE_RUST",
                                 "Failed to get Rust sysroot path from pipe!");
                         }
                     }
                     else
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
 						    "LANGUAGE_RUST",
 						    "Failed to open pipe to get Rust sysroot path!");
                     }
@@ -693,7 +699,7 @@ void Compile_Final(const GlobalData& globalData)
 
                     if (!exists(originDir))
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
 						    "LANGUAGE_RUST",
 						    "Failed to find Rust std library sysroot folder at path '" + originDir.string() + "'!");
                     }
@@ -729,7 +735,7 @@ void Compile_Final(const GlobalData& globalData)
 
                     if (!exists(originDir))
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
 						    "LANGUAGE_RUST",
 						    "Failed to find Rust std library folder at path '" + originDir.string() + "'!");
                     }
@@ -769,7 +775,7 @@ void Compile_Final(const GlobalData& globalData)
 
                     if (!foundTargetFile)
                     {
-                        KalaMakeCore::CloseOnError(
+                        KalaMakeCore::ForceClose(
 						    "LANGUAGE_RUST",
 						    "Failed to find Rust std library at path '" + originDir.string() + "'!");
                     }
@@ -783,7 +789,7 @@ void Compile_Final(const GlobalData& globalData)
 
                         if (!err.empty())
                         {
-                            KalaMakeCore::CloseOnError(
+                            KalaMakeCore::ForceClose(
                                 "LANGUAGE_RUST",
                                 "Failed to copy Rust std library to user build dir! Reason: " + err);
                         }
@@ -917,7 +923,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 if (system(command.c_str()) != 0)
                 {
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_RUST",
 						"Failed to compile '" + outputPath.string() + "'!");
                 }
@@ -957,7 +963,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_RUST",
 					"Failed to run post build action '" + a + "'!");
 			}

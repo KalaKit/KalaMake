@@ -101,74 +101,74 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.binaryType != BinaryType::B_EXECUTABLE)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Python only supports executables!");
     }
     if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'compilerlauncher' is not supported in Python!");
     }
     if (globalData.targetProfile.standard != StandardType::S_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'standard' is not supported in Python!");
     }
     if (globalData.targetProfile.targetType != TargetType::T_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'targettype' is not supported in Python!");
     }
     if (globalData.targetProfile.buildType != BuildType::B_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'buildtype' is not supported in Python!");
     }
     if (!globalData.targetProfile.headers.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'headers' is not supported in Python!");
     }
     if (!globalData.targetProfile.links.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'links' is not supported in Python!");
 	}
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'warninglevel' is not supported in Python!");
     }
     if (!globalData.targetProfile.linkFlags.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'linkflags' is not supported in Python!");
     }
 
     if (!globalData.targetProfile.defines.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'defines' is not supported in Python!");
     }
     if (!globalData.targetProfile.links.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'links' is not supported in Python!");
     }
     if (globalData.targetProfile.jobs != 0)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'jobs' is not supported in Python!");
     }
@@ -177,7 +177,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_COMPILE_COMMANDS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 		    "LANGUAGE_PYTHON",
 		    "Custom flag 'export-compile-commands' is not supported in Python!");
 	}
@@ -185,7 +185,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_WARNINGS_AS_ERRORS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'warnings-as-errors' is not supported in Python!");
 	}
@@ -193,7 +193,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_MSVC_STATIC_RUNTIME))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'msvc-static-runtime' is not supported in Python!");
 	}
@@ -201,7 +201,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_GENERATE_SYMBOLS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'generate-symbols' is not supported in Python!");
 	}
@@ -209,7 +209,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_NO_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'no-console' is not supported in Java!");
 	}
@@ -217,7 +217,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'package-jar' is not supported in Python!");
 	}
@@ -225,7 +225,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_JAVA_WIN_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'java-win-console' is not supported in Python!");
 	}
@@ -233,7 +233,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_JAVA_SLN))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Custom flag 'export-java-sln' is not supported in Python!");
 	}
@@ -249,14 +249,14 @@ void PreCheck(GlobalData& globalData)
 		{
 			if (!mainPython.empty())
 			{
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_PYTHON",
 				    "Cannot have more than one main Python script! Please ensure you only have one Main.py or main.py script, and not both.");
 			}
 
             if (is_empty(p))
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_PYTHON",
 				    "Main Python script was empty!");
             }
@@ -267,7 +267,7 @@ void PreCheck(GlobalData& globalData)
 
     if (mainPython.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
             "LANGUAGE_PYTHON",
             "Did not find main Python script! Please ensure Main.py or main.py is added to sources.");
     }
@@ -318,7 +318,7 @@ void PreCheck(GlobalData& globalData)
 
 				if (itMatch == sources.end())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_PYTHON",
 						"Cannot ignore target '" + target.string() + "' if it hasn't already been added to sources list!");
 				}
@@ -372,7 +372,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (finalSources.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"No sources were remaining after cleaning source scripts list!");
 	}
@@ -417,7 +417,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_PYTHON",
 					"Failed to run pre build action '" + a + "'!");
 			}
@@ -455,7 +455,7 @@ void Compile_Final(const GlobalData& globalData)
 
             if (system(command.c_str()) != 0)
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
                     "LANGUAGE_PYTHON",
                     "Cannot compile because pyinstaller was not found!");
             }
@@ -539,7 +539,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 if (system(command.c_str()) != 0)
                 {
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_PYTHON",
 						"Failed to compile '" + globalData.targetProfile.buildPath.string() + "'!");
                 }
@@ -580,7 +580,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_PYTHON",
 					"Failed to run post build action '" + a + "'!");
 			}

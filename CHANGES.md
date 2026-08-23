@@ -3,6 +3,7 @@
 ## 1.4.1
 
 - fixed invalid error 'Linux compiler is not allowed to add any non-MSVC target types'
+- added system-level header support to headers in c/c++
 
 ## 1.4.0
 

@@ -149,13 +149,13 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.standard == StandardType::S_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'standard' must be assigned in Java!");
     }
 	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'buildtype' must be assigned in Java!");
     }
@@ -166,44 +166,44 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.binaryType != BinaryType::B_EXECUTABLE)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Java only supports executables!");
     }
     if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'compilerlauncher' is not supported in Java!");
     }
     if (globalData.targetProfile.targetType != TargetType::T_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'targettype' is not supported in Java!");
     }
     if (!globalData.targetProfile.headers.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'headers' is not supported in Java!");
     }
     if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'warninglevel' is not supported in Java!");
     }
     if (!globalData.targetProfile.linkFlags.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'linkflags' is not supported in Java!");
     }
 
     if (globalData.targetProfile.jobs != 0)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'jobs' is not supported in Java!");
     }
@@ -212,7 +212,7 @@ void PreCheck(GlobalData& globalData)
 			globalData.targetProfile.customFlags, 
 			CustomFlag::F_EXPORT_COMPILE_COMMANDS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Custom flag 'export-compile-commands' is not supported in Java!");
 	}
@@ -220,7 +220,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_MSVC_STATIC_RUNTIME))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Custom flag 'msvc-static-runtime' is not supported in Java!");
 	}
@@ -228,7 +228,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_GENERATE_SYMBOLS))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Custom flag 'generate-symbols' is not supported in Java!");
 	}
@@ -236,7 +236,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_NO_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Custom flag 'no-console' is not supported in Java!");
 	}
@@ -244,7 +244,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Custom flag 'python-one-file' is not supported in Java!");
 	}
@@ -253,13 +253,13 @@ void PreCheck(GlobalData& globalData)
 	{
 		if (globalData.targetProfile.links.size() > 1)
 		{
-			KalaMakeCore::CloseOnError(
+			KalaMakeCore::ForceClose(
 				"LANGUAGE_JAVA",
 				"Field 'links' only allows one value in Java!");
 		}
 		if (!is_directory(globalData.targetProfile.links[0]))
 		{
-			KalaMakeCore::CloseOnError(
+			KalaMakeCore::ForceClose(
 				"LANGUAGE_JAVA",
 				"Field 'links' value must be a directory!");
 		}
@@ -276,7 +276,7 @@ void PreCheck(GlobalData& globalData)
 		}
 		if (!foundJar)
 		{
-			KalaMakeCore::CloseOnError(
+			KalaMakeCore::ForceClose(
 				"LANGUAGE_JAVA",
 				"Field 'links' directory did not contain any jar files!");
 		}
@@ -293,14 +293,14 @@ void PreCheck(GlobalData& globalData)
 		{
 			if (!mainJava.empty())
 			{
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_JAVA",
 				    "Cannot have more than one main Java script! Please ensure you only have one Main.java or main.java script, and not both.");
 			}
 
             if (is_empty(p))
             {
-                KalaMakeCore::CloseOnError(
+                KalaMakeCore::ForceClose(
 				    "LANGUAGE_JAVA",
 				    "Main Java script was empty!");
             }
@@ -312,7 +312,7 @@ void PreCheck(GlobalData& globalData)
 					ifstream file(mainJava);
 					if (!file.is_open())
 					{
-						KalaMakeCore::CloseOnError(
+						KalaMakeCore::ForceClose(
 							"LANGUAGE_JAVA",
 							"Failed to open main class for package retrieval!");
 					}
@@ -338,7 +338,7 @@ void PreCheck(GlobalData& globalData)
 
     if (mainJava.empty())
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
             "LANGUAGE_JAVA",
             "Did not find main Java script! Please ensure Main.java or main.java is added to sources.");
     }
@@ -389,7 +389,7 @@ void PreCheck(GlobalData& globalData)
 
 				if (itMatch == sources.end())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_JAVA",
 						"Cannot ignore target '" + target.string() + "' if it hasn't already been added to sources list!");
 				}
@@ -443,7 +443,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (finalSources.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"No sources were remaining after cleaning source scripts list!");
 	}
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_JAVA",
 					"Failed to run pre build action '" + a + "'!");
 			}
@@ -525,11 +525,20 @@ void Compile_Final(const GlobalData& globalData)
 			//set standard
 
 			string_view standard{};
-			EnumToString(globalData.targetProfile.standard, KalaMakeCore::GetStandardTypes(), standard);
+			string err = EnumToString(
+				globalData.targetProfile.standard,
+				KalaMakeCore::GetStandardTypes(),
+				standard);
+			if (!err.empty())
+			{
+				KalaMakeCore::ForceClose(
+					"LANGUAGE_JAVA",
+					"Failed to get standard because its string was invalid! Reason: " + err);
+			}
 
             if (!standard.starts_with("java"))
             {
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_JAVA",
 					"Unsupported standard type '" + string(standard) + "' was passed to Java compiler!");
             }
@@ -599,7 +608,7 @@ void Compile_Final(const GlobalData& globalData)
 				string errorMsg = CreateNewDirectory(classDir);
 				if (!errorMsg.empty())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_JAVA",
 						"Failed to create new class dir for compilation! Reason: " + errorMsg);
 				}
@@ -646,7 +655,7 @@ void Compile_Final(const GlobalData& globalData)
 
 				if (system(command.c_str()) != 0)
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_JAVA",
 						"Failed to compile class files!");
 				}
@@ -674,7 +683,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (mainClass.empty())
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_JAVA",
 					"Failed to find main class!");
 			}
@@ -739,7 +748,7 @@ void Compile_Final(const GlobalData& globalData)
 
 				if (system(command.c_str()) != 0)
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_JAVA",
 						"Failed to create jar file '" + jarPath.string() + "'!");
 				}
@@ -844,7 +853,7 @@ void Compile_Final(const GlobalData& globalData)
 					string errorMsg = CopyPath(f, jarDir / path(f).filename());
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::CloseOnError(
+						KalaMakeCore::ForceClose(
 							"LANGUAGE_JAVA",
 							"Failed to copy jar file to target dir! Reason: " + errorMsg);
 					}
@@ -854,7 +863,7 @@ void Compile_Final(const GlobalData& globalData)
 					string errorMsg = CopyPath(f, jarDir / path(f).filename(), true);
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::CloseOnError(
+						KalaMakeCore::ForceClose(
 							"LANGUAGE_JAVA",
 							"Failed to overwrite jar file at target dir! Reason: " + errorMsg);
 					}
@@ -921,7 +930,7 @@ void Compile_Final(const GlobalData& globalData)
 					string errorMsg = DeletePath(packageDir);
 					if (!errorMsg.empty())
 					{
-						KalaMakeCore::CloseOnError(
+						KalaMakeCore::ForceClose(
 							"LANGUAGE_JAVA",
 							"Failed to delete package dir for repacking! Reason: " + errorMsg);
 					}
@@ -929,7 +938,7 @@ void Compile_Final(const GlobalData& globalData)
 
 				if (system(command.c_str()) != 0)
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_JAVA",
 						"Failed to package jar file '" + jarName + "'!");
 				}
@@ -981,7 +990,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_JAVA",
 					"Failed to run post build action '" + a + "'!");
 			}

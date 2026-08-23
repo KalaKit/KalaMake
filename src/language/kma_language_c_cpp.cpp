@@ -176,13 +176,13 @@ void PreCheck(GlobalData& globalData)
 
     if (globalData.targetProfile.standard == StandardType::S_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Field 'standard' must be assigned in C and C++!");
     }
 	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
     {
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Field 'buildtype' must be assigned in C and C++!");
     }
@@ -203,7 +203,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PACKAGE_JAR))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Custom flag 'package-jar' is not supported in C and C++!");
 	}
@@ -211,7 +211,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_JAVA_WIN_CONSOLE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Custom flag 'java-win-console' is not supported in C and C++!");
 	}
@@ -219,7 +219,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_EXPORT_JAVA_SLN))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Custom flag 'export-java-sln' is not supported in C and C++!");
 	}
@@ -227,7 +227,7 @@ void PreCheck(GlobalData& globalData)
 		globalData.targetProfile.customFlags, 
 		CustomFlag::F_PYTHON_ONE_FILE))
 	{
-        KalaMakeCore::CloseOnError(
+        KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Custom flag 'python-one-file' is not supported in C and C++!");
 	}
@@ -237,13 +237,13 @@ void PreCheck(GlobalData& globalData)
 	//
 
 	string_view compilerStr{};
-	EnumToString(
+	string _ = EnumToString(
 		globalData.targetProfile.compiler,
 		KalaMakeCore::GetCompilerTypes(),
 		compilerStr);
 
 	string_view targetTypeStr{};
-	EnumToString(
+	_ = EnumToString(
 		globalData.targetProfile.targetType,
 		KalaMakeCore::GetTargetTypes(),
 		targetTypeStr);
@@ -271,7 +271,7 @@ void PreCheck(GlobalData& globalData)
 		&& (!has_env("INCLUDE")
 		|| !has_env("LIB")))
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Compiler '" + string(compilerStr) + "' requires to use vcvars64.bat or vcvarsall.bat before it can be used with KalaMake!");
 	}
@@ -280,7 +280,7 @@ void PreCheck(GlobalData& globalData)
 	if (globalData.targetProfile.compiler == CompilerType::C_CL
 		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"MSVC compiler '" + string(compilerStr) + "' is not allowed on Linux!");
 	}
@@ -381,7 +381,7 @@ void PreCheck(GlobalData& globalData)
 
 				if (itMatch == sources.end())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_C_CPP",
 						"Cannot ignore target '" + target.string() + "' if it hasn't already been added to sources list!");
 				}
@@ -435,7 +435,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (finalSources.empty())
 	{
-		KalaMakeCore::CloseOnError(
+		KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"No sources were remaining after cleaning source scripts list!");
 	}
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_C_CPP",
 					"Failed to run pre build action '" + a + "'!");
 			}
@@ -517,7 +517,7 @@ void Compile_Final(const GlobalData& globalData)
 			if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
 			{
 				string_view compilerLauncher{};
-				EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
+				string _ = EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
 
 				command += string(compilerLauncher) + " ";
 			}
@@ -527,7 +527,7 @@ void Compile_Final(const GlobalData& globalData)
 			string_view compiler{};
 			string targetTriple{};
 
-			EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
+			string _ = EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
 
 			if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 			{
@@ -587,11 +587,11 @@ void Compile_Final(const GlobalData& globalData)
 			//set standard
 
 			string_view standard{};
-			EnumToString(globalData.targetProfile.standard, KalaMakeCore::GetStandardTypes(), standard);
+			_ = EnumToString(globalData.targetProfile.standard, KalaMakeCore::GetStandardTypes(), standard);
 
             if (!standard.starts_with("c"))
             {
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_C_CPP",
 					"Unsupported standard type '" + string(standard) + "' was passed to C/C++ compiler!");
             }
@@ -840,7 +840,7 @@ void Compile_Final(const GlobalData& globalData)
 				string errorMsg = CreateNewDirectory(buildPath);
 				if (!errorMsg.empty())
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_C_CPP",
 						"Failed to create new obj dir for compilation! Reason: " + errorMsg);
 				}
@@ -928,10 +928,13 @@ void Compile_Final(const GlobalData& globalData)
 							perFileCommand += " \"" + s.string() + "\"";
 							perFileCommand += " " + objFront + " \"" + objPath.string() + "\"";
 
+							string rfs{};
+							string _ = RemoveFromString(perFileCommand, "\"", rfs, true);
+
 							commands.push_back(
 							{
 								.dir = globalData.projectFile.parent_path(),
-								.command = RemoveFromString(perFileCommand, "\"", true),
+								.command = rfs,
 								.file = s,
 								.output = objPath.string()
 							});
@@ -970,7 +973,7 @@ void Compile_Final(const GlobalData& globalData)
 							
 						if (system(perFileCommand.c_str()) != 0)
 						{
-							KalaMakeCore::CloseOnError(
+							KalaMakeCore::ForceClose(
 								"LANGUAGE_C_CPP",
 								"Failed to compile object file '" + objPath.string() + "'!");
 						}
@@ -1042,7 +1045,7 @@ void Compile_Final(const GlobalData& globalData)
 				&& globalData.targetProfile.binaryType != BinaryType::B_STATIC)
 			{
 				string_view compilerLauncher{};
-				EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
+				string _ = EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
 
 				command += string(compilerLauncher) + " ";
 			}
@@ -1056,7 +1059,7 @@ void Compile_Final(const GlobalData& globalData)
 				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED)
 			{
 				string_view nonStaticCompiler{};
-				EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), nonStaticCompiler);
+				string _ = EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), nonStaticCompiler);
 
 				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
 				{
@@ -1360,7 +1363,7 @@ void Compile_Final(const GlobalData& globalData)
 
 				if (system(command.c_str()) != 0)
 				{
-					KalaMakeCore::CloseOnError(
+					KalaMakeCore::ForceClose(
 						"LANGUAGE_C_CPP",
 						"Failed to link '" + outputPath.string() + "'!");
 				}
@@ -1377,7 +1380,7 @@ void Compile_Final(const GlobalData& globalData)
 							string err = RenamePath(file, globalData.targetProfile.binaryName + ".lib");
 							if (!err.empty())
 							{
-								KalaMakeCore::CloseOnError(
+								KalaMakeCore::ForceClose(
 									"LANGUAGE_C_CPP",
 									"Failed to rename Zig-created lib! Reason: " + err);
 							}
@@ -1425,7 +1428,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (system(a.c_str()) != 0)
 			{
-				KalaMakeCore::CloseOnError(
+				KalaMakeCore::ForceClose(
 					"LANGUAGE_C_CPP",
 					"Failed to run post build action '" + a + "'!");
 			}
