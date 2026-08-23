@@ -13,7 +13,7 @@
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
-using KalaCLI::Core;
+using KalaCLI::KalaCLICore;
 using KalaCLI::CommandManager;
 
 using KalaMake::Core::KalaMakeCore;
@@ -160,7 +160,7 @@ static void AddExternalCommands()
 			KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
 		};
 
-	CommandManager::AddCommand(
+	bool _ = CommandManager::AddCommand(
 		{
 			.primaryParam = "compile",
 			.description =
@@ -170,21 +170,21 @@ static void AddExternalCommands()
 			.targetFunction = command_compile
 		});
 
-	CommandManager::AddCommand(
+	_ = CommandManager::AddCommand(
 		{
 			.primaryParam = "clean",
 			.description = "Deletes all build directories from your target kalamake file path.",
 			.targetFunction = command_clean
 		});
 
-	CommandManager::AddCommand(
+	_ = CommandManager::AddCommand(
 		{
 			.primaryParam = "version",
 			.description = "Prints current KalaMake version.",
 			.targetFunction = command_version
 		});
 
-	CommandManager::AddCommand(
+	_ = CommandManager::AddCommand(
 		{
 			.primaryParam = "list-profiles",
 			.description =
@@ -193,7 +193,7 @@ static void AddExternalCommands()
 			.targetFunction = command_list_profiles
 		});
 
-	CommandManager::AddCommand(
+	_ = CommandManager::AddCommand(
 		{
 			.primaryParam = "validate",
 			.description =
@@ -206,7 +206,7 @@ static void AddExternalCommands()
 
 int main(int argc, char* argv[])
 {
-	Core::Run(argc, argv, AddExternalCommands);
+	KalaCLICore::Run(argc, argv, AddExternalCommands);
 
 	return 0;
 }

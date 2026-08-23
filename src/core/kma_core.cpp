@@ -53,6 +53,8 @@ using KalaHeaders::KalaString::ContainsSpace;
 using KalaHeaders::KalaString::ContainsUnsafeFileChar;
 using KalaHeaders::KalaString::ContainsAlpha;
 
+using KalaCLI::KalaCLICore;
+
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::ReferenceData;
 using KalaMake::Core::GlobalData;
@@ -542,7 +544,7 @@ namespace KalaMake::Core
 		if (type == StartType::S_COMPILE 
 			|| type == StartType::S_VALIDATE) targetProfile = params[2];
 
-		string& currentDir = KalaCLI::Core::GetCurrentDir();
+		string& currentDir = KalaCLICore::GetCurrentDir();
 		if (currentDir.empty()) currentDir = current_path().string();
 
 		auto first_parse = [](
@@ -1039,7 +1041,7 @@ namespace KalaMake::Core
 
 		try
 		{
-			correctTarget = weakly_canonical(path(KalaCLI::Core::GetCurrentDir()) / projectFile);
+			correctTarget = weakly_canonical(path(KalaCLICore::GetCurrentDir()) / projectFile);
 		}
 		catch (const filesystem_error&)
 		{
