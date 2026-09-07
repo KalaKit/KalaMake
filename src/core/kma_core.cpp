@@ -294,7 +294,7 @@ static bool GetEnumFromMap(
 	{
 		KalaMakeCore::ForceClose(
 			"KALAMAKE",
-			string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'!");
+			string(valueName) + " did not contain enum that matched requested value '" + string(value) + "'! Reason: " + err);
 
 		return false;
 	}
@@ -1158,7 +1158,7 @@ void ExtractFieldData(
 	{
 		KalaMakeCore::ForceClose(
 			"KALAMAKE",
-			"Field '" + name  + "' is invalid!");
+			"Field '" + name  + "' is invalid! Reason: " + err);
 	}
 	else if (isReference
 			 && err.empty()
@@ -1655,7 +1655,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Binary type '" + trimmedValue + "' is invalid!");
+					"Binary type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_compiler_launcher)
@@ -1670,7 +1670,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Compiler launcher type '" + trimmedValue + "' is invalid!");
+					"Compiler launcher type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_compiler)
@@ -1684,7 +1684,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Compiler type '" + trimmedValue + "' is invalid!");
+					"Compiler type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_standard)
@@ -1698,7 +1698,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Standard type '" + trimmedValue + "' is invalid!");
+					"Standard type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_target_type)
@@ -1712,7 +1712,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Target type '" + trimmedValue + "' is invalid!");
+					"Target type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_build_type)
@@ -1726,7 +1726,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Build type '" + trimmedValue + "' is invalid!");
+					"Build type '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 		if (name == field_warning_level)
@@ -1740,7 +1740,7 @@ void ExtractFieldData(
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Warning level '" + trimmedValue + "' is invalid!");
+					"Warning level '" + trimmedValue + "' is invalid! Reason: " + err);
 			}
 		}
 
@@ -1771,7 +1771,7 @@ void ExtractFieldData(
 				{
 					KalaMakeCore::ForceClose(
 						"KALAMAKE",
-						"Custom flag '" + trimmedValue + "' is invalid!");
+						"Custom flag '" + trimmedValue + "' is invalid! Reason: " + err);
 				}
 			}
 		}
@@ -1899,7 +1899,7 @@ void FirstParse(const vector<string>& lines)
 			{
 				KalaMakeCore::ForceClose(
 					"KALAMAKE",
-					"Category type '" + name + "' is invalid!");
+					"Category type '" + name + "' is invalid! Reason: " + err);
 			}
 		};
 
@@ -1998,7 +1998,7 @@ void FirstParse(const vector<string>& lines)
 				{
 					KalaMakeCore::ForceClose(
 						"KALAMAKE",
-						"Version '" + value  + "' is invalid!");
+						"Version '" + value  + "' is invalid! Reason: " + err);
 				}
 
 				Log::Print(
@@ -2160,7 +2160,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Binary type '" + values.front()  + "' is invalid!");
+							"Binary type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.binaryType = result;
@@ -2175,7 +2175,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Compiler launcher '" + values.front()  + "' is invalid!");
+							"Compiler launcher '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					
@@ -2191,7 +2191,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Compiler type '" + values.front()  + "' is invalid!");
+							"Compiler type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.compiler = result;
@@ -2206,7 +2206,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Standard type type '" + values.front()  + "' is invalid!");
+							"Standard type type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.standard = result;
@@ -2221,7 +2221,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Target type '" + values.front()  + "' is invalid!");
+							"Target type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.targetType = result;
@@ -2246,7 +2246,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Build type '" + values.front()  + "' is invalid!");
+							"Build type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.buildType = result;
@@ -2263,7 +2263,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field sources!");
+							"Failed to get field sources! Reason: " + err);
 					}
 
 					globalData.targetProfile.sources = std::move(pathResult);
@@ -2276,7 +2276,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field headers!");
+							"Failed to get field headers! Reason: " + err);
 					}
 
 					globalData.targetProfile.headers = std::move(pathResult);
@@ -2289,7 +2289,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field links!");
+							"Failed to get field links! Reason: " + err);
 					}
 
 					globalData.targetProfile.links = std::move(pathResult);
@@ -2304,7 +2304,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Warning level '" + values.front()  + "' is invalid!");
+							"Warning level '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.warningLevel = result;
@@ -2334,7 +2334,7 @@ void FirstParse(const vector<string>& lines)
 						{
 							KalaMakeCore::ForceClose(
 								"KALAMAKE",
-								"Custom flag '" + values.front()  + "' is invalid!");
+								"Custom flag '" + values.front()  + "' is invalid! Reason: " + err);
 						}
 
 						customFlags.push_back(result);
@@ -2433,7 +2433,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Binary type '" + values.front()  + "' is invalid!");
+							"Binary type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.binaryType = result;
@@ -2448,7 +2448,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Compiler type '" + values.front()  + "' is invalid!");
+							"Compiler type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.compiler = result;
@@ -2463,7 +2463,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Compiler launcher '" + values.front()  + "' is invalid!");
+							"Compiler launcher '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.compilerLauncher = result;
@@ -2478,7 +2478,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Standard type '" + values.front()  + "' is invalid!");
+							"Standard type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.standard = result;
@@ -2493,7 +2493,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Target type '" + values.front()  + "' is invalid!");
+							"Target type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.targetType = result;
@@ -2518,7 +2518,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Build type '" + values.front()  + "' is invalid!");
+							"Build type '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.buildType = result;
@@ -2535,7 +2535,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field sources!");
+							"Failed to get field sources! Reason: " + err);
 					}
 
 					globalData.targetProfile.sources.reserve(
@@ -2557,7 +2557,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field headers!");
+							"Failed to get field headers! Reason: " + err);
 					}
 
 					globalData.targetProfile.headers.reserve(
@@ -2579,7 +2579,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Failed to get field links!");
+							"Failed to get field links! Reason: " + err);
 					}
 
 					globalData.targetProfile.links.reserve(
@@ -2603,7 +2603,7 @@ void FirstParse(const vector<string>& lines)
 					{
 						KalaMakeCore::ForceClose(
 							"KALAMAKE",
-							"Warning level '" + values.front()  + "' is invalid!");
+							"Warning level '" + values.front()  + "' is invalid! Reason: " + err);
 					}
 
 					globalData.targetProfile.warningLevel = result;
@@ -2666,7 +2666,7 @@ void FirstParse(const vector<string>& lines)
 						{
 							KalaMakeCore::ForceClose(
 								"KALAMAKE",
-								"Custom flag '" + values.front()  + "' is invalid!");
+								"Custom flag '" + values.front()  + "' is invalid! Reason: " + err);
 						}
 
 						customFlags.push_back(result);
