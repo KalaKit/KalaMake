@@ -89,6 +89,4 @@ Currently only Windows (x86_64) and Linux (x86_64) are supported. There are no p
 
 [How to use](docs/how_to_use.md)
 
-[External libraries](docs/external_libraries.md)
-
 [Lost Empire Entertainment and KalaKit ecosystem](docs/ecosystem.md)
