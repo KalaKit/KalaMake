@@ -1135,6 +1135,14 @@ void Compile_Final(const GlobalData& globalData)
 				}
 			}
 
+			if (!isWindows
+				&& globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU
+				&& (globalData.targetProfile.compiler == CompilerType::C_CLANG
+				|| globalData.targetProfile.compiler == CompilerType::C_CLANGPP))
+			{
+				command += " -fuse-ld=lld";
+			}
+
 			//-target only for clang/clang++/zig
 			if (!targetTriple.empty()) command += " -target " + targetTriple;
 
@@ -1166,7 +1174,11 @@ void Compile_Final(const GlobalData& globalData)
 			string extension{};
 			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE)
 			{
-				if (!isWindows) command += " -Wl,-rpath,\\$ORIGIN";
+				if (!isWindows
+					&& globalData.targetProfile.targetType != TargetType::T_WINDOWS_GNU)
+				{
+					command += " -Wl,-rpath,\\$ORIGIN";
+				}
 
 				if ((!isWindows
 					&& globalData.targetProfile.targetType == TargetType::T_INVALID)

@@ -4,6 +4,8 @@
 
 - fixed invalid error 'Linux compiler is not allowed to add any non-MSVC target types'
 - added system-level header support to headers in c/c++
+- add linker flag '-fuse-ld=lld' if using clang/clang++ compiler and targeting windows-gnu on linux
+- no longer adding linker flag '-Wl,-rpath,\\$ORIGIN' if on linux but targeting windows-gnu
 - simplified build and dependency system
 
 ## 1.4.0
