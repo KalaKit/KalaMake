@@ -7,8 +7,6 @@ name_bin: kalamake
 dir_release: build/temp/release-
 dir_debug: build/temp/debug-
 name_kc: kalacli
-dir_kc_rel: external/kalacli/release-
-dir_kc_deb: external/kalacli/debug-
 comm_objcopy: objcopy --remove-section .note.gnu.property
 links_win_only: msvcrt, msvcprt, ucrt, vcruntime, shell32, user32
 links_win_on_linux_only: winpthread
@@ -24,7 +22,7 @@ standard: c++20
 binarytype: executable
 binaryname: ${name_bin}
 sources: "src"
-headers: "include", "external/kalaheaders/include"
+headers: "include", "external/kalaheaders/include", "external/kalacli/include"
 defines: LIB_STATIC
 warninglevel: normal
 customflags: export-compile-commands, export-vscode-sln
@@ -32,21 +30,18 @@ customflags: export-compile-commands, export-vscode-sln
 #profile debug-windows
 buildtype: debug
 buildpath: "${dir_debug}windows"
-headers: "${dir_kc_deb}windows/include"
-links: "${dir_kc_deb}windows/${name_kc}d.lib", ${links_win_only}
+links: "external/kalacli/${name_kc}d.lib", ${links_win_only}
 
 #profile release-windows
 buildtype: minsizerel
 buildpath: "${dir_release}windows"
-headers: "${dir_kc_rel}windows-gnu/include"
-links: "${dir_kc_rel}windows/${name_kc}.lib", ${links_win_only}
+links: "external/kalacli/${name_kc}.lib", ${links_win_only}
 
 #profile debug-windows-gnu
 targettype: windows-gnu
 buildtype: debug
 buildpath: "${dir_debug}windows-gnu"
-headers: "${dir_kc_deb}windows-gnu/include"
-links: "${dir_kc_deb}windows-gnu/${name_kc}-gnud.lib", ${links_win_on_linux_only}
+links: "external/kalacli/${name_kc}-gnud.lib", ${links_win_on_linux_only}
 postbuildaction: cp "${lib_libgcc}" "${dir_debug}windows-gnu"
 postbuildaction: cp "${lib_libstdcpp}" "${dir_debug}windows-gnu"
 postbuildaction: cp "${lib_libwinp}" "${dir_debug}windows-gnu"
@@ -55,8 +50,7 @@ postbuildaction: cp "${lib_libwinp}" "${dir_debug}windows-gnu"
 targettype: windows-gnu
 buildtype: minsizerel
 buildpath: "${dir_release}windows-gnu"
-headers: "${dir_kc_rel}windows-gnu/include"
-links: "${dir_kc_rel}windows-gnu/${name_kc}-gnu.lib", ${links_win_on_linux_only}
+links: "external/kalacli/${name_kc}-gnu.lib", ${links_win_on_linux_only}
 postbuildaction: cp "${lib_libgcc}" "${dir_release}windows-gnu"
 postbuildaction: cp "${lib_libstdcpp}" "${dir_release}windows-gnu"
 postbuildaction: cp "${lib_libwinp}" "${dir_release}windows-gnu"
@@ -64,16 +58,14 @@ postbuildaction: cp "${lib_libwinp}" "${dir_release}windows-gnu"
 #profile debug-linux
 buildtype: debug
 buildpath: "${dir_debug}linux"
-headers: "${dir_kc_deb}linux/include"
-links: "${dir_kc_deb}linux/lib${name_kc}d.a"
+links: "external/kalacli/lib${name_kc}d.a"
 //strips stupid avx requirements that cachyos seems to add for no reason
 postbuildaction: ${comm_objcopy} ${dir_debug}linux/${name_bin}
 
 #profile release-linux
 buildtype: minsizerel
 buildpath: "${dir_release}linux"
-headers: "${dir_kc_rel}linux/include"
-links: "${dir_kc_rel}linux/lib${name_kc}.a"
+links: "external/kalacli/lib${name_kc}.a"
 //strips stupid avx requirements that cachyos seems to add for no reason
 postbuildaction: ${comm_objcopy} ${dir_release}linux/${name_bin}
 postbuildaction: strip --strip-unneeded ${dir_release}linux/${name_bin}

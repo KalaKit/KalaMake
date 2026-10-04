@@ -1,0 +1,52 @@
+[project]
+name="kalamake"
+version="1-4-1"
+kmake="project.kmake"
+
+[references]
+dir_kh="../kalaheaders"
+dir_kc="../kalacli/build/1-1-0"
+ext_kh="external/kalaheaders"
+ext_kc="external/kalacli"
+
+[windows-sync]
+kh_license=[ "${dir_kh}/LICENSE.md", "${ext_kh}/LICENSE.md", "copy" ]
+kh_readme=[ "${dir_kh}/README.md", "${ext_kh}/README.md", "copy" ]
+kh_include=[ "${dir_kh}/include", "${ext_kh}/include", "copy" ]
+kc_stuff=[ "${dir_kc}", "${ext_kc}", "copy" ]
+kc_junk=[ "${ext_kc}/kalaheaders", "", "delete" ]
+
+[windows-post-build-sync]
+km_bin_rel=[ "build/temp/release-window/kalamake.exe", "build/${version}/kalamake-window.exe", "copy" ]
+km_bin_deb=[ "build/temp/debug-window/kalamake.exe", "build/${version}/kalamake-windowsd.exe", "copy" ]
+km_license=[ "LICENSE.md", "build/${version}/LICENSE.md", "copy" ]
+km_readme=[ "README.md", "build/${version}/README.md", "copy" ]
+km_changes=[ "CHANGES.md", "build/${version}/CHANGES.md", "copy" ]
+
+[windows-gnu-sync]
+kh_license=[ "${dir_kh}/LICENSE.md", "${ext_kh}/LICENSE.md", "copy" ]
+kh_readme=[ "${dir_kh}/README.md", "${ext_kh}/README.md", "copy" ]
+kh_include=[ "${dir_kh}/include", "${ext_kh}/include", "copy" ]
+kc_stuff=[ "${dir_kc}", "${ext_kc}", "copy" ]
+kc_junk=[ "${ext_kc}/kalaheaders", "", "delete" ]
+
+[windows-gnu-post-build-sync]
+km_bin_rel=[ "build/temp/release-windows-gnu/kalamake.exe", "build/${version}/kalamake-windows-gnu.exe", "copy" ]
+km_bin_deb=[ "build/temp/debug-windows-gnu/kalamake.exe", "build/${version}/kalamake-windows-gnud.exe", "copy" ]
+km_license=[ "LICENSE.md", "build/${version}/LICENSE.md", "copy" ]
+km_readme=[ "README.md", "build/${version}/README.md", "copy" ]
+km_changes=[ "CHANGES.md", "build/${version}/CHANGES.md", "copy" ]
+
+[linux-sync]
+kh_license=[ "${dir_kh}/LICENSE.md", "${ext_kh}/LICENSE.md", "copy" ]
+kh_readme=[ "${dir_kh}/README.md", "${ext_kh}/README.md", "copy" ]
+kh_include=[ "${dir_kh}/include", "${ext_kh}/include", "copy" ]
+kc_stuff=[ "${dir_kc}", "${ext_kc}", "copy" ]
+kc_junk=[ "${ext_kc}/kalaheaders", "", "delete" ]
+
+[linux-post-build-sync]
+km_bin_rel=[ "build/temp/release-linux/kalamake", "build/${version}/kalamake-linux", "copy" ]
+km_bin_deb=[ "build/temp/debug-linux/kalamake", "build/${version}/kalamake-linuxd", "copy" ]
+km_license=[ "LICENSE.md", "build/${version}/LICENSE.md", "copy" ]
+km_readme=[ "README.md", "build/${version}/README.md", "copy" ]
+km_changes=[ "CHANGES.md", "build/${version}/CHANGES.md", "copy" ]

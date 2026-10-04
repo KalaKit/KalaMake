@@ -72,6 +72,4 @@ ar rcs libkalacli.a obj/*.o
 
 [How to build from source](docs/build_from_source.md)
 
-[External libraries](docs/external_libraries.md)
-
 [Lost Empire Entertainment and KalaKit ecosystem](docs/ecosystem.md)
