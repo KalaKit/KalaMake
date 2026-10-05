@@ -1138,7 +1138,9 @@ void Compile_Final(const GlobalData& globalData)
 			if (!isWindows
 				&& globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU
 				&& (globalData.targetProfile.compiler == CompilerType::C_CLANG
-				|| globalData.targetProfile.compiler == CompilerType::C_CLANGPP))
+				|| globalData.targetProfile.compiler == CompilerType::C_CLANGPP)
+				&& (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
+				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED))
 			{
 				command += " -fuse-ld=lld";
 			}
