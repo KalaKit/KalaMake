@@ -26,10 +26,10 @@ mkdir build\release-windows\obj
 cd build\release-windows
 
 //compile cpp files
-for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\..\external-shared\KalaHeaders\include" -I"..\..\..\external-shared\KalaCLI\include" -o "obj\%~nf.obj"
+for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\external\kalaheaders\include" -I"..\..\external\kalacli\include" -o "obj\%~nf.obj"
 
 //link into executable
-clang++ -o kalamake.exe "obj\*.obj" "..\..\..\external-shared\KalaCLI\release\kalacli.lib"
+clang++ -o kalamake.exe "obj\*.obj" "..\..\external\kalacli\release\kalacli.lib"
 ```
 And on Linux:
 ```
@@ -47,11 +47,11 @@ cd build\release-linux
 
 //compile cpp files
 for f in ../../src/**/*.cpp
-    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I../../../external-shared/KalaHeaders/include -I"../../../external-shared/KalaCLI/include" -o obj/(basename $f .cpp).o
+    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I../../external/kalaheaders/include -I"../../external/kalacli/include" -o obj/(basename $f .cpp).o
 end
 
 //link into executable
-clang++ -o kalamake obj/*.o ../../../external-shared/KalaCLI/release/libkalacli.a
+clang++ -o kalamake obj/*.o ../../externa/kalacli/release/libkalacli.a
 ```
 
 ## Supported languages
