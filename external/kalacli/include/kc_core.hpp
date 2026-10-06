@@ -21,11 +21,6 @@ namespace KalaCLI
 		KNODISCARD
 		static string& GetCurrentDir();
 
-		static void Run(
-			int argc,
-			char* argv[],
-			function<void()> AddExternalCommands);
-
 		//Use this when you absolutely need a hard crash at this very moment.
 		//Aborts and doesn't clean up data.
 		KNORETURN

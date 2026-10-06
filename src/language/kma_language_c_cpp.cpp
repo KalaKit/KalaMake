@@ -124,7 +124,7 @@ static void GenerateSteps(const GlobalData& globalData)
 
 		Generate::GenerateCompileCommands(commands);
 
-		if (canGenerateVSCodeSln) Log::Print(" ");
+		if (canGenerateVSCodeSln) Log::Print(" ", true);
 	}
 	if (canGenerateVSCodeSln)
 	{
@@ -153,7 +153,7 @@ static void GenerateSteps(const GlobalData& globalData)
 	if (canGenerateCompComm
 		|| canGenerateVSCodeSln)
 	{
-		Log::Print("===========================================================================\n");
+		Log::Print("===========================================================================\n", true);
 	}
 }
 
@@ -392,7 +392,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -402,7 +404,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -414,7 +418,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -424,7 +430,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -457,7 +465,7 @@ void PreCheck(GlobalData& globalData)
 
 		globalData.targetProfile.sources = std::move(finalSources);
 
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 	}
 }
 
@@ -480,7 +488,9 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
 		for (const auto& a : globalData.targetProfile.preBuildActions)
 		{
@@ -494,14 +504,16 @@ void Compile_Final(const GlobalData& globalData)
 			}
 		}
 
-		Log::Print(" ");
+		Log::Print(" ", true);
 
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
 
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 	}
 
 	//
@@ -969,7 +981,9 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Starting to compile via '" + perFileCommand + "'.",
 							"LANGUAGE_C_CPP",
-							LogType::LOG_INFO);
+							LogType::LOG_INFO,
+							0,
+							true);
 							
 						if (system(perFileCommand.c_str()) != 0)
 						{
@@ -983,7 +997,9 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Skipping compilation of object file '" + objPath.string() + "' because it is newer than its source and header files.\n",
 							"LANGUAGE_C_CPP",
-							LogType::LOG_INFO);
+							LogType::LOG_INFO,
+							0,
+							true);
 					}
 
 					m_compiledObj.lock();
@@ -1364,16 +1380,18 @@ void Compile_Final(const GlobalData& globalData)
 					return false;
 				};
 
-			Log::Print("===========================================================================\n");
+			Log::Print("===========================================================================\n", true);
 
 			if (needs_link(outputPath, objFiles))
 			{
 				Log::Print(
 					"Starting to link via '" + command + "'.",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
-				Log::Print(" ");
+				Log::Print(" ", true);
 
 				if (system(command.c_str()) != 0)
 				{
@@ -1405,14 +1423,18 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished linking to output '" + outputPath.string() + "'!",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_SUCCESS,
+					0,
+					true);
 			}
 			else
 			{
 				Log::Print(
 					"Skipping linking of output '" + outputPath.string() + "' because there are no new object files.",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 			}
 			};
 
@@ -1429,16 +1451,18 @@ void Compile_Final(const GlobalData& globalData)
 
 	if (!globalData.targetProfile.postBuildActions.empty())
 	{
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
 		for (const auto& a : globalData.targetProfile.postBuildActions)
 		{
-			Log::Print("\naction: " + a);
+			Log::Print("\naction: " + a, true);
 
 			if (system(a.c_str()) != 0)
 			{
@@ -1448,11 +1472,13 @@ void Compile_Final(const GlobalData& globalData)
 			}
 		}
 
-		Log::Print(" ");
+		Log::Print(" ", true);
 
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
 	}
 }

@@ -97,7 +97,7 @@ static void GenerateSteps(const GlobalData& globalData)
 
 		Generate::GenerateJavaClassPath(jcp);
 
-		if (canGenerateVSCodeSln) Log::Print(" ");
+		if (canGenerateVSCodeSln) Log::Print(" ", true);
 	}
 
 	if (canGenerateVSCodeSln)
@@ -128,7 +128,7 @@ static void GenerateSteps(const GlobalData& globalData)
 	if (canGenerateExportSln
 		|| canGenerateVSCodeSln)
 	{
-		Log::Print("===========================================================================\n");
+		Log::Print("===========================================================================\n", true);
 	}
 }
 
@@ -400,7 +400,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -410,7 +412,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -422,7 +426,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -432,7 +438,9 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO);
+				LogType::LOG_INFO,
+				0,
+				true);
 
 			foundInvalid = true;
 			continue;
@@ -465,7 +473,7 @@ void PreCheck(GlobalData& globalData)
 
 		globalData.targetProfile.sources = std::move(finalSources);
 
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 	}
 }
 
@@ -480,7 +488,9 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_JAVA",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
 		for (const auto& a : globalData.targetProfile.preBuildActions)
 		{
@@ -494,14 +504,16 @@ void Compile_Final(const GlobalData& globalData)
 			}
 		}
 
-		Log::Print(" ");
+		Log::Print(" ", true);
 
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_JAVA",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
 
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 	}
 
 	//
@@ -651,7 +663,9 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
 				if (system(command.c_str()) != 0)
 				{
@@ -665,7 +679,9 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compilation of class files because they are newer than their source files.\n",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 			}
 
 			vector<path> compiledClasses{};
@@ -737,14 +753,16 @@ void Compile_Final(const GlobalData& globalData)
 					return false;
 				};
 
-			Log::Print("===========================================================================\n");
+			Log::Print("===========================================================================\n", true);
 
 			if (needs_jar(jarPath, compiledClasses))
 			{
 				Log::Print(
 					"Starting to create jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
 				if (system(command.c_str()) != 0)
 				{
@@ -756,14 +774,18 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished creating jar file '" + jarPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_SUCCESS,
+					0,
+					true);
 			}
 			else
 			{
 				Log::Print(
 					"Skipping creating jar file '" + jarPath.string() + "' because there are no new class files.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 			}
 
 			return jarPath;
@@ -915,14 +937,16 @@ void Compile_Final(const GlobalData& globalData)
 					return false;
 				};
 
-			Log::Print("===========================================================================\n");
+			Log::Print("===========================================================================\n", true);
 
 			if (needs_package(jarPath, buildPath))
 			{
 				Log::Print(
 					"Starting to package jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
 				path packageDir = globalData.targetProfile.buildPath / globalData.targetProfile.binaryName;
 				if (exists(packageDir))
@@ -946,14 +970,18 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished packing jar file to path '" + buildPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_SUCCESS,
+					0,
+					true);
 			}
 			else
 			{
 				Log::Print(
 					"Skipping packing jar file to path '" + buildPath.string() + "' because it is newer than its jar file.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 			}
 		};
 
@@ -977,16 +1005,18 @@ void Compile_Final(const GlobalData& globalData)
 
 	if (!globalData.targetProfile.postBuildActions.empty())
 	{
-		Log::Print("\n===========================================================================\n");
+		Log::Print("\n===========================================================================\n", true);
 
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_JAVA",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
 		for (const auto& a : globalData.targetProfile.postBuildActions)
 		{
-			Log::Print("\naction: " + a);
+			Log::Print("\naction: " + a, true);
 
 			if (system(a.c_str()) != 0)
 			{
@@ -996,11 +1026,13 @@ void Compile_Final(const GlobalData& globalData)
 			}
 		}
 
-		Log::Print(" ");
+		Log::Print(" ", true);
 
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_JAVA",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
 	}
 }

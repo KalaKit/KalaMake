@@ -45,7 +45,9 @@ namespace KalaMake::Core
 		Log::Print(
 			"Starting to create compile commands file at '" + compComm.string() + "'.",
 			"GENERATE",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
 		if (exists(compComm))
 		{
@@ -141,7 +143,9 @@ namespace KalaMake::Core
 		Log::Print(
 			"Finished generating compile_commands.json!",
 			"GENERATE",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
     }
 
     void Generate::GenerateJavaClassPath(const JavaClassPath& javaData)
@@ -153,7 +157,9 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create classpath file at '" + classPath.string() + "'.",
                     "GENERATE",
-                    LogType::LOG_INFO);
+                    LogType::LOG_INFO,
+                    0,
+                    true);
 
                 if (exists(classPath))
                 {
@@ -217,9 +223,11 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .classpath!",
                     "GENERATE",
-                    LogType::LOG_SUCCESS);
+                    LogType::LOG_SUCCESS,
+                    0,
+                    true);
 
-                Log::Print(" ");
+                Log::Print(" ", true);
             };
 
         auto create_project = [&javaData]() -> void
@@ -229,7 +237,9 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create project file at '" + projectPath.string() + "'.",
                     "GENERATE",
-                    LogType::LOG_INFO);
+                    LogType::LOG_INFO,
+                    0,
+                    true);
 
                 if (exists(projectPath))
                 {
@@ -278,7 +288,9 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .project!",
                     "GENERATE",
-                    LogType::LOG_SUCCESS);
+                    LogType::LOG_SUCCESS,
+                    0,
+                    true);
             };
 
         create_class_path();
@@ -360,7 +372,9 @@ namespace KalaMake::Core
             Log::Print(
                 "Starting to generate launch.json.",
                 "GENERATE",
-                LogType::LOG_INFO);
+                LogType::LOG_INFO,
+                0,
+                true);
 
             path launchJson = vscodeDir / "launch.json";
 
@@ -562,7 +576,7 @@ namespace KalaMake::Core
             /*
             for (const auto& l : launchLines)
             {
-                Log::Print(l);
+                Log::Print(l, true);
             }
             */
         }
@@ -571,19 +585,23 @@ namespace KalaMake::Core
             Log::Print(
                 "Skipping launch.json generation because target is not an executable.",
                 "GENERATE",
-                LogType::LOG_INFO);
+                LogType::LOG_INFO,
+                0,
+                true);
         }
 
         //
         // TASKS
         //
 
-        Log::Print(" ");
+        Log::Print(" ", true);
 
         Log::Print(
 			"Starting to generate tasks.json.",
 			"GENERATE",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 
         path tasksJson = vscodeDir / "tasks.json";
 
@@ -753,15 +771,17 @@ namespace KalaMake::Core
         /*
         for (const auto& l : tasksLines)
         {
-            Log::Print(l);
+            Log::Print(l, true);
         }
         */
 
         Log::Print(
 			"Finished generating vscode solution files!",
 			"GENERATE",
-			LogType::LOG_SUCCESS);
+			LogType::LOG_SUCCESS,
+			0,
+			true);
 
-        Log::Print(" ");
+        Log::Print(" ", true);
     }
 }

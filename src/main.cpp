@@ -5,16 +5,14 @@
 
 #include "log_utils.hpp"
 
-#include "kc_core.hpp"
-#include "kc_command.hpp"
+#include "kc_cli.hpp"
 
 #include "core/kma_core.hpp"
 
 using KalaHeaders::KalaLog::Log;
 using KalaHeaders::KalaLog::LogType;
 
-using KalaCLI::KalaCLICore;
-using KalaCLI::CommandManager;
+using KalaCLI::CLI;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::StartType;
@@ -97,7 +95,7 @@ static void AddExternalCommands()
 				return;
 			}
 
-			Log::Print("KalaMake 1.4.1");
+			Log::Print("KalaMake 1.4.1", true);
 		};
 	auto command_list_profiles = [](const vector<string>& params)
 		{
@@ -160,7 +158,7 @@ static void AddExternalCommands()
 			KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
 		};
 
-	bool _ = CommandManager::AddCommand(
+	bool _ = CLI::AddCommand(
 		{
 			.primaryParam = "compile",
 			.description =
@@ -170,21 +168,21 @@ static void AddExternalCommands()
 			.targetFunction = command_compile
 		});
 
-	_ = CommandManager::AddCommand(
+	_ = CLI::AddCommand(
 		{
 			.primaryParam = "clean",
 			.description = "Deletes all build directories from your target kalamake file path.",
 			.targetFunction = command_clean
 		});
 
-	_ = CommandManager::AddCommand(
+	_ = CLI::AddCommand(
 		{
 			.primaryParam = "version",
 			.description = "Prints current KalaMake version.",
 			.targetFunction = command_version
 		});
 
-	_ = CommandManager::AddCommand(
+	_ = CLI::AddCommand(
 		{
 			.primaryParam = "list-profiles",
 			.description =
@@ -193,7 +191,7 @@ static void AddExternalCommands()
 			.targetFunction = command_list_profiles
 		});
 
-	_ = CommandManager::AddCommand(
+	_ = CLI::AddCommand(
 		{
 			.primaryParam = "validate",
 			.description =
@@ -206,7 +204,7 @@ static void AddExternalCommands()
 
 int main(int argc, char* argv[])
 {
-	KalaCLICore::Run(argc, argv, AddExternalCommands);
+	CLI::Run(argc, argv, AddExternalCommands);
 
 	return 0;
 }

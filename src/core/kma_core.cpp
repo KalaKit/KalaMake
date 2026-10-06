@@ -538,7 +538,7 @@ namespace KalaMake::Core
 	{
 		ostringstream details{};
 
-		Log::Print(details.str());
+		Log::Print(details.str(), true);
 
 		projectFile = params[1];
 		if (type == StartType::S_COMPILE 
@@ -556,7 +556,9 @@ namespace KalaMake::Core
 					"Starting to parse the kalamake file '" + filePath.string() + "'"
 					"\n\n===========================================================================\n",
 					"KALAMAKE",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
 				FirstParse(lines);
 
@@ -632,7 +634,9 @@ namespace KalaMake::Core
 					Log::Print(
 						"Using '" + to_string(globalData.targetProfile.jobs) + "' jobs for compilation.\n",
 						"KALAMAKE",
-						LogType::LOG_INFO);
+						LogType::LOG_INFO,
+						0,
+						true);
 				}
 
 				globalData.projectFile = weakly_canonical(projectFile);
@@ -640,9 +644,11 @@ namespace KalaMake::Core
 				Log::Print(
 					"Finished first parse!\n",
 					"KALAMAKE",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_SUCCESS,
+					0,
+					true);
 
-				Log::Print("===========================================================================\n");
+				Log::Print("===========================================================================\n", true);
 
 				CompilerType c = globalData.targetProfile.compiler;
 
@@ -651,7 +657,9 @@ namespace KalaMake::Core
 						Log::Print(
 					"Finished validating, kalamake file is valid!",
 					"KALAMAKE",
-					LogType::LOG_SUCCESS);
+					LogType::LOG_SUCCESS,
+					0,
+					true);
 
 					return;
 				}
@@ -809,8 +817,8 @@ namespace KalaMake::Core
 					}
 					case StartType::S_LIST_PROFILES:
 					{
-						Log::Print("Available profiles in '" + filePath.string() + "':");
-    					Log::Print("    global");
+						Log::Print("Available profiles in '" + filePath.string() + "':", true);
+    					Log::Print("    global", true);
 
 						for (const string& l : content)
 						{
@@ -823,7 +831,7 @@ namespace KalaMake::Core
 
 							if (type == CategoryType::C_PROFILE)
 							{
-								Log::Print("    " + value);
+								Log::Print("    " + value, true);
 							}
 
 						}
@@ -1030,7 +1038,9 @@ namespace KalaMake::Core
 						Log::Print(
 							"Finished cleaning '" + to_string(buildPaths.size()) + "' build paths!",
 							"KALAMAKE",
-							LogType::LOG_SUCCESS);
+							LogType::LOG_SUCCESS,
+							0,
+							true);
 					}
 				}
 			};
@@ -1639,7 +1649,9 @@ void ExtractFieldData(
 				Log::Print(
 					"Jobs count exceeds double the thread count, issues may occur during compilation.",
 					"KALAMAKE",
-					LogType::LOG_WARNING);
+					LogType::LOG_WARNING,
+					0,
+					true);
 			}
 		}
 
@@ -1785,7 +1797,9 @@ void ExtractFieldData(
 		Log::Print(
 			"Field '" + outFieldName + "' was parsed correctly and had no values.",
 			"KALAMAKE",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 	}
 	else
 	{
@@ -1801,7 +1815,9 @@ void ExtractFieldData(
 		Log::Print(
 			msg,
 			"KALAMAKE",
-			LogType::LOG_INFO);
+			LogType::LOG_INFO,
+			0,
+			true);
 	}
 }
 
@@ -2004,7 +2020,9 @@ void FirstParse(const vector<string>& lines)
 				Log::Print(
 					"Found valid version '" + value + "'",
 					"KALAMAKE",
-					LogType::LOG_INFO);
+					LogType::LOG_INFO,
+					0,
+					true);
 
 				foundVersion = true;
 
@@ -2036,7 +2054,7 @@ void FirstParse(const vector<string>& lines)
 				Log::Print(
 					"\n---------------------------------------------------------------------------"
 					"\n# Starting to parse references category\n"
-					"---------------------------------------------------------------------------\n");
+					"---------------------------------------------------------------------------\n", true);
 
 				if (foundReferences)
 				{
@@ -2104,7 +2122,7 @@ void FirstParse(const vector<string>& lines)
 				Log::Print(
 					"\n---------------------------------------------------------------------------"
 					"\n# Starting to parse global profile\n"
-					"---------------------------------------------------------------------------\n");
+					"---------------------------------------------------------------------------\n", true);
 
 				if (foundGlobal)
 				{
@@ -2383,7 +2401,7 @@ void FirstParse(const vector<string>& lines)
 				Log::Print(
 					"\n---------------------------------------------------------------------------"
 					"\n# Starting to parse user profile '" + value + "'\n"
-					"---------------------------------------------------------------------------\n");
+					"---------------------------------------------------------------------------\n", true);
 
 				vector<string> content = get_all_category_content(name, value);
 
