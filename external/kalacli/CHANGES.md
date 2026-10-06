@@ -2,6 +2,7 @@
 
 - registry overhaul
 - simplified build and dependency system
+- added TUI framework
 
 # 1.0.0
 

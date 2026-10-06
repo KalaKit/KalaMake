@@ -30,7 +30,7 @@ namespace KalaCLI
 		//The description of this command that is listed when the built-in 'info' command is called
 		string description{};
 
-		//Reference to the target function you want this command to call,
+		//The function that contains the action this command will do,
 		//must contain vector<string> as its only parameter to be able to receive user-passed parameters
 		function<void(const vector<string>&)> targetFunction{};
 	};
