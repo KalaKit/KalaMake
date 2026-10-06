@@ -29,7 +29,7 @@ cd build\release-windows
 for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\external\kalaheaders\include" -I"..\..\external\kalacli\include" -o "obj\%~nf.obj"
 
 //link into executable
-clang++ -o kalamake.exe "obj\*.obj" "..\..\external\kalacli\release\kalacli.lib"
+clang++ -o kalamake.exe "obj\*.obj" "..\..\external\kalacli\kalacli.lib"
 ```
 And on Linux:
 ```
@@ -51,7 +51,7 @@ for f in ../../src/**/*.cpp
 end
 
 //link into executable
-clang++ -o kalamake obj/*.o ../../externa/kalacli/release/libkalacli.a
+clang++ -o kalamake obj/*.o ../../externa/kalacli/libkalacli.a
 ```
 
 ## Supported languages
