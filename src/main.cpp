@@ -152,6 +152,7 @@ int main(int argc, char* argv[])
             command += argv[i];
         }
 
+        KalaMakeCore::SetHeadlessModeState(true);
         KalaCLICore::SendCommand(command);
 
         //always exits if a command was passed, otherwise goes into cli mode
