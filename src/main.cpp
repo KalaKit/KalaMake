@@ -3,208 +3,174 @@
 //This is free software, and you are welcome to redistribute it under certain conditions.
 //Read LICENSE.md for more information.
 
-#include "log_utils.hpp"
+#include <chrono>
+#include <thread>
 
-#include "kc_cli.hpp"
+#include "kc_core.hpp"
 
 #include "core/kma_core.hpp"
 
-using KalaHeaders::KalaLog::Log;
-using KalaHeaders::KalaLog::LogType;
-
-using KalaCLI::CLI;
+using KalaCLI::KalaCLICore;
+using KalaCLI::COMMAND_PREFIX;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::StartType;
 
-using std::vector;
 using std::string;
+using std::string_view;
+using std::vector;
+using std::chrono::milliseconds;
+using std::this_thread::sleep_for;
 
-static void AddExternalCommands()
+static constexpr string_view KALAMAKE_VERSION = "2.0.0";
+
+static void Command_Version(const vector<string>& _)
 {
-	auto command_compile = [](const vector<string>& params)
-		{
-			if (params.size() == 1)
-			{
-				Log::Print(
-					"Command 'compile' got no arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+    KalaCLICore::AppendToPage("KalaMake " + string(KALAMAKE_VERSION));
+}
+static void Command_Validate(const vector<string>& params)
+{
+    if (params.size() < 2)
+    {
+        KalaCLICore::AppendToPage("ERROR: Not enough arguments! You must pass a .kmake path and target profile.");
 
-				return;
-			}
-			if (params.size() == 2)
-			{
-				Log::Print(
-					"Command 'compile' requires two arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+        return;
+    }
+    else if (params.size() > 2)
+    {
+        KalaCLICore::AppendToPage("ERROR: Too many arguments! You can only pass a .kmake path and target profile.");
 
-				return;
-			}
-			if (params.size() > 3)
-			{
-				Log::Print(
-					"Command 'compile' only allows two arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+        return;
+    }
+    
+    KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
+}
+static void Command_List_Profiles(const vector<string>& params)
+{
+    if (params.size() != 1)
+    {
+        KalaCLICore::AppendToPage("ERROR: Invalid amount of arguments! You can only pass a .kmake path.");
 
-				return;
-			}
+        return;
+    }
 
-			KalaMakeCore::OpenFile(StartType::S_COMPILE, params);
-		};
-	auto command_clean = [](const vector<string>& params)
-		{
-			if (params.size() == 1)
-			{
-				Log::Print(
-					"Command 'clean' got no arguments! You must pass a .kmake path!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+    KalaMakeCore::OpenFile(StartType::S_LIST_PROFILES, params);
+}
+static void Command_Clean(const vector<string>& params)
+{
+    if (params.size() != 1)
+    {
+        KalaCLICore::AppendToPage("ERROR: Invalid amount of arguments! You can only pass a .kmake path.");
 
-				return;
-			}
-			if (params.size() > 2)
-			{
-				Log::Print(
-					"Command 'clean' only allows one argument! You must pass a .kmake path!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+        return;
+    }
 
-				return;
-			}
+    KalaMakeCore::OpenFile(StartType::S_CLEAN, params);
+}
+static void Command_Compile(const vector<string>& params)
+{
+    if (params.size() < 2)
+    {
+        KalaCLICore::AppendToPage("ERROR: Not enough arguments! You must pass a .kmake path and target profile.");
 
-			KalaMakeCore::OpenFile(StartType::S_CLEAN, params);
-		};
-	auto command_version = [](const vector<string>& params)
-		{
-			if (params.size() > 1)
-			{
-				Log::Print(
-					"Command 'version' does not allow any arguments!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
+        return;
+    }
+    else if (params.size() > 2)
+    {
+        KalaCLICore::AppendToPage("ERROR: Too many arguments! You can only pass a .kmake path and target profile.");
 
-				return;
-			}
-
-			Log::Print("KalaMake 1.4.1", true);
-		};
-	auto command_list_profiles = [](const vector<string>& params)
-		{
-			if (params.size() == 1)
-			{
-				Log::Print(
-					"Command 'list-profiles' got no arguments! You must pass a .kmake path!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
-
-				return;
-			}
-			if (params.size() > 2)
-			{
-				Log::Print(
-					"Command 'list-profiles' only allows one argument! You must pass a .kmake path!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
-
-				return;
-			}
-
-			KalaMakeCore::OpenFile(StartType::S_LIST_PROFILES, params);
-		};
-	auto command_validate = [](const vector<string>& params)
-		{
-			if (params.size() == 1)
-			{
-				Log::Print(
-					"Command 'validate' got no arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
-
-				return;
-			}
-			if (params.size() == 2)
-			{
-				Log::Print(
-					"Command 'validate' requires two arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
-
-				return;
-			}
-			if (params.size() > 3)
-			{
-				Log::Print(
-					"Command 'validate' only allows two arguments! You must pass a .kmake path and target profile!",
-					"PARSE",
-					LogType::LOG_ERROR,
-					2);
-
-				return;
-			}
-
-			KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
-		};
-
-	bool _ = CLI::AddCommand(
-		{
-			.primaryParam = "compile",
-			.description =
-				"Compile a project from a kalamake file, "
-				"second parameter must be valid path to a .kmake file, "
-				"third parameter must be a valid profile in the .kmake file.",
-			.targetFunction = command_compile
-		});
-
-	_ = CLI::AddCommand(
-		{
-			.primaryParam = "clean",
-			.description = "Deletes all build directories from your target kalamake file path.",
-			.targetFunction = command_clean
-		});
-
-	_ = CLI::AddCommand(
-		{
-			.primaryParam = "version",
-			.description = "Prints current KalaMake version.",
-			.targetFunction = command_version
-		});
-
-	_ = CLI::AddCommand(
-		{
-			.primaryParam = "list-profiles",
-			.description =
-				"Lists all profiles in a kalamake file, "
-				"second parameter must be valid path to a .kmake file.",
-			.targetFunction = command_list_profiles
-		});
-
-	_ = CLI::AddCommand(
-		{
-			.primaryParam = "validate",
-			.description =
-				"Validates a kalamake file, "
-				"second parameter must be valid path to a .kmake file, "
-				"third parameter must be a valid profile in the .kmake file.",
-			.targetFunction = command_validate
-		});
+        return;
+    }
+    
+    KalaMakeCore::OpenFile(StartType::S_COMPILE, params);
 }
 
 int main(int argc, char* argv[])
 {
-	CLI::Run(argc, argv, AddExternalCommands);
+    //all commands require -- prefix
+    KalaCLICore::SetPrefixlessInputAction([](string& _)
+        {
+            KalaCLICore::AppendToPage("ERROR: You must add the -- prefix to commands!");
+        });
 
-	return 0;
+    KalaCLICore::AddCommand(
+        {
+            .allowInHeadlessMode = true,
+            .primaryParam = "version",
+            .description =
+                "Prints current KalaMake version.",
+            .targetFunction = [](const vector<string>& params) { Command_Version(params); }
+        });
+
+    KalaCLICore::AddCommand(
+        {
+            .allowInHeadlessMode = true,
+            .primaryParam = "validate",
+            .description =
+                "Validates a kalamake file, "
+				"second parameter must be valid path to a .kmake file, "
+				"third parameter must be a valid profile in the .kmake file.",
+            .targetFunction = [](const vector<string>& params) { Command_Validate(params); }
+        });
+
+    KalaCLICore::AddCommand(
+        {
+            .allowInHeadlessMode = true,
+            .primaryParam = "list-profiles",
+            .description =
+				"Lists all profiles in a kalamake file, "
+				"second parameter must be valid path to a .kmake file.",
+            .targetFunction = [](const vector<string>& params) { Command_List_Profiles(params); }
+        });
+
+    KalaCLICore::AddCommand(
+        {
+            .allowInHeadlessMode = true,
+            .primaryParam = "clean",
+            .description =
+				"Deletes all build directories from your target kalamake file path.",
+            .targetFunction = [](const vector<string>& params) { Command_Clean(params); }
+        });
+
+    KalaCLICore::AddCommand(
+        {
+            .allowInHeadlessMode = true,
+            .primaryParam = "compile",
+            .description =
+                "Compile a project from a kalamake file, "
+				"second parameter must be valid path to a .kmake file, "
+				"third parameter must be a valid profile in the .kmake file.",
+            .targetFunction = [](const vector<string>& params) { Command_Compile(params); }
+        });
+
+    if (argc > 1)
+    {
+        string command{};
+        for (int i = 1; i < argc; ++i)
+        {
+            if (i > 1) command += " ";
+            command += argv[i];
+        }
+
+        KalaCLICore::SendCommand(command);
+
+        //always exits if a command was passed, otherwise goes into cli mode
+        exit(0);
+    }
+
+    KalaCLICore::SetConsoleWritesToPageState(true);
+    KalaCLICore::SetWrapState(true);
+    KalaCLICore::SetPageTitle("KalaMake " + string(KALAMAKE_VERSION));
+
+    KalaCLICore::AppendToPage(" ");
+    KalaCLICore::AppendToPage("Type '" + string(COMMAND_PREFIX) + "h' to list all commands.");
+    
+    while(true)
+    {
+        KalaCLICore::UpdateDisplayedContent();
+
+        sleep_for(milliseconds(33)); //30 frames per second
+    }
+
+    return 0;
 }

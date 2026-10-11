@@ -22,8 +22,6 @@
 #include "file_utils.hpp"
 #include "string_utils.hpp"
 
-#include "kc_core.hpp"
-
 #include "language/kma_language.hpp"
 #include "core/kma_core.hpp"
 
@@ -52,8 +50,6 @@ using KalaHeaders::KalaString::TrimString;
 using KalaHeaders::KalaString::ContainsSpace;
 using KalaHeaders::KalaString::ContainsUnsafeFileChar;
 using KalaHeaders::KalaString::ContainsAlpha;
-
-using KalaCLI::KalaCLICore;
 
 using KalaMake::Core::KalaMakeCore;
 using KalaMake::Core::ReferenceData;
@@ -211,6 +207,7 @@ static bool foundAnyUserProfile{};
 
 static GlobalData globalData{};
 static path projectFile{};
+static path exePath{};
 
 static u16 GetThreadCount()
 {
@@ -540,12 +537,12 @@ namespace KalaMake::Core
 
 		Log::Print(details.str(), true);
 
-		projectFile = params[1];
+		projectFile = params[0];
 		if (type == StartType::S_COMPILE 
-			|| type == StartType::S_VALIDATE) targetProfile = params[2];
-
-		string& currentDir = KalaCLICore::GetCurrentDir();
-		if (currentDir.empty()) currentDir = current_path().string();
+			|| type == StartType::S_VALIDATE)
+		{
+			targetProfile = params[1];
+		}
 
 		auto first_parse = [](
 			const path& filePath,
@@ -1047,18 +1044,7 @@ namespace KalaMake::Core
 
 		//partial path was found
 
-		path correctTarget{};
-
-		try
-		{
-			correctTarget = weakly_canonical(path(KalaCLICore::GetCurrentDir()) / projectFile);
-		}
-		catch (const filesystem_error&)
-		{
-			KalaMakeCore::ForceClose(
-				"KALAMAKE",
-				"Project partial path via '" + projectFile.string() + "' could not be resolved!");
-		}
+		path correctTarget = current_path() / projectFile;
 
 		if (exists(correctTarget))
 		{

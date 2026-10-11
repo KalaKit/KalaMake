@@ -1,8 +1,8 @@
 # KalaCLI
 
-This is a cli executable template for C++ 20 on Windows and Linux.
+This is a cli executable template with a custom terminal layout for C++ 20 on Windows and Linux.
 
-An optional TUI is provided alongside the main CLI framework, it is recommended to only use either the CLI or the TUI as they conflict with each other. The CLI gives a primitive CLI framework which accepts commands, can be given new commands and works like a simple console application like git or python. Meanwhile the TUI draws its own borders, draws the page box where the main content is drawn into, its title bar and an input field where you can type commands into. Use this for more demanding projects where you need interactivity and easy navigation alongside commands for a more terminal-like experience like oldschool DOS or TempleOS or whatever.
+The CLI draws its own borders, draws the page view box where the main content is drawn into, its title bar and an input field where you can type commands into for a more terminal-like experience like oldschool DOS or TempleOS or whatever.
 
 Please be aware that this library/software has limited or no documentation at the current stage due to the KalaKit and the Elypso Engine ecosystem being in early development, if you have questions then message me on discord at @kirjukala
  or via [email](mailto:sanderveski@gmail.com?subject=Questions%20about%20KalaKit%20and%20the%20Elypso%20Engine%20ecosystem). The website linked at the right side also does not currently function because both the domain and its [server backend](https://github.com/kalakit/kalaserver) are still in early development.
@@ -30,7 +30,7 @@ mkdir build\release-windows\obj
 cd build\release-windows
 
 //compile cpp files
-for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\..\external-shared\KalaHeaders\include" -o "obj\%~nf.obj"
+for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\external\kalaheaders\include" -o "obj\%~nf.obj"
 
 //link into library
 llvm-lib /OUT:kalacli.lib "obj\*.obj"
@@ -51,7 +51,7 @@ cd build\release-linux
 
 //compile cpp files
 for f in ../../src/**/*.cpp
-    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I"../../../external-shared/KalaHeaders/include" -o obj/(basename $f .cpp).o
+    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I"../../external/KalaHeaders/include" -o obj/(basename $f .cpp).o
 end
 
 //link into library
