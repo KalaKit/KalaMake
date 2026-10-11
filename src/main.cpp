@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     //all commands require -- prefix
     KalaCLICore::SetPrefixlessInputAction([](string& _)
         {
-            KalaCLICore::AppendToPage("ERROR: You must add the -- prefix to commands!");
+            KalaCLICore::AppendToPage("ERROR: You must add the '" + string(COMMAND_PREFIX) + "' prefix to commands!");
         });
 
     KalaCLICore::AddCommand(
