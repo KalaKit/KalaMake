@@ -520,7 +520,8 @@ string GetGlobalData(const vector<string>& content)
                 
                 for (char c : trimmed)
                 {
-                    if (c == ' '
+                    if ((c == ' '
+                        || c == '\t')
                         && !inQuotes)
                     {
                         if (!word.empty())
@@ -552,6 +553,11 @@ string GetGlobalData(const vector<string>& content)
                     if (c == '"') inQuotes = !inQuotes;
                 }
 
+                if (inQuotes)
+                {
+                    return "Failed to parse line '" + line + "' because it is a quoted value and it was not closed!";
+                }
+
                 if (!word.empty()
                     && !word.starts_with("//"))
                 {
@@ -570,17 +576,13 @@ string GetGlobalData(const vector<string>& content)
             }
 
             CategoryBlock catBlock{};
-            bool skipFirstWord{};
 
             //group by category
             for (size_t i = 0; i < cleanedLines.size(); ++i)
             {
                 const vector<string>& cleanLine = cleanedLines[i];
 
-                size_t startWord = skipFirstWord ? 1 : 0;
-                skipFirstWord = false;
-
-                for (size_t j = startWord; j < cleanLine.size(); ++j)
+                for (size_t j = 0; j < cleanLine.size(); ++j)
                 {
                     const string& cleanWord = cleanLine[j];
 
@@ -602,12 +604,7 @@ string GetGlobalData(const vector<string>& content)
                                 profileName = cleanLine[j + 1];
                                 j++;
                             }
-                            else if (i + 1 < cleanedLines.size())
-                            {
-                                profileName = cleanedLines[i + 1][0];
-                                skipFirstWord = true;
-                            }
-                            else return "Failed to get categories because custom profile had no name!";
+                            else return "Failed to get categories because custom profile had no name on the same line!";
 
                             if (profileName.starts_with('#')
                                 || profileName.ends_with(':')
@@ -616,6 +613,13 @@ string GetGlobalData(const vector<string>& content)
                                 || profileName.ends_with("\","))))
                             {
                                 return "Failed to get categories because custom profile had no valid name!";
+                            }
+
+                            if (profileName == "version"
+                                || profileName == "references"
+                                || profileName == "global")
+                            {
+                                return "Failed to get categories because custom profile name '" + profileName + "' is reserved!";
                             }
 
                             catBlock.categoryName = cleanWord + " " + profileName;
@@ -627,10 +631,8 @@ string GetGlobalData(const vector<string>& content)
                             {
                                 outResult.push_back(catBlock);
                                 catBlock = {};
-
-                                catBlock.categoryName = cleanWord;
                             }
-                            else catBlock.categoryName = cleanWord;
+                            catBlock.categoryName = cleanWord;
 
                             continue;
                         }
@@ -693,16 +695,9 @@ string GetGlobalData(const vector<string>& content)
             return "Failed to get categories because category name '" + block.categoryName + "' was used more than once!";
         }
 
-        Log::Print(block.categoryName);
-
         if (block.categoryWords.empty())
         {
             return "Failed to get categories because category '" + block.categoryName + "' has no values!";
-        }
-
-        for (const string& blockWord : block.categoryWords)
-        {
-            Log::Print("  " + blockWord);
         }
 
         foundCategoryNames.push_back(block.categoryName);
@@ -728,46 +723,127 @@ string GetGlobalData(const vector<string>& content)
         }
     }
 
-    struct VariableBlock
+    struct FieldBlock
     {
-        string variableName{};
-        vector<string> variableValues{};
+        string fieldName{};
+        vector<string> fieldValues{};
     };
 
     /*
     TODO: ADD THIS ORDER
     
-    Extract: Which variable belongs to which values? Produce the VariableBlock structures.
-    Validate variable names: Does each variable actually exist in KalaMake's supported fields?
-    Validate variable repetition: Is this variable allowed to appear multiple times within the same category?
-    Validate value counts: Is this variable allowed to contain multiple values in a single declaration?
-    Validate actual values: Are those values valid for the specific variable?
+    Validate field names: Does each field actually exist in KalaMake's supported fields?
+    Validate field repetition: Is this field allowed to appear multiple times within the same category?
+    Validate value counts: Is this field allowed to contain multiple values in a single declaration?
+    Validate actual values: Are those values valid for the specific field?
     Assign: Store the verified configuration, with custom profiles overriding inherited global settings where appropriate.
     */
 
-    auto get_variable_data = [](
+    auto get_field_data = [](
         const CategoryBlock& categoryBlock,
-        vector<VariableBlock>& outResult) -> string
+        vector<FieldBlock>& outResult) -> string
         {
+            FieldBlock fieldBlock{};
+
             for (const string& blockWord : categoryBlock.categoryWords)
             {
+                if (categoryBlock.categoryName == "#version")
+                {
+                    outResult.push_back({ "", { blockWord } });
+                    break;
+                }
 
+                if (!blockWord.ends_with(':')
+                    && fieldBlock.fieldName.empty())
+                {
+                    return "Failed to parse value '" + blockWord + "' because it was not preceded by a field!";
+                }
+
+                if (blockWord.ends_with(':'))
+                {
+                    if (!fieldBlock.fieldName.empty())
+                    {
+                        outResult.push_back(fieldBlock);
+                        fieldBlock = {};
+                    }
+                    fieldBlock.fieldName = blockWord;
+
+                    continue;
+                }
+
+                fieldBlock.fieldValues.push_back(blockWord);
             }
+
+            //push last block if its not empty
+            if (!fieldBlock.fieldName.empty()) outResult.push_back(fieldBlock);
 
             return "";
         };
 
-    vector<pair<string, vector<VariableBlock>>> gatheredData{};
+    vector<pair<string, vector<FieldBlock>>> gatheredData{};
     for (const CategoryBlock& cat : categories)
     {
-        vector<VariableBlock> result{};
-        err = get_variable_data(
+        vector<FieldBlock> result{};
+        err = get_field_data(
             cat,
             result);
 
         if (!err.empty()) return err;
 
         gatheredData.push_back({ cat.categoryName, std::move(result) });
+    }
+
+    for (pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+    {
+        //remove starting '#' from categories
+        catBlock.first = catBlock.first.substr(1);
+        //remove starting 'profile ' from categories
+        string toBeErased = "profile ";
+        if (catBlock.first.starts_with(toBeErased))
+        {
+            catBlock.first = catBlock.first.substr(toBeErased.size());
+        }
+
+        Log::Print(catBlock.first);
+        for (FieldBlock& fieldBlock : catBlock.second)
+        {
+            if (fieldBlock.fieldValues.empty())
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName 
+                    + "' in category '" + catBlock.first + "' because it had no values!";
+            }
+
+            if (fieldBlock.fieldValues[fieldBlock.fieldValues.size() - 1].ends_with("\","))
+            {
+                return 
+                    "Failed to parse last value in field '" + fieldBlock.fieldName 
+                    + "' in category '" + catBlock.first + "' because the last value must not end with a comma!";
+            }
+
+            //remove ending ':' from fields
+            if (!fieldBlock.fieldName.empty())
+            {
+                fieldBlock.fieldName = fieldBlock.fieldName.substr(0, fieldBlock.fieldName.size() - 1);
+                Log::Print("--" + fieldBlock.fieldName);
+            }
+
+            for (string& val : fieldBlock.fieldValues)
+            {
+                if (val.starts_with('"'))
+                {
+                    //remove starting '"' from values
+                    val = val.substr(1);
+
+                    //remove ending '"' from values
+                    if (val.ends_with('"')) val = val.substr(0, val.size() - 1);
+                    //remove ending '"' from values where they end as '",'
+                    else val = val.substr(0, val.size() - 2);
+                }
+
+                Log::Print("----" + val);
+            }
+        }
     }
 
     return "";
