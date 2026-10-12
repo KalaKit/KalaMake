@@ -732,9 +732,9 @@ string GetGlobalData(const vector<string>& content)
     /*
     TODO: ADD THIS ORDER
     
-    Validate field names: Does each field actually exist in KalaMake's supported fields?
     Validate field repetition: Is this field allowed to appear multiple times within the same category?
     Validate value counts: Is this field allowed to contain multiple values in a single declaration?
+    Validate field names: Does each field actually exist in KalaMake's supported fields?
     Validate actual values: Are those values valid for the specific field?
     Assign: Store the verified configuration, with custom profiles overriding inherited global settings where appropriate.
     */
@@ -804,7 +804,8 @@ string GetGlobalData(const vector<string>& content)
             catBlock.first = catBlock.first.substr(toBeErased.size());
         }
 
-        Log::Print(catBlock.first);
+        vector<string> fields{};
+
         for (FieldBlock& fieldBlock : catBlock.second)
         {
             if (fieldBlock.fieldValues.empty())
@@ -825,8 +826,21 @@ string GetGlobalData(const vector<string>& content)
             if (!fieldBlock.fieldName.empty())
             {
                 fieldBlock.fieldName = fieldBlock.fieldName.substr(0, fieldBlock.fieldName.size() - 1);
-                Log::Print("--" + fieldBlock.fieldName);
             }
+
+            //non-references category allows to have more than one postbuildcation,
+            //references category does not allow to have more
+            if (ContainsValue(fields, fieldBlock.fieldName)
+                && (fieldBlock.fieldName != "postbuildaction"
+                || (catBlock.first == "references"
+                && fieldBlock.fieldName == "postbuildaction")))
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName 
+                    + "' in category '" + catBlock.first + "' because it was added more than once to the category!";
+            }
+
+            fields.push_back(fieldBlock.fieldName);
 
             for (string& val : fieldBlock.fieldValues)
             {
@@ -840,8 +854,6 @@ string GetGlobalData(const vector<string>& content)
                     //remove ending '"' from values where they end as '",'
                     else val = val.substr(0, val.size() - 2);
                 }
-
-                Log::Print("----" + val);
             }
         }
     }

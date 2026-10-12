@@ -143,7 +143,7 @@ namespace KalaCLI
 		//commands that start with COMMAND_PREFIX are sent to CLI internal command parser,
 		//writing a message without a command prefix writes it to the CLI like a normal message.
 		//Built in CLI commands:
-		//- --h: lists all available commands and what they do,
+		//- --help: lists all available commands and what they do,
 		//- --c: clears all CLI page messages,
 		//- --cmd command: sends selected message as command to console,
 		//- --ec: enables console-based updates,

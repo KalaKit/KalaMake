@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
     KalaCLICore::SetPageTitle("KalaMake " + string(KALAMAKE_VERSION));
 
     KalaCLICore::AppendToPage(" ");
-    KalaCLICore::AppendToPage("Type '" + string(COMMAND_PREFIX) + "h' to list all commands.");
+    KalaCLICore::AppendToPage("Type '" + string(COMMAND_PREFIX) + "help' to list all commands.");
     
     while(true)
     {
