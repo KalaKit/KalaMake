@@ -43,12 +43,12 @@ The references category tells KalaMake what the available references are for the
 Example:
 ```
 #references
-myref: 123456
-myref2: 334455
+myref: "123456"
+myref2: "334455"
 
 #global
-compiler: ${myref}
-standard: ${myref2}
+compiler: "${myref}"
+standard: "${myref2}"
 ```
 
 ---
@@ -183,11 +183,11 @@ Build type is not supported in Python.
     
 ### buildpath
 
-Describes what folder to build the binary into. Accepts relative or full paths. Must be quoted with `"`. Only one value is allowed.
+Describes what folder to build the binary into. Accepts relative or full paths. Only one value is allowed.
 
 ### sources
 
-Describes what sources this binary will use. Supports quoted relative and full paths to files and folders, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
+Describes what sources this binary will use. Supports relative and full paths to files and folders, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
 
 Sources support exclusion with the `!` symbol in front of the file or dir name, globbed paths do not support exclusion.
 
@@ -198,13 +198,13 @@ sources: "!myfile.cpp"
 
 ### headers
 
-Describes what headers this binary will use. Supports quoted relative and full paths to folders, individual files are not allowed, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
+Describes what headers this binary will use. Supports relative and full paths to folders, individual files are not allowed, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
 
 Headers are not supported in Java, Zig, Python and Rust.
 
 ### links
 
-Describes what libraries this binary will link to. Supports quoted relative and full paths files and to folders, supports recursive and non-recursive globbing with `*` and `**`, supports system library paths if added without quotes and extension. Can add multiple values.
+Describes what libraries this binary will link to. Supports relative and full paths files and to folders, supports recursive and non-recursive globbing with `*` and `**`, supports system library paths if added without slashes to indicate directory traversal. Can add multiple values.
 
 Java only supports one directory value in the links field. Use it as the directory where your jar libraries are that you wish to include during jpackage phase.
 
@@ -228,7 +228,7 @@ Warning level is not supported in Java, Zig, Python and Rust.
 
 Describes what defines to pass to the compiler. `-D` and `/D` are added in front of the define internally. Can add multiple values.
 
-Defines are used as module values in Java, like for example `defines: javafx.base`.
+Defines are used as module values in Java, like for example `defines: "javafx.base"`.
 
 Defines are not supported in Zig and Python.
 
@@ -284,11 +284,11 @@ Minimal global profile
 
 ```
 #global
-compiler: clang-cl
-standard: c++20
-binarytype: executable
-binaryname: myexe
-buildtype: release
+compiler: "clang-cl"
+standard: "c++20"
+binarytype: "executable"
+binaryname: "myexe"
+<!-- buildtype: "release" -->
 buildpath: "build"
 sources: "src/main.cpp"
 ```

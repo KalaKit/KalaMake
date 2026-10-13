@@ -1,6 +1,6 @@
 # KalaMake
 
-KalaMake is a multithreaded CLI for building libraries and executables with `.kmake` files and it is intended to use as a replacement for other build scripts and generators like Make, Premake, CMake or Ninja. KalaMake automatically uses all available threads from your CPU to always help speed up compilation, or you can fill the jobs field with your desired job count, multithreading is not supported by all languages.
+KalaMake is a multithreaded CLI for building libraries and executables with `.kmake` files and it is intended to use as a full replacement for other build scripts and generators like Make, Premake, CMake or Ninja. KalaMake automatically uses all available threads from your CPU to always help speed up compilation, or you can fill the jobs field with your desired job count, multithreading is not supported by all languages.
 
 KalaMake currently accepts several commands, most of which come from [KalaCLI](https://github.com/kalakit/kalacli) which is statically linked to KalaMake. Type `--help` to list all available commands and type `--info commandnamehere` to list info about that command.
 
