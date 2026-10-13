@@ -1,14 +1,26 @@
 # KalaMake updates
 
-## 1.4.1
+## 2.0.0
+
+This is a parser-side rebuild from the ground up. The compiler flag generation stays identical. The biggest upgrade is that all field values can now be added to new lines, so youre not restricted to single-line fields and values.
+
+The cli also gets a fresh new face - a tui-like terminal experience when you don't pass arguments after kalamake. Read more when typing `--help` once inside kalamake cli.
+
+BREAKING CHANGES:
+
+- #version 1.0 kmake scripts are no longer compatible, old kmake script versions must be bumped to #version 2.0
+- all field values now require quotes, old kmake scripts must be converted
+
+Other changes:
 
 - fixed invalid error 'Linux compiler is not allowed to add any non-MSVC target types'
 - added system-level header support to headers in c/c++
 - add linker flag '-fuse-ld=lld' if using clang/clang++ compiler and targeting windows-gnu on linux
 - no longer adding linker flag '-Wl,-rpath,\\$ORIGIN' if on linux but targeting windows-gnu
 - simplified build and dependency system
+- ...
 
-## 1.4.0
+## 1.4
 
 - added new command list-profiles: lists all available profiles in a .kmake file (by jake)
 - added new command validate: checks if a .kmake file is valid without compiling (by jake)

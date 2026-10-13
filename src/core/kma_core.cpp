@@ -12,6 +12,8 @@
 #include <csignal>
 #endif
 
+#include <functional>
+
 #include "log_utils.hpp"
 #include "file_utils.hpp"
 #include "string_utils.hpp"
@@ -19,6 +21,7 @@
 #include "language/kma_language.hpp"
 
 using KalaHeaders::KalaCore::ContainsValue;
+using KalaHeaders::KalaCore::StringToEnum;
 using KalaHeaders::KalaCore::EnumHash;
 
 using KalaHeaders::KalaLog::Log;
@@ -27,9 +30,11 @@ using KalaHeaders::KalaLog::TimeFormat;
 using KalaHeaders::KalaLog::DateFormat;
 
 using KalaHeaders::KalaFile::ReadLinesFromFile;
+using KalaHeaders::KalaFile::CreateNewDirectory;
 
+using KalaHeaders::KalaString::IsStringInRange;
 using KalaHeaders::KalaString::TrimString;
-using KalaHeaders::KalaString::SplitString;
+using KalaHeaders::KalaString::ContainsSpace;
 
 using KalaMake::Language::LanguageCore;
 using KalaMake::Core::Version;
@@ -43,15 +48,24 @@ using KalaMake::Core::TargetType;
 using KalaMake::Core::BuildType;
 using KalaMake::Core::WarningLevel;
 using KalaMake::Core::CustomFlag;
-using KalaMake::Core::ProfileData;
-using KalaMake::Core::ReferenceData;
 using KalaMake::Core::GlobalData;
 
 using std::string;
 using std::string_view;
+using std::to_string;
 using std::vector;
+using std::array;
 using std::pair;
 using std::unordered_map;
+using std::filesystem::path;
+using std::filesystem::is_directory;
+using std::filesystem::is_regular_file;
+using std::filesystem::absolute;
+using std::filesystem::exists;
+using std::filesystem::recursive_directory_iterator;
+using std::from_chars;
+using std::errc;
+using std::function;
 
 constexpr string_view version_1_0 = "1.0";
 constexpr string_view version_2_0 = "2.0";
@@ -163,6 +177,12 @@ constexpr string_view custom_java_win_console    = "java-win-console";
 constexpr string_view custom_export_java_sln     = "export-java-sln";
 constexpr string_view custom_python_one_file     = "python-one-file";
 
+//max number of reference expansions allowed to prevent infinite recursion
+static constexpr u32 MAX_EXPANSION_LIMIT = 100;
+
+static constexpr u32 MIN_BINARY_NAME_LENGTH = 3;
+static constexpr u32 MAX_BINARY_NAME_LENGTH = 50;
+
 static const unordered_map<Version, string_view, EnumHash<Version>> versions =
 {
     { Version::V_1_0, version_1_0 },
@@ -267,10 +287,10 @@ static const unordered_map<StandardType, string_view, EnumHash<StandardType>> st
     { StandardType::JAVA_25, standard_java25 },
     { StandardType::JAVA_26, standard_java26 },
 
-    { StandardType::RUST_15,     standard_rust15 },
-    { StandardType::RUST_18,     standard_rust18 },
-    { StandardType::RUST_21,     standard_rust21 },
-    { StandardType::RUST_24,     standard_rust24 }
+    { StandardType::RUST_15, standard_rust15 },
+    { StandardType::RUST_18, standard_rust18 },
+    { StandardType::RUST_21, standard_rust21 },
+    { StandardType::RUST_24, standard_rust24 }
 };
 
 static const unordered_map<TargetType, string_view, EnumHash<TargetType>> targetTypes =
@@ -317,8 +337,59 @@ static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>> custom
     { CustomFlag::F_PYTHON_ONE_FILE,         custom_python_one_file }
 };
 
+static constexpr array<string_view, 19> availableFields =
+{
+    field_compiler_launcher,
+    field_compiler,
+    field_standard,
+    field_binary_name,
+    field_build_type,
+    field_target_type,
+    field_binary_type,
+    field_build_path,
+    field_warning_level,
+    field_jobs,
+    field_sources,
+    field_headers,
+    field_links,
+    field_defines,
+    field_compile_flags,
+    field_link_flags,
+    field_custom_flags,
+    field_pre_build_action,
+    field_post_build_action
+};
+
+static constexpr array<string_view, 7> requiredFields = 
+{
+    field_compiler,
+    field_standard,
+    field_binary_name,
+    field_build_type,
+    field_binary_type,
+    field_build_path,
+    field_sources  
+};
+
+static constexpr array<string_view, 12> singleValueFields = 
+{
+    field_compiler_launcher,
+    field_compiler,
+    field_standard,
+    field_binary_name,
+    field_build_type,
+    field_target_type,
+    field_binary_type,
+    field_build_path,
+    field_warning_level,
+    field_jobs,
+    field_pre_build_action,
+    field_post_build_action
+};
+
 static bool isInHeadlessMode{};
 static GlobalData globalData{};
+static vector<string> userParams{};
 
 static u16 GetThreadCount()
 {
@@ -342,12 +413,23 @@ namespace KalaMake::Core
         StartType startType,
         const vector<string>& params)
     {
+        userParams = params;
+
+        if (userParams[1] == "version"
+            || userParams[1] == "references")
+        {
+            ForceClose(
+                "KalaMake core error",
+                "Failed to parse kmake file '" + userParams[0] 
+                + " because the target profile '" + userParams[1] + "' was invalid!");
+        }
+
         vector<string> kmakeContent{};
-        string err = ReadLinesFromFile(params[0], kmakeContent);
+        string err = ReadLinesFromFile(userParams[0], kmakeContent);
         if (!err.empty())
         {
             Log::Print(
-                "Failed to parse kmake file '" + params[0] + "'! Reason: " + err,
+                "Failed to parse kmake file '" + userParams[0] + "'! Reason: " + err,
                 "KMAKE_CORE",
                 LogType::LOG_ERROR,
                 2);
@@ -363,15 +445,12 @@ namespace KalaMake::Core
             {
                 ForceClose(
                     "KalaMake core error",
-                    "Failed to get data from kmake file '" + params[0] + "'! Reason: " + err);
+                    "Failed to get data from kmake file '" + userParams[0] + "'! Reason: " + err);
             }
 
             if (isInHeadlessMode) exit(0);
             return;
         }
-
-        //TEMPORARY EXIT, REMOVE LATER
-        exit(0);
 
         if (startType == StartType::S_LIST_PROFILES)
         {
@@ -380,7 +459,7 @@ namespace KalaMake::Core
             {
                 ForceClose(
                     "KalaMake core error",
-                    "Failed to list profiles from kmake file '" + params[0] + "'! Reason: " + err);
+                    "Failed to list profiles from kmake file '" + userParams[0] + "'! Reason: " + err);
             }
 
             if (isInHeadlessMode) exit(0);
@@ -394,7 +473,7 @@ namespace KalaMake::Core
             {
                 ForceClose(
                     "KalaMake core error",
-                    "Failed to clean build dirs from kmake file '" + params[0] + "'! Reason: " + err);
+                    "Failed to clean build dirs from kmake file '" + userParams[0] + "'! Reason: " + err);
             }
 
             if (isInHeadlessMode) exit(0);
@@ -703,6 +782,15 @@ string GetGlobalData(const vector<string>& content)
         foundCategoryNames.push_back(block.categoryName);
     }
 
+    string targetCategory = userParams[1] == "global"
+        ? "#global"
+        : "#profile " + userParams[1];
+
+    if (!ContainsValue(foundCategoryNames, targetCategory))
+    {
+        return "Failed to get categories because category '" + userParams[1] + "' was not found!";
+    }
+
     //find missing required categories
     if (!ContainsValue(foundCategoryNames, "#version"))
     {
@@ -716,10 +804,21 @@ string GetGlobalData(const vector<string>& content)
     //ensure version category only has one value
     for (const CategoryBlock& cat : categories)
     {
-        if (cat.categoryName == "#version"
-            && cat.categoryWords.size() > 1)
+        if (cat.categoryName == "#version")
         {
-            return "Failed to verify categories because category 'version' has more than one value!";
+            if (cat.categoryWords.size() > 1)
+            {
+                return "Failed to verify categories because category 'version' has more than one value!";
+            }
+            if (cat.categoryWords[0] != version_1_0
+                && cat.categoryWords[0] != version_2_0)
+            {
+                return "Failed to verify categories because category 'version' has an invalid version value!";
+            }
+            if (cat.categoryWords[0] == version_1_0)
+            {
+                return "Failed to verify categories because category 'version' has an unsupported version!";
+            }
         }
     }
 
@@ -728,16 +827,6 @@ string GetGlobalData(const vector<string>& content)
         string fieldName{};
         vector<string> fieldValues{};
     };
-
-    /*
-    TODO: ADD THIS ORDER
-    
-    Validate field repetition: Is this field allowed to appear multiple times within the same category?
-    Validate value counts: Is this field allowed to contain multiple values in a single declaration?
-    Validate field names: Does each field actually exist in KalaMake's supported fields?
-    Validate actual values: Are those values valid for the specific field?
-    Assign: Store the verified configuration, with custom profiles overriding inherited global settings where appropriate.
-    */
 
     auto get_field_data = [](
         const CategoryBlock& categoryBlock,
@@ -793,8 +882,10 @@ string GetGlobalData(const vector<string>& content)
         gatheredData.push_back({ cat.categoryName, std::move(result) });
     }
 
-    for (pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+    for (size_t i = 0; i < gatheredData.size(); ++i)
     {
+        pair<string, vector<FieldBlock>>& catBlock = gatheredData[i];
+
         //remove starting '#' from categories
         catBlock.first = catBlock.first.substr(1);
         //remove starting 'profile ' from categories
@@ -804,10 +895,10 @@ string GetGlobalData(const vector<string>& content)
             catBlock.first = catBlock.first.substr(toBeErased.size());
         }
 
-        vector<string> fields{};
-
-        for (FieldBlock& fieldBlock : catBlock.second)
+        for (size_t j = 0; j < catBlock.second.size(); ++j)
         {
+            FieldBlock& fieldBlock = catBlock.second[j];
+
             if (fieldBlock.fieldValues.empty())
             {
                 return 
@@ -815,32 +906,54 @@ string GetGlobalData(const vector<string>& content)
                     + "' in category '" + catBlock.first + "' because it had no values!";
             }
 
-            if (fieldBlock.fieldValues[fieldBlock.fieldValues.size() - 1].ends_with("\","))
-            {
-                return 
-                    "Failed to parse last value in field '" + fieldBlock.fieldName 
-                    + "' in category '" + catBlock.first + "' because the last value must not end with a comma!";
-            }
+            bool hasMoreThanOneValue = fieldBlock.fieldValues.size() > 1;
 
-            //remove ending ':' from fields
-            if (!fieldBlock.fieldName.empty())
+            if (catBlock.first != "version")
             {
+                for (size_t k = 0; k < fieldBlock.fieldValues.size(); ++k)
+                {
+                    const string& fieldValue = fieldBlock.fieldValues[k];
+                    
+                    if (hasMoreThanOneValue
+                        && k != fieldBlock.fieldValues.size() - 1
+                        && !fieldValue.ends_with("\","))
+                    {
+                        return 
+                            "Failed to parse value in field '" + fieldBlock.fieldName 
+                            + "' in category '" + catBlock.first + "' because the value must end with a comma!";
+                    }
+
+                    //last field value must not end with '",'
+                    if (k == fieldBlock.fieldValues.size() - 1
+                        && fieldValue.ends_with("\","))
+                    {
+                        return 
+                            "Failed to parse last value in field '" + fieldBlock.fieldName 
+                            + "' in category '" + catBlock.first + "' because the last value must not end with a comma!";
+                    }
+                }
+
+                //remove ending ':' from fields
                 fieldBlock.fieldName = fieldBlock.fieldName.substr(0, fieldBlock.fieldName.size() - 1);
+
+                if (catBlock.first != "references")
+                {
+                    if (!ContainsValue(availableFields, fieldBlock.fieldName))
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName 
+                            + "' in category '" + catBlock.first + "' because it is unsupported!"; 
+                    }
+                }
             }
 
-            //non-references category allows to have more than one postbuildcation,
-            //references category does not allow to have more
-            if (ContainsValue(fields, fieldBlock.fieldName)
-                && (fieldBlock.fieldName != "postbuildaction"
-                || (catBlock.first == "references"
-                && fieldBlock.fieldName == "postbuildaction")))
+            if (hasMoreThanOneValue
+                && ContainsValue(singleValueFields, fieldBlock.fieldName))
             {
                 return 
                     "Failed to parse field '" + fieldBlock.fieldName 
-                    + "' in category '" + catBlock.first + "' because it was added more than once to the category!";
+                    + "' in category '" + catBlock.first + "' because it cannot have more than one value!";
             }
-
-            fields.push_back(fieldBlock.fieldName);
 
             for (string& val : fieldBlock.fieldValues)
             {
@@ -855,6 +968,698 @@ string GetGlobalData(const vector<string>& content)
                     else val = val.substr(0, val.size() - 2);
                 }
             }
+        }
+    }
+
+    vector<FieldBlock> foundReferences{};
+    vector<FieldBlock> foundContentInGlobal{};
+    pair<string, vector<FieldBlock>> foundContentInCustomProfile{};
+
+    for (const pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+    {
+        vector<string> foundFields{};
+        for (const FieldBlock& fieldBlock : catBlock.second)
+        {
+            bool isRepeatable = 
+                fieldBlock.fieldName == "prebuildaction"
+                || fieldBlock.fieldName == "postbuildaction";
+
+            //non-references category allows to have more than one repeatable field,
+            //references category does not allow to have more
+            if (ContainsValue(foundFields, fieldBlock.fieldName)
+                && (!isRepeatable
+                || catBlock.first == "references"))
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName 
+                    + "' in category '" + catBlock.first + "' because it was added more than once to the category!";
+            }
+
+            foundFields.push_back(fieldBlock.fieldName);
+        }
+    }
+
+    //store references
+    for (const pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+    {
+        if (catBlock.first == "references")
+        {
+            foundReferences = catBlock.second;
+            break;
+        }
+    }
+
+    //store global content
+    for (const pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+    {
+        if (catBlock.first == "global")
+        {
+            foundContentInGlobal = catBlock.second;
+            break;
+        }
+    }
+
+    //store custom profile content
+    if (userParams[1] != "global")
+    {
+        for (const pair<string, vector<FieldBlock>>& catBlock : gatheredData)
+        {
+            if (catBlock.first == userParams[1])
+            {
+                foundContentInCustomProfile = { catBlock.first, catBlock.second };
+                break;
+            }
+        }
+    }
+
+    //get found required fields global already has
+    vector<string> foundGlobalRequiredFields{};
+
+    for (const FieldBlock& fieldBlock : foundContentInGlobal)
+    {
+        if (ContainsValue(requiredFields, fieldBlock.fieldName))
+        {
+            foundGlobalRequiredFields.push_back(fieldBlock.fieldName);
+        }
+    }
+
+    if (userParams[1] != "global")
+    {
+        //check if each custom profile has required fields global does not have
+        vector<string> foundFields{};
+        for (const FieldBlock& fieldBlock : foundContentInCustomProfile.second)
+        {
+            if (ContainsValue(requiredFields, fieldBlock.fieldName))
+            {
+                foundFields.push_back(fieldBlock.fieldName);
+            }
+        }
+
+        for (const string_view requiredField : requiredFields)
+        {
+            if (!ContainsValue(foundGlobalRequiredFields, requiredField)
+                && !ContainsValue(foundFields, requiredField))
+            {
+                return 
+                    "Failed to parse field '" + string(requiredField) 
+                    + "' because it is required and it was not found in "
+                    "'global' and '" + foundContentInCustomProfile.first + "' profile!";
+            }
+        }
+    }
+    else
+    {
+        for (const string_view requiredField : requiredFields)
+        {
+            if (!ContainsValue(foundGlobalRequiredFields, requiredField))
+            {
+                return 
+                    "Failed to parse field '" + string(requiredField) 
+                    + "' because it is required and it was not found in 'global' profile!";
+            }
+        }
+    }
+
+    pair<string, vector<FieldBlock>> finalCategoryContent{};
+    vector<FieldBlock> globalPrePostBuildActions{};
+
+    if (userParams[1] != "global")
+    {
+        for (const FieldBlock& globalBlock : foundContentInGlobal)
+        {
+            bool found{};
+            for (FieldBlock& customBlock : foundContentInCustomProfile.second)
+            {
+                if (customBlock.fieldName == globalBlock.fieldName)
+                {
+                    found = true;
+
+                    //append multi-value field values from global to custom profile
+                    if (!ContainsValue(singleValueFields, customBlock.fieldName))
+                    {
+                        //append non-existing multivalue
+                        for (const string& value : globalBlock.fieldValues)
+                        {
+                            if (!ContainsValue(customBlock.fieldValues, value))
+                            {
+                                customBlock.fieldValues.push_back(value);
+                            }
+                        }
+                    }
+                }
+            }
+
+            //add missing fields from global to custom
+            if (!found
+                || globalBlock.fieldName == field_pre_build_action
+                || globalBlock.fieldName == field_post_build_action)
+            {
+                foundContentInCustomProfile.second.push_back(globalBlock);
+            }
+        }
+
+        finalCategoryContent = std::move(foundContentInCustomProfile);
+    }
+    else finalCategoryContent = { "global", std::move(foundContentInGlobal) };
+
+    string compiler{};
+    for (const FieldBlock& fieldBlock : finalCategoryContent.second)
+    {
+        if (fieldBlock.fieldName == field_compiler)
+        {
+            compiler = fieldBlock.fieldValues[0];
+            break;
+        }
+    }
+
+    bool foundJobs{};
+    for (const FieldBlock& fieldBlock : finalCategoryContent.second)
+    {
+        if (fieldBlock.fieldName == field_jobs)
+        {
+            foundJobs = true;
+            break;
+        }
+    }
+
+    //only c/c++ compilers can auto-assign job if not assigned
+    if (compiler == compiler_clang_cl
+        || compiler == compiler_cl
+        || compiler == compiler_clang
+        || compiler == compiler_clangpp
+        || compiler == compiler_gcc
+        || compiler == compiler_gpp
+        || compiler == compiler_zig)
+    {
+        if (!foundJobs)
+        {
+            string jobsCount = to_string(GetThreadCount());
+            finalCategoryContent.second.push_back(
+                { 
+                    "jobs", 
+                    { jobsCount } 
+                });
+
+            Log::Print(
+                "Set jobs count to '" + jobsCount + "' because it was not assigned.",
+                "KMAKE_CORE",
+                LogType::LOG_INFO);
+        }
+    }
+    else
+    {
+        if (foundJobs)
+        {
+            return
+                "Failed to parse field 'jobs' because it was assigned to compiler '" + compiler +
+                "' that does not support multiple jobs!";
+        }
+    }
+
+    auto translate_reference = [&](
+        string inValue,
+        string& outValue) -> string
+        {
+            //value did not contain any references, skip
+            if (inValue.find('$') == string_view::npos)
+            {
+                outValue = inValue;
+                return "";
+            }
+
+            size_t replacementCount{};
+            function<string(size_t)> replace_ref;
+
+            replace_ref = [&](size_t start) -> string
+                {
+                    size_t refBracketPos = start + 1;
+                    size_t refBracketEndPos = string::npos;
+                    size_t depth = 1;
+
+                    for (size_t i = refBracketPos + 1; i < inValue.size(); i++)
+                    {
+                        if (i + 1 < inValue.size()
+                            && inValue[i] == '$'
+                            && inValue[i + 1] == '{')
+                        {
+                            depth++;
+                            i++;
+                        }
+                        else if (inValue[i] == '}')
+                        {
+                            depth--;
+                            if (depth == 0)
+                            {
+                                refBracketEndPos = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (refBracketEndPos == string::npos)
+                    {
+                        return
+                            "Failed to find dereference values in field value '" + inValue +
+                            "' because a reference value was not closed by a closing bracket!";
+                    }
+
+                    //find ref start here before the closing bracket and jump to child
+                    size_t childRef = inValue.find("${", refBracketPos + 1);
+                    while (childRef != string::npos
+                        && childRef < refBracketEndPos)
+                    {
+                        string err = replace_ref(childRef);
+                        if (!err.empty()) return err;
+
+                        //recalculate closing bracket after child replacement
+                        refBracketEndPos = inValue.find('}', refBracketPos);
+
+                        childRef = inValue.find("${", refBracketPos + 1);
+                    }
+
+                    if (refBracketEndPos == refBracketPos + 1)
+                    {
+                        return
+                            "Failed to find dereference values in field value '" + inValue 
+                            + "' because a reference had no value between brackets!";
+                    }
+
+                    string refValue = inValue.substr(
+                        refBracketPos + 1,
+                        refBracketEndPos - refBracketPos - 1);
+
+                    if (ContainsSpace(refValue))
+                    {
+                        return
+                            "Failed to find dereference values in field value '" + inValue 
+                            + "' because reference '" + refValue + "' contains whitespace characters!";
+                    }
+
+                    string replacement{};
+                    for (const auto& r : globalData.references)
+                    {
+                        if (r.name == refValue)
+                        {
+                            replacement = r.value;
+                            break;
+                        }
+                    }
+                    if (replacement.empty())
+                    {
+                        return
+                            "Failed to find dereference value '" + refValue + "' in field value '" 
+                            + inValue + "' because it has not been added as a reference!";
+                    }
+
+                    if (++replacementCount > MAX_EXPANSION_LIMIT)
+                    {
+                        return
+                            "Failed to translate references in field value '" + inValue 
+                            + "' because the maximum reference replacement limit was exceeded!" 
+                            "Possible circular reference.";
+                    }
+
+                    inValue.replace(
+                        start,
+                        refBracketEndPos - start + 1,
+                        replacement);
+
+                    return "";
+                };
+
+            for (size_t i = 0; i < inValue.size();)
+            {
+                if (i + 1 < inValue.size()
+                    && inValue[i] == '$'
+                    && inValue[i + 1] == '{')
+                {
+                    string err = replace_ref(i);
+                    if (!err.empty()) return err;
+                }
+                else i++;
+            }
+
+            outValue = inValue;
+            return "";
+        };
+
+    for (const FieldBlock& fieldBlock : foundReferences)
+    {
+        for (const string& value : fieldBlock.fieldValues)
+        {
+            string translated{};
+            string err = translate_reference(value, translated);
+            if (!err.empty()) return err;
+
+            globalData.references.push_back(
+                {
+                    .name = fieldBlock.fieldName,
+                    .value = std::move(translated)
+                });
+        }
+    }
+
+    auto try_parse_jobs = [](string_view text) -> bool
+        {
+            u16 jobs{};
+
+            auto [ptr, ec] = from_chars(
+                text.data(),
+                text.data() + text.size(),
+                jobs);
+
+            if (ec != errc{}
+                || ptr != text.data() + text.size())
+            {
+                return false;
+            }
+
+            return true;
+        };
+
+    globalData.projectFile = absolute(userParams[0]);
+    globalData.targetProfile.profileName = userParams[1];
+
+    for (FieldBlock& fieldBlock : finalCategoryContent.second)
+    {
+        if (fieldBlock.fieldName == field_compiler_launcher
+            || fieldBlock.fieldName == field_compiler
+            || fieldBlock.fieldName == field_standard
+            || fieldBlock.fieldName == field_target_type
+            || fieldBlock.fieldName == field_binary_type
+            || fieldBlock.fieldName == field_build_type
+            || fieldBlock.fieldName == field_warning_level
+            || fieldBlock.fieldName == field_binary_name
+            || fieldBlock.fieldName == field_build_path
+            || fieldBlock.fieldName == field_jobs
+            || fieldBlock.fieldName == field_pre_build_action
+            || fieldBlock.fieldName == field_post_build_action)
+        {
+            string value = fieldBlock.fieldValues[0];
+            string translated{};
+            string err = translate_reference(value, translated);
+            if (!err.empty()) return err;
+
+            if ((fieldBlock.fieldName == field_compiler_launcher
+                && !ContainsValue(compilerLauncherTypes, translated))
+                || (fieldBlock.fieldName == field_compiler
+                && !ContainsValue(compilerTypes, translated))
+                || (fieldBlock.fieldName == field_standard
+                && !ContainsValue(standardTypes, translated))
+                || (fieldBlock.fieldName == field_target_type
+                && !ContainsValue(targetTypes, translated))
+                || (fieldBlock.fieldName == field_binary_type
+                && !ContainsValue(binaryTypes, translated))
+                || (fieldBlock.fieldName == field_build_type
+                && !ContainsValue(buildTypes, translated))
+                || (fieldBlock.fieldName == field_warning_level
+                && !ContainsValue(warningLevels, translated)))
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName
+                    + "' value '" + translated + "' in category '" 
+                    + finalCategoryContent.first + "' because it is invalid!";
+            }
+
+            if (fieldBlock.fieldName == field_binary_name
+                && !IsStringInRange(translated, MIN_BINARY_NAME_LENGTH, MAX_BINARY_NAME_LENGTH))
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName
+                    + "' value '" + translated + "' in category '" 
+                    + finalCategoryContent.first + "' because it is out of range!";
+            }
+
+            if (fieldBlock.fieldName == field_build_path)
+            {
+                path buildPath = absolute(translated);
+
+                if (exists(buildPath))
+                {
+                    if (!is_directory(buildPath))
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + translated + "' in category '" 
+                            + finalCategoryContent.first + "' because it does not lead to a directory!";
+                    }
+                }
+                else
+                {
+                    string err = CreateNewDirectory(buildPath);
+                    if (!err.empty())
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + translated + "' in category '" 
+                            + finalCategoryContent.first + "' because it could not be created as a new build path!";
+                    }
+
+                    Log::Print(
+                        "Created build directory '" + translated + "' because it did not exist.",
+                        "KMAKE_CORE",
+                        LogType::LOG_INFO);
+                }
+            }
+
+            if (fieldBlock.fieldName == field_jobs)
+            {
+                bool errState = try_parse_jobs(translated);
+                if (!errState)
+                {
+                    return 
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + translated + "' in category '" 
+                        + finalCategoryContent.first + "' because it could not be cast to u16!";
+                }
+
+                if (translated.starts_with('0'))
+                {
+                    return 
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + translated + "' in category '" 
+                        + finalCategoryContent.first + "' because it was set to 0 or started with 0!";
+                }
+            }
+
+            if (fieldBlock.fieldName == field_binary_type)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    binaryTypes, 
+                    globalData.targetProfile.binaryType);
+            }
+            if (fieldBlock.fieldName == field_compiler_launcher)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    compilerLauncherTypes, 
+                    globalData.targetProfile.compilerLauncher);
+            }
+            if (fieldBlock.fieldName == field_compiler)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    compilerTypes, 
+                    globalData.targetProfile.compiler);
+            }
+            if (fieldBlock.fieldName == field_standard)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    standardTypes, 
+                    globalData.targetProfile.standard);
+            }
+            if (fieldBlock.fieldName == field_target_type)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    targetTypes, 
+                    globalData.targetProfile.targetType);
+            }
+            if (fieldBlock.fieldName == field_jobs)
+            {
+                globalData.targetProfile.jobs = scast<u16>(stoul(translated));
+            }
+            if (fieldBlock.fieldName == field_binary_name)
+            {
+                globalData.targetProfile.binaryName = translated;
+            }
+            if (fieldBlock.fieldName == field_build_type)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    buildTypes, 
+                    globalData.targetProfile.buildType);
+            }
+            if (fieldBlock.fieldName == field_build_path)
+            {
+                globalData.targetProfile.buildPath = translated;
+            }
+            if (fieldBlock.fieldName == field_warning_level)
+            {
+                string _ = StringToEnum(
+                    translated, 
+                    warningLevels, 
+                    globalData.targetProfile.warningLevel);
+            }
+            if (fieldBlock.fieldName == field_pre_build_action)
+            {
+                size_t pos{};
+                while ((pos = translated.find("\\\"", pos)) != string::npos)
+                {
+                    translated.replace(pos, 2, "\"");
+                    ++pos;
+                }
+
+                globalData.targetProfile.preBuildActions.push_back(translated);
+            }
+            if (fieldBlock.fieldName == field_post_build_action)
+            {
+                size_t pos{};
+                while ((pos = translated.find("\\\"", pos)) != string::npos)
+                {
+                    translated.replace(pos, 2, "\"");
+                    ++pos;
+                }
+
+                globalData.targetProfile.postBuildActions.push_back(translated);
+            }
+        }
+
+        for (size_t i = 0; i < fieldBlock.fieldValues.size(); i++)
+        {
+            string& value = fieldBlock.fieldValues[i];
+
+            if (fieldBlock.fieldName == field_sources
+                || fieldBlock.fieldName == field_headers
+                || fieldBlock.fieldName == field_links
+                || fieldBlock.fieldName == field_custom_flags
+                || fieldBlock.fieldName == field_compile_flags
+                || fieldBlock.fieldName == field_link_flags
+                || fieldBlock.fieldName == field_defines)
+            {
+                string translated{};
+                string err = translate_reference(value, translated);
+                if (!err.empty()) return err;
+
+                //sources must always exist
+                if (fieldBlock.fieldName == field_sources
+                    && !exists(absolute(translated)))
+                {
+                    return 
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + translated + "' in category '" 
+                        + finalCategoryContent.first + "' because it does not exist!";
+                }
+
+                //headers must be directories and always exist
+                if (fieldBlock.fieldName == field_headers)
+                {
+                    path absPath = absolute(translated);
+                    if (!exists(absPath))
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + translated + "' in category '" 
+                            + finalCategoryContent.first + "' because it does not exist!";
+                    }
+                    if (!is_directory(absPath))
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + translated + "' in category '" 
+                            + finalCategoryContent.first + "' because it is not a directory!";
+                    }
+                }
+
+                //links must lead to full path if not system lib
+                if (fieldBlock.fieldName == field_links
+                    && path(translated).has_parent_path()
+                    && !is_regular_file(absolute(translated)))
+                {
+                    return 
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + translated + "' in category '" 
+                        + finalCategoryContent.first + "' because it does not exist!";
+                }
+
+                if (fieldBlock.fieldName == field_custom_flags
+                    && !ContainsValue(customFlags, translated))
+                {
+                    return 
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + translated + "' in category '" 
+                        + finalCategoryContent.first + "' because it is invalid!";
+                }
+
+                value = std::move(translated);
+            }
+        }
+
+        if (fieldBlock.fieldName == field_sources)
+        {
+            for (const string& value : fieldBlock.fieldValues)
+            {
+                if (is_directory(value))
+                {
+                    for (const auto& entry : recursive_directory_iterator(value))
+                    {
+                        if (!entry.is_regular_file()) continue;
+
+                        const path& file = entry.path();
+                        string ext = file.extension().string();
+
+                        if (ext == ".c"
+                            || ext == ".cc"
+                            || ext == ".cpp")
+                        {
+                            globalData.targetProfile.sources.push_back(file);
+                        }
+                    }
+                }
+                else globalData.targetProfile.sources.push_back(path(value));
+            }
+        }
+        if (fieldBlock.fieldName == field_headers)
+        {
+            for (const string& value : fieldBlock.fieldValues)
+            {
+                globalData.targetProfile.headers.push_back(path(value));
+            }
+        }
+        if (fieldBlock.fieldName == field_links)
+        {
+            for (const string& value : fieldBlock.fieldValues)
+            {
+                globalData.targetProfile.links.push_back(path(value));
+            }
+        }
+        if (fieldBlock.fieldName == field_custom_flags)
+        {
+            for (const string& value : fieldBlock.fieldValues)
+            {
+                CustomFlag flag{};
+
+                string _ = StringToEnum(
+                    value, 
+                    customFlags, 
+                    flag);
+
+                globalData.targetProfile.customFlags.push_back(flag);
+            }
+        }
+        if (fieldBlock.fieldName == field_compile_flags)
+        {
+            globalData.targetProfile.compileFlags = std::move(fieldBlock.fieldValues);
+        }
+        if (fieldBlock.fieldName == field_link_flags)
+        {
+            globalData.targetProfile.linkFlags = std::move(fieldBlock.fieldValues);
+        }
+        if (fieldBlock.fieldName == field_defines)
+        {
+            globalData.targetProfile.defines = std::move(fieldBlock.fieldValues);
         }
     }
 
