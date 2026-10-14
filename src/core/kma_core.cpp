@@ -35,6 +35,7 @@ using KalaHeaders::KalaFile::CreateNewDirectory;
 using KalaHeaders::KalaString::IsStringInRange;
 using KalaHeaders::KalaString::TrimString;
 using KalaHeaders::KalaString::ContainsSpace;
+using KalaHeaders::KalaString::SplitString;
 
 using KalaMake::Language::LanguageCore;
 using KalaMake::Core::Version;
@@ -1305,18 +1306,22 @@ string GetGlobalData(const vector<string>& content)
 
     for (const FieldBlock& fieldBlock : foundReferences)
     {
+        string combined{};
         for (const string& value : fieldBlock.fieldValues)
         {
             string translated{};
             string err = translate_reference(value, translated);
             if (!err.empty()) return err;
 
-            globalData.references.push_back(
-                {
-                    .name = fieldBlock.fieldName,
-                    .value = std::move(translated)
-                });
+            if (!combined.empty()) combined += ", ";
+            combined += translated;
         }
+
+        globalData.references.push_back(
+            {
+                .name = fieldBlock.fieldName,
+                .value = std::move(combined)
+            });
     }
 
     auto try_parse_jobs = [](string_view text) -> bool
@@ -1342,6 +1347,8 @@ string GetGlobalData(const vector<string>& content)
 
     for (FieldBlock& fieldBlock : finalCategoryContent.second)
     {
+        Log::Print("--field '" + fieldBlock.fieldName + "'", true);
+
         if (fieldBlock.fieldName == field_compiler_launcher
             || fieldBlock.fieldName == field_compiler
             || fieldBlock.fieldName == field_standard
@@ -1356,43 +1363,74 @@ string GetGlobalData(const vector<string>& content)
             || fieldBlock.fieldName == field_post_build_action)
         {
             string value = fieldBlock.fieldValues[0];
-            string translated{};
-            string err = translate_reference(value, translated);
+            string expanded{};
+            string err = translate_reference(value, expanded);
             if (!err.empty()) return err;
 
+            vector<string> translated{};
+            if (expanded.find(", ") != string::npos)
+            {
+                string err = SplitString(expanded, ", ", translated);
+                if (!err.empty())
+                {
+                    return
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + expanded + "' in category '" 
+                        + finalCategoryContent.first + "' because its reference couldn't be expanded! Reason: " + err;
+                }
+            }
+            else translated.push_back(expanded);
+
+            if (translated.empty()
+                || translated[0].empty())
+            {
+                return
+                    "Failed to parse field '" + fieldBlock.fieldName
+                    + "' value '" + expanded + "' in category '" 
+                    + finalCategoryContent.first + "' because its expanded reference was empty!";
+            }
+            if (translated.size() > 1)
+            {
+                return
+                    "Failed to parse field '" + fieldBlock.fieldName
+                    + "' value '" + expanded + "' in category '" 
+                    + finalCategoryContent.first + "' because its expanded reference contained more than one value!";
+            }
+            expanded = translated[0];
+
             if ((fieldBlock.fieldName == field_compiler_launcher
-                && !ContainsValue(compilerLauncherTypes, translated))
+                && !ContainsValue(compilerLauncherTypes, expanded))
                 || (fieldBlock.fieldName == field_compiler
-                && !ContainsValue(compilerTypes, translated))
+                && !ContainsValue(compilerTypes, expanded))
                 || (fieldBlock.fieldName == field_standard
-                && !ContainsValue(standardTypes, translated))
+                && !ContainsValue(standardTypes, expanded))
                 || (fieldBlock.fieldName == field_target_type
-                && !ContainsValue(targetTypes, translated))
+                && !ContainsValue(targetTypes, expanded))
                 || (fieldBlock.fieldName == field_binary_type
-                && !ContainsValue(binaryTypes, translated))
+                && !ContainsValue(binaryTypes, expanded))
                 || (fieldBlock.fieldName == field_build_type
-                && !ContainsValue(buildTypes, translated))
+                && !ContainsValue(buildTypes, expanded))
                 || (fieldBlock.fieldName == field_warning_level
-                && !ContainsValue(warningLevels, translated)))
+                && !ContainsValue(warningLevels, expanded)))
             {
                 return 
                     "Failed to parse field '" + fieldBlock.fieldName
-                    + "' value '" + translated + "' in category '" 
+                    + "' value '" + expanded + "' in category '" 
                     + finalCategoryContent.first + "' because it is invalid!";
             }
 
             if (fieldBlock.fieldName == field_binary_name
-                && !IsStringInRange(translated, MIN_BINARY_NAME_LENGTH, MAX_BINARY_NAME_LENGTH))
+                && !IsStringInRange(expanded, MIN_BINARY_NAME_LENGTH, MAX_BINARY_NAME_LENGTH))
             {
                 return 
                     "Failed to parse field '" + fieldBlock.fieldName
-                    + "' value '" + translated + "' in category '" 
+                    + "' value '" + expanded + "' in category '" 
                     + finalCategoryContent.first + "' because it is out of range!";
             }
 
             if (fieldBlock.fieldName == field_build_path)
             {
-                path buildPath = absolute(translated);
+                path buildPath = absolute(expanded);
 
                 if (exists(buildPath))
                 {
@@ -1400,7 +1438,7 @@ string GetGlobalData(const vector<string>& content)
                     {
                         return 
                             "Failed to parse field '" + fieldBlock.fieldName
-                            + "' value '" + translated + "' in category '" 
+                            + "' value '" + expanded + "' in category '" 
                             + finalCategoryContent.first + "' because it does not lead to a directory!";
                     }
                 }
@@ -1411,12 +1449,12 @@ string GetGlobalData(const vector<string>& content)
                     {
                         return 
                             "Failed to parse field '" + fieldBlock.fieldName
-                            + "' value '" + translated + "' in category '" 
+                            + "' value '" + expanded + "' in category '" 
                             + finalCategoryContent.first + "' because it could not be created as a new build path!";
                     }
 
                     Log::Print(
-                        "Created build directory '" + translated + "' because it did not exist.",
+                        "Created build directory '" + expanded + "' because it did not exist.",
                         "KMAKE_CORE",
                         LogType::LOG_INFO);
                 }
@@ -1424,20 +1462,20 @@ string GetGlobalData(const vector<string>& content)
 
             if (fieldBlock.fieldName == field_jobs)
             {
-                bool errState = try_parse_jobs(translated);
+                bool errState = try_parse_jobs(expanded);
                 if (!errState)
                 {
                     return 
                         "Failed to parse field '" + fieldBlock.fieldName
-                        + "' value '" + translated + "' in category '" 
+                        + "' value '" + expanded + "' in category '" 
                         + finalCategoryContent.first + "' because it could not be cast to u16!";
                 }
 
-                if (translated.starts_with('0'))
+                if (expanded.starts_with('0'))
                 {
                     return 
                         "Failed to parse field '" + fieldBlock.fieldName
-                        + "' value '" + translated + "' in category '" 
+                        + "' value '" + expanded + "' in category '" 
                         + finalCategoryContent.first + "' because it was set to 0 or started with 0!";
                 }
             }
@@ -1445,91 +1483,94 @@ string GetGlobalData(const vector<string>& content)
             if (fieldBlock.fieldName == field_binary_type)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     binaryTypes, 
                     globalData.targetProfile.binaryType);
             }
             if (fieldBlock.fieldName == field_compiler_launcher)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     compilerLauncherTypes, 
                     globalData.targetProfile.compilerLauncher);
             }
             if (fieldBlock.fieldName == field_compiler)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     compilerTypes, 
                     globalData.targetProfile.compiler);
             }
             if (fieldBlock.fieldName == field_standard)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     standardTypes, 
                     globalData.targetProfile.standard);
             }
             if (fieldBlock.fieldName == field_target_type)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     targetTypes, 
                     globalData.targetProfile.targetType);
             }
             if (fieldBlock.fieldName == field_jobs)
             {
-                globalData.targetProfile.jobs = scast<u16>(stoul(translated));
+                globalData.targetProfile.jobs = scast<u16>(stoul(expanded));
             }
             if (fieldBlock.fieldName == field_binary_name)
             {
-                globalData.targetProfile.binaryName = translated;
+                globalData.targetProfile.binaryName = expanded;
             }
             if (fieldBlock.fieldName == field_build_type)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     buildTypes, 
                     globalData.targetProfile.buildType);
             }
             if (fieldBlock.fieldName == field_build_path)
             {
-                globalData.targetProfile.buildPath = translated;
+                globalData.targetProfile.buildPath = expanded;
             }
             if (fieldBlock.fieldName == field_warning_level)
             {
                 string _ = StringToEnum(
-                    translated, 
+                    expanded, 
                     warningLevels, 
                     globalData.targetProfile.warningLevel);
             }
             if (fieldBlock.fieldName == field_pre_build_action)
             {
                 size_t pos{};
-                while ((pos = translated.find("\\\"", pos)) != string::npos)
+                while ((pos = expanded.find("\\\"", pos)) != string::npos)
                 {
-                    translated.replace(pos, 2, "\"");
+                    expanded.replace(pos, 2, "\"");
                     ++pos;
                 }
 
-                globalData.targetProfile.preBuildActions.push_back(translated);
+                globalData.targetProfile.preBuildActions.push_back(expanded);
             }
             if (fieldBlock.fieldName == field_post_build_action)
             {
                 size_t pos{};
-                while ((pos = translated.find("\\\"", pos)) != string::npos)
+                while ((pos = expanded.find("\\\"", pos)) != string::npos)
                 {
-                    translated.replace(pos, 2, "\"");
+                    expanded.replace(pos, 2, "\"");
                     ++pos;
                 }
 
-                globalData.targetProfile.postBuildActions.push_back(translated);
+                globalData.targetProfile.postBuildActions.push_back(expanded);
             }
+
+            Log::Print("----value '" + expanded + "'", true);
         }
 
+        vector<string> finalValues{};
         for (size_t i = 0; i < fieldBlock.fieldValues.size(); i++)
         {
-            string& value = fieldBlock.fieldValues[i];
+            const string& value = fieldBlock.fieldValues[i];
 
             if (fieldBlock.fieldName == field_sources
                 || fieldBlock.fieldName == field_headers
@@ -1539,63 +1580,97 @@ string GetGlobalData(const vector<string>& content)
                 || fieldBlock.fieldName == field_link_flags
                 || fieldBlock.fieldName == field_defines)
             {
-                string translated{};
-                string err = translate_reference(value, translated);
+                string expanded{};
+                string err = translate_reference(value, expanded);
                 if (!err.empty()) return err;
 
-                //sources must always exist
-                if (fieldBlock.fieldName == field_sources
-                    && !exists(absolute(translated)))
+                vector<string> translated{};
+                if (expanded.find(", ") != string::npos)
                 {
-                    return 
-                        "Failed to parse field '" + fieldBlock.fieldName
-                        + "' value '" + translated + "' in category '" 
-                        + finalCategoryContent.first + "' because it does not exist!";
+                    string err = SplitString(expanded, ", ", translated);
+                    if (!err.empty())
+                    {
+                        return
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + expanded + "' in category '" 
+                            + finalCategoryContent.first + "' because its reference couldn't be expanded! Reason: " + err;
+                    }
                 }
+                else translated.push_back(expanded);
 
-                //headers must be directories and always exist
-                if (fieldBlock.fieldName == field_headers)
+                if (translated.empty())
                 {
-                    path absPath = absolute(translated);
-                    if (!exists(absPath))
+                    return
+                        "Failed to parse field '" + fieldBlock.fieldName
+                        + "' value '" + expanded + "' in category '" 
+                        + finalCategoryContent.first + "' because its expanded reference was empty!";
+                }
+                for (const string& val : translated)
+                {
+                    if (val.empty())
+                    {
+                        return
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + val + "' in category '" 
+                            + finalCategoryContent.first + "' because it was empty!";
+                    }
+
+                    //sources must always exist
+                    if (fieldBlock.fieldName == field_sources
+                        && !exists(absolute(val)))
                     {
                         return 
                             "Failed to parse field '" + fieldBlock.fieldName
-                            + "' value '" + translated + "' in category '" 
+                            + "' value '" + val + "' in category '" 
                             + finalCategoryContent.first + "' because it does not exist!";
                     }
-                    if (!is_directory(absPath))
+
+                    //headers must be directories and always exist
+                    if (fieldBlock.fieldName == field_headers)
+                    {
+                        path absPath = absolute(val);
+                        if (!exists(absPath))
+                        {
+                            return 
+                                "Failed to parse field '" + fieldBlock.fieldName
+                                + "' value '" + val + "' in category '" 
+                                + finalCategoryContent.first + "' because it does not exist!";
+                        }
+                        if (!is_directory(absPath))
+                        {
+                            return 
+                                "Failed to parse field '" + fieldBlock.fieldName
+                                + "' value '" + val + "' in category '" 
+                                + finalCategoryContent.first + "' because it is not a directory!";
+                        }
+                    }
+
+                    //links must lead to full path if not system lib
+                    if (fieldBlock.fieldName == field_links
+                        && path(val).has_parent_path()
+                        && !is_regular_file(absolute(val)))
                     {
                         return 
                             "Failed to parse field '" + fieldBlock.fieldName
-                            + "' value '" + translated + "' in category '" 
-                            + finalCategoryContent.first + "' because it is not a directory!";
+                            + "' value '" + val + "' in category '" 
+                            + finalCategoryContent.first + "' because it does not exist!";
                     }
-                }
 
-                //links must lead to full path if not system lib
-                if (fieldBlock.fieldName == field_links
-                    && path(translated).has_parent_path()
-                    && !is_regular_file(absolute(translated)))
-                {
-                    return 
-                        "Failed to parse field '" + fieldBlock.fieldName
-                        + "' value '" + translated + "' in category '" 
-                        + finalCategoryContent.first + "' because it does not exist!";
-                }
+                    if (fieldBlock.fieldName == field_custom_flags
+                        && !ContainsValue(customFlags, val))
+                    {
+                        return 
+                            "Failed to parse field '" + fieldBlock.fieldName
+                            + "' value '" + val + "' in category '" 
+                            + finalCategoryContent.first + "' because it is invalid!";
+                    }
 
-                if (fieldBlock.fieldName == field_custom_flags
-                    && !ContainsValue(customFlags, translated))
-                {
-                    return 
-                        "Failed to parse field '" + fieldBlock.fieldName
-                        + "' value '" + translated + "' in category '" 
-                        + finalCategoryContent.first + "' because it is invalid!";
+                    Log::Print("----value '" + val + "'", true);
+                    finalValues.push_back(val);
                 }
-
-                value = std::move(translated);
             }
         }
+        fieldBlock.fieldValues = std::move(finalValues);
 
         if (fieldBlock.fieldName == field_sources)
         {

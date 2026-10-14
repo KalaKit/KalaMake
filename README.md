@@ -13,45 +13,11 @@ This project relies on several [external dependencies](external), this repositor
 
 To compile Kalamake on Windows without Kalamake:
 ```
-//create the root build dir
-mkdir build
-
-//create the target binary dir
-mkdir build\release-windows
-
-//create the object dir
-mkdir build\release-windows\obj
-
-//go to the target binary dir
-cd build\release-windows
-
-//compile cpp files
-for /r "..\..\src" %f in (*.cpp) do clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\external\kalaheaders\include" -I"..\..\external\kalacli\include" -o "obj\%~nf.obj"
-
-//link into executable
-clang++ -o kalamake.exe "obj\*.obj" "..\..\external\kalacli\kalacli.lib"
+(if exist build rmdir /s /q build) & mkdir build && mkdir build\release-windows && mkdir build\release-windows\obj && cd build\release-windows && (for /r "..\..\src" %f in (*.cpp) do @clang++ -DLIB_STATIC -std=c++20 -c "%f" -I"..\..\include" -I"..\..\external\kalaheaders\include" -I"..\..\external\kalacli\include" -o "obj\%~nf.obj") && clang++ -o kalamake.exe obj\*.obj "..\..\external\kalacli\kalacli.lib" -luser32 && echo Build succeeded!
 ```
 And on Linux:
 ```
-//create the root build dir
-mkdir build
-
-//create the target binary dir
-mkdir build\release-linux
-
-//create the object dir
-mkdir build\release-linux\obj
-
-//go to the target binary dir
-cd build\release-linux
-
-//compile cpp files
-for f in ../../src/**/*.cpp
-    clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I../../external/kalaheaders/include -I"../../external/kalacli/include" -o obj/(basename $f .cpp).o
-end
-
-//link into executable
-clang++ -o kalamake obj/*.o ../../externa/kalacli/libkalacli.a
+rm -rf build; and mkdir build; and mkdir build/release-linux; and mkdir build/release-linux/obj; and cd build/release-linux; and for f in ../../src/**/*.cpp; clang++ -DLIB_STATIC -std=c++20 -c "$f" -I"../../include" -I../../external/kalaheaders/include -I"../../external/kalacli/include" -o obj/(basename $f .cpp).o; end; and clang++ -o kalamake obj/*.o ../../external/kalacli/libkalacli.a; and echo Build succeeded!
 ```
 
 ## Supported languages
