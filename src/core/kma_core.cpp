@@ -583,7 +583,8 @@ string GetGlobalData(const vector<string>& content)
 
             for (const string& line : content)
             {
-                if (line.empty()) continue;
+                //skip empty and whitespace-only lines
+                if (line.find_first_not_of(" \t\n\r\f\v") == string::npos) continue;
 
                 string trimmed{};
                 string err = TrimString(line, trimmed);
