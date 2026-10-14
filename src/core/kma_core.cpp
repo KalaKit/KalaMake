@@ -392,6 +392,8 @@ static bool isInHeadlessMode{};
 static GlobalData globalData{};
 static vector<string> userParams{};
 
+static bool isValidating{};
+
 static u16 GetThreadCount()
 {
 #if _WIN32
@@ -402,8 +404,6 @@ static u16 GetThreadCount()
 };
 
 static string GetGlobalData(const vector<string>& content);
-static string ListProfiles();
-static string CleanBuildDirs();
 
 namespace KalaMake::Core
 {
@@ -438,6 +438,8 @@ namespace KalaMake::Core
             return;
         }
 
+        if (startType == StartType::S_VALIDATE) isValidating = true;
+
         err = GetGlobalData(kmakeContent);
         if (startType == StartType::S_VALIDATE
             || !err.empty())
@@ -449,33 +451,7 @@ namespace KalaMake::Core
                     "Failed to get data from kmake file '" + userParams[0] + "'! Reason: " + err);
             }
 
-            if (isInHeadlessMode) exit(0);
-            return;
-        }
-
-        if (startType == StartType::S_LIST_PROFILES)
-        {
-            err = ListProfiles();
-            if (!err.empty())
-            {
-                ForceClose(
-                    "KalaMake core error",
-                    "Failed to list profiles from kmake file '" + userParams[0] + "'! Reason: " + err);
-            }
-
-            if (isInHeadlessMode) exit(0);
-            return;
-        }
-
-        if (startType == StartType::S_CLEAN)
-        {
-            err = CleanBuildDirs();
-            if (!err.empty())
-            {
-                ForceClose(
-                    "KalaMake core error",
-                    "Failed to clean build dirs from kmake file '" + userParams[0] + "'! Reason: " + err);
-            }
+            Log::Print("Validation succeeded!", true);
 
             if (isInHeadlessMode) exit(0);
             return;
@@ -1135,12 +1111,15 @@ string GetGlobalData(const vector<string>& content)
     }
 
     bool foundJobs{};
-    for (const FieldBlock& fieldBlock : finalCategoryContent.second)
+    if (!isValidating)
     {
-        if (fieldBlock.fieldName == field_jobs)
+        for (const FieldBlock& fieldBlock : finalCategoryContent.second)
         {
-            foundJobs = true;
-            break;
+            if (fieldBlock.fieldName == field_jobs)
+            {
+                foundJobs = true;
+                break;
+            }
         }
     }
 
@@ -1153,7 +1132,8 @@ string GetGlobalData(const vector<string>& content)
         || compiler == compiler_gpp
         || compiler == compiler_zig)
     {
-        if (!foundJobs)
+        if (!isValidating
+            && !foundJobs)
         {
             string jobsCount = to_string(GetThreadCount());
             finalCategoryContent.second.push_back(
@@ -1348,7 +1328,7 @@ string GetGlobalData(const vector<string>& content)
 
     for (FieldBlock& fieldBlock : finalCategoryContent.second)
     {
-        Log::Print("--field '" + fieldBlock.fieldName + "'", true);
+        if (isValidating) Log::Print("--field '" + fieldBlock.fieldName + "'", true);
 
         if (fieldBlock.fieldName == field_compiler_launcher
             || fieldBlock.fieldName == field_compiler
@@ -1445,19 +1425,22 @@ string GetGlobalData(const vector<string>& content)
                 }
                 else
                 {
-                    string err = CreateNewDirectory(buildPath);
-                    if (!err.empty())
+                    if (!isValidating)
                     {
-                        return 
-                            "Failed to parse field '" + fieldBlock.fieldName
-                            + "' value '" + expanded + "' in category '" 
-                            + finalCategoryContent.first + "' because it could not be created as a new build path!";
-                    }
+                        string err = CreateNewDirectory(buildPath);
+                        if (!err.empty())
+                        {
+                            return 
+                                "Failed to parse field '" + fieldBlock.fieldName
+                                + "' value '" + expanded + "' in category '" 
+                                + finalCategoryContent.first + "' because it could not be created as a new build path!";
+                        }
 
-                    Log::Print(
-                        "Created build directory '" + expanded + "' because it did not exist.",
-                        "KMAKE_CORE",
-                        LogType::LOG_INFO);
+                        Log::Print(
+                            "Created build directory '" + expanded + "' because it did not exist.",
+                            "KMAKE_CORE",
+                            LogType::LOG_INFO);
+                    }
                 }
             }
 
@@ -1565,7 +1548,7 @@ string GetGlobalData(const vector<string>& content)
                 globalData.targetProfile.postBuildActions.push_back(expanded);
             }
 
-            Log::Print("----value '" + expanded + "'", true);
+            if (isValidating) Log::Print("----value '" + expanded + "'", true);
         }
 
         vector<string> finalValues{};
@@ -1666,7 +1649,7 @@ string GetGlobalData(const vector<string>& content)
                             + finalCategoryContent.first + "' because it is invalid!";
                     }
 
-                    Log::Print("----value '" + val + "'", true);
+                    if (isValidating) Log::Print("----value '" + val + "'", true);
                     finalValues.push_back(val);
                 }
             }
@@ -1739,15 +1722,5 @@ string GetGlobalData(const vector<string>& content)
         }
     }
 
-    return "";
-}
-
-string ListProfiles()
-{
-    return "";
-}
-
-string CleanBuildDirs()
-{
     return "";
 }

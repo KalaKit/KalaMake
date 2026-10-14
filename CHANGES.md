@@ -10,6 +10,7 @@ BREAKING CHANGES:
 
 - #version 1.0 kmake scripts are no longer compatible, old kmake script versions must be bumped to #version 2.0
 - all field values now require quotes, old kmake scripts must be converted
+- the commands `list-profiles` and `clean` are no longer compatible with the new parser logic and they have been removed
 
 Other changes:
 

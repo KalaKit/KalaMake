@@ -1,8 +1,9 @@
-# 1.1.0
+# 2.0.0
 
 - registry overhaul
 - simplified build and dependency system
 - added TUI framework
+- kalacli no longer owns the main loop, user must provide it
 
 # 1.0.0
 

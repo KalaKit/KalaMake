@@ -45,28 +45,6 @@ static void Command_Validate(const vector<string>& params)
     
     KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
 }
-static void Command_List_Profiles(const vector<string>& params)
-{
-    if (params.size() != 1)
-    {
-        KalaCLICore::AppendToPage("ERROR: Invalid amount of arguments! You can only pass a .kmake path.");
-
-        return;
-    }
-
-    KalaMakeCore::OpenFile(StartType::S_LIST_PROFILES, params);
-}
-static void Command_Clean(const vector<string>& params)
-{
-    if (params.size() != 1)
-    {
-        KalaCLICore::AppendToPage("ERROR: Invalid amount of arguments! You can only pass a .kmake path.");
-
-        return;
-    }
-
-    KalaMakeCore::OpenFile(StartType::S_CLEAN, params);
-}
 static void Command_Compile(const vector<string>& params)
 {
     if (params.size() < 2)
@@ -111,25 +89,6 @@ int main(int argc, char* argv[])
 				"second parameter must be valid path to a .kmake file, "
 				"third parameter must be a valid profile in the .kmake file.",
             .targetFunction = [](const vector<string>& params) { Command_Validate(params); }
-        });
-
-    KalaCLICore::AddCommand(
-        {
-            .allowInHeadlessMode = true,
-            .primaryParam = "list-profiles",
-            .description =
-				"Lists all profiles in a kalamake file, "
-				"second parameter must be valid path to a .kmake file.",
-            .targetFunction = [](const vector<string>& params) { Command_List_Profiles(params); }
-        });
-
-    KalaCLICore::AddCommand(
-        {
-            .allowInHeadlessMode = true,
-            .primaryParam = "clean",
-            .description =
-				"Deletes all build directories from your target kalamake file path.",
-            .targetFunction = [](const vector<string>& params) { Command_Clean(params); }
         });
 
     KalaCLICore::AddCommand(
