@@ -1,35 +1,35 @@
-#version 1.0
+#version 2.0
 
 #global
-binaryname: test_exe
-binarytype: executable
-buildtype: release
-compiler: clang
-standard: c11
+binaryname: "test_exe"
+binarytype: "executable"
+buildtype: "release"
+compiler: "clang"
+standard: "c11"
 sources: "src/exe"
 headers: "include"
-customflags: export-vscode-sln, export-compile-commands
+customflags: "export-vscode-sln", "export-compile-commands"
 
 #profile c89
-standard: c89
+standard: "c89"
 buildpath: "build/exe-basic-89"
 
 #profile c23
-standard: c23
+standard: "c23"
 buildpath: "build/exe-basic-23"
 
 #profile linux-gnu
 buildpath: "build/exe-basic-linux-gnu"
-targettype: linux-gnu
+targettype: "linux-gnu"
 
 #profile linux-musl
 buildpath: "build/exe-basic-linux-musl"
-targettype: linux-musl
+targettype: "linux-musl"
 
 #profile windows-gnu
 buildpath: "build/exe-basic-windows-gnu"
-targettype: windows-gnu
+targettype: "windows-gnu"
 
 #profile windows-msvc
 buildpath: "build/exe-basic-windows-msvc"
-targettype: windows-msvc
+targettype: "windows-msvc"

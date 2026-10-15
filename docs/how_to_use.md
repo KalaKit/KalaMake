@@ -6,7 +6,7 @@ To run KalaMake you must first have a `.kmake` manifest file in your project roo
 
 To compile with KalaMake all you need is to launch KalaMake manually and type `--compile yourproject.kmake yourprofile` or directly type `kalamake --compile yourproject.kmake yourprofile` into your console. Read below for more details.
 
-Look at the `testing/*` folders to check an example of how to compile each language.
+Look at the `tests/*` folders to check an example of how to compile each language.
 
 ## Introduction
 

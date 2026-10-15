@@ -2,7 +2,7 @@
 
 KalaMake is a multithreaded CLI for building libraries and executables with `.kmake` files and it is intended to use as a full replacement for other build scripts and generators like Make, Premake, CMake or Ninja. KalaMake automatically uses all available threads from your CPU to always help speed up compilation, or you can fill the jobs field with your desired job count, multithreading is not supported by all languages.
 
-KalaMake currently accepts several commands, most of which come from [KalaCLI](https://github.com/kalakit/kalacli) which is statically linked to KalaMake. Type `--help` to list all available commands and type `--info commandnamehere` to list info about that command.
+KalaMake currently accepts several commands, most of which come from [KalaCLI](https://github.com/kalakit/kalacli) which is statically linked to KalaMake. Type `--help` to list all available commands.
 
 Please be aware that this library/software has limited or no documentation at the current stage due to the KalaKit and the Elypso Engine ecosystem being in early development, if you have questions then message me on discord at @kirjukala
  or via [email](mailto:sanderveski@gmail.com?subject=Questions%20about%20KalaKit%20and%20the%20Elypso%20Engine%20ecosystem). The website linked at the right side also does not currently function because both the domain and its [server backend](https://github.com/kalakit/kalaserver) are still in early development.

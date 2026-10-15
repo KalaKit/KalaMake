@@ -1,0 +1,13 @@
+#version 2.0
+
+#global
+compiler: "rust"
+standard: "rust24"
+sources: "src/lib"
+customflags: "export-vscode-sln"
+
+#profile test-sha-release
+binaryname: "test_sha"
+binarytype: "shared"
+buildtype: "release"
+buildpath: "build/sha-release"

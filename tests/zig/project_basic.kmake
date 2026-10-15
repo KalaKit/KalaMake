@@ -1,24 +1,24 @@
-#version 1.0
+#version 2.0
 
 #global
-binaryname: test_exe
-binarytype: executable
-buildtype: release
-compiler: zig
+binaryname: "test_exe"
+binarytype: "executable"
+buildtype: "release"
+compiler: "zig"
 sources: "src/basic"
-customflags: export-vscode-sln
+customflags: "export-vscode-sln"
 
 #profile current
 buildpath: "build/exe-basic-current"
 
 #profile linux-gnu
 buildpath: "build/exe-basic-linux-gnu"
-targettype: linux-gnu
+targettype: "linux-gnu"
 
 #profile linux-musl
 buildpath: "build/exe-basic-linux-musl"
-targettype: linux-musl
+targettype: "linux-musl"
 
 #profile windows-gnu
 buildpath: "build/exe-basic-windows-gnu"
-targettype: windows-gnu
+targettype: "windows-gnu"

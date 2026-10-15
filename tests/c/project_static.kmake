@@ -1,0 +1,30 @@
+#version 2.0
+
+#global
+binaryname: "test_sta"
+binarytype: "static"
+buildtype: "release"
+standard: "c11"
+sources: "src/lib"
+defines: "LIB_EXPORT"
+customflags: "export-vscode-sln", "export-compile-commands"
+
+#profile test-sta-release-cl
+compiler: "cl"
+buildpath: "build/sta-release-cl"
+
+#profile test-sta-release-clang-cl
+compiler: "clang-cl"
+buildpath: "build/sta-release-clang-cl"
+
+#profile test-sta-release-clang
+compiler: "clang"
+buildpath: "build/sta-release-clang"
+
+#profile test-sta-release-gcc
+compiler: "gcc"
+buildpath: "build/sta-release-gcc"
+
+#profile test-sta-release-zig
+compiler: "zig"
+buildpath: "build/sta-release-zig"

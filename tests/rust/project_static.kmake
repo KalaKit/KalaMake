@@ -1,0 +1,13 @@
+#version 2.0
+
+#global
+compiler: "rust"
+standard: "rust24"
+sources: "src/lib"
+customflags: "export-vscode-sln"
+
+#profile test-sta-release
+binaryname: "test_sta"
+binarytype: "static"
+buildtype: "release"
+buildpath: "build/sta-release"

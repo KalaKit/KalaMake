@@ -1,0 +1,16 @@
+#version 2.0
+
+#global
+binaryname: "java-test"
+binarytype: "executable"
+buildtype: "release"
+buildpath: "build"
+sources: "src"
+compiler: "java"
+customflags: "package-jar", "export-vscode-sln", "export-java-sln"
+
+#profile j8
+standard: "java8"
+
+#profile j26
+standard: "java26"

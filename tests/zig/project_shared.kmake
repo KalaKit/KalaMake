@@ -1,0 +1,12 @@
+#version 2.0
+
+#global
+binarytype: "shared"
+compiler: "zig"
+sources: "src/lib"
+customflags: "export-vscode-sln"
+
+#profile test-sha-release
+binaryname: "test_sha"
+buildtype: "release"
+buildpath: "build/sha-release"

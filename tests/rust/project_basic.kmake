@@ -1,32 +1,32 @@
-#version 1.0
+#version 2.0
 
 #global
-binaryname: test_exe
-binarytype: executable
-buildtype: release
-compiler: rust
+binaryname: "test_exe"
+binarytype: "executable"
+buildtype: "release"
+compiler: "rust"
 sources: "src/basic"
-customflags: export-vscode-sln
+customflags: "export-vscode-sln"
 
 #profile 2015
-standard: rust15
+standard: "rust15"
 buildpath: "build/exe-basic-2015"
 
 #profile 2024
-standard: rust24
+standard: "rust24"
 buildpath: "build/exe-basic-2024"
 
 #profile linux-gnu
-standard: rust24
+standard: "rust24"
 buildpath: "build/exe-basic-linux-gnu"
-targettype: linux-gnu
+targettype: "linux-gnu"
 
 #profile linux-musl
-standard: rust24
+standard: "rust24"
 buildpath: "build/exe-basic-linux-musl"
-targettype: linux-musl
+targettype: "linux-musl"
 
 #profile windows-gnu
-standard: rust24
+standard: "rust24"
 buildpath: "build/exe-basic-windows-gnu"
-targettype: windows-gnu
+targettype: "windows-gnu"
