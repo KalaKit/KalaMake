@@ -22,7 +22,7 @@ using std::vector;
 using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
 
-static constexpr string_view KALAMAKE_VERSION = "2.0.0";
+static constexpr string_view KALAMAKE_VERSION = "2.0.1";
 
 static void Command_Version(const vector<string>& _)
 {

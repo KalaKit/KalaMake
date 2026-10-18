@@ -1,5 +1,10 @@
 # KalaMake updates
 
+## 2.0.1
+
+- doc fixes and cleanup
+- build system cleanup
+
 ## 2.0.0
 
 This is a parser-side rebuild from the ground up. The compiler flag generation stays identical. The biggest upgrade is that all field values can now be added to new lines, so youre not restricted to single-line fields and values.
