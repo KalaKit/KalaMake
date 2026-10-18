@@ -27,11 +27,11 @@ An object file for C/C++ may only be recompiled if its source file or any of the
 The version category tells KalaMake what the available fields and categories are. It prevents older versions from using new fields or categories that version did not yet have or from using deprecated or removed fields and categories in newer versions. You must add a version number after the `#version` category name.
 
 Available versions:
-- 1.0
+- 2.0
     
 Example:
 ```
-#version 1.0
+#version 2.0
 ```
 
 ---
