@@ -8,14 +8,13 @@ dir_release: "build/temp/release-"
 dir_debug: "build/temp/debug-"
 name_kc: "kalacli"
 comm_objcopy: "objcopy --remove-section .note.gnu.property"
-links_win_only:
+links_win:
     "msvcrt",
     "msvcprt",
     "ucrt",
     "vcruntime",
     "shell32",
     "user32"
-links_win_on_linux_only: "winpthread"
 
 #global
 compilerlauncher: "ccache"
@@ -32,12 +31,12 @@ customflags: "export-compile-commands", "export-vscode-sln"
 #profile debug-windows
 buildtype: "debug"
 buildpath: "${dir_debug}windows"
-links: "external/kalacli/${name_kc}d.lib", "${links_win_only}"
+links: "external/kalacli/${name_kc}d.lib", "${links_win}"
 
 #profile release-windows
 buildtype: "minsizerel"
 buildpath: "${dir_release}windows"
-links: "external/kalacli/${name_kc}.lib", "${links_win_only}"
+links: "external/kalacli/${name_kc}.lib", "${links_win}"
 
 #profile debug-linux
 buildtype: "debug"
