@@ -1248,15 +1248,23 @@ string GetGlobalData(const vector<string>& content)
                     }
                     if (replacement.empty())
                     {
-                        if (getenv(refValue.c_str()) != nullptr)
-                        {
 #if defined(KWIN_ANY)
-                            replacement = "%" + refValue + "%";
+                        char* envValue{};
+                        size_t envLength{};
+
+                        errno_t result = _dupenv_s(
+                            &envValue, 
+                            &envLength, 
+                            refValue.c_str());
+
+                        bool envExists = result == 0 && envValue;
+                        free(envValue);
+
+                        if (envExists) replacement = "%" + refValue + "%";
 #else
-                            replacement = "$" + refValue;
+                        if (getenv(refValue.c_str())) replacement = "$" + refValue;
 #endif
-                        }
-                        else
+                        if (replacement.empty())
                         {
                             return
                                 "Failed to find dereference value '" + refValue + "' in field value '" 
