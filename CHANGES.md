@@ -4,6 +4,7 @@
 
 - doc fixes and cleanup
 - build system cleanup
+- fall back to os environment variable if reference is invalid
 
 ## 2.0.0
 

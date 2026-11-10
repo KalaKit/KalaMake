@@ -189,13 +189,6 @@ Describes what folder to build the binary into. Accepts relative or full paths. 
 
 Describes what sources this binary will use. Supports relative and full paths to files and folders, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
 
-Sources support exclusion with the `!` symbol in front of the file or dir name, globbed paths do not support exclusion.
-
-```
-//exclude a source script
-sources: "!myfile.cpp"
-```
-
 ### headers
 
 Describes what headers this binary will use. Supports relative and full paths to folders, individual files are not allowed, supports recursive and non-recursive globbing with `*` and `**`. Can add multiple values.
@@ -288,7 +281,7 @@ compiler: "clang-cl"
 standard: "c++20"
 binarytype: "executable"
 binaryname: "myexe"
-<!-- buildtype: "release" -->
+buildtype: "release"
 buildpath: "build"
 sources: "src/main.cpp"
 ```

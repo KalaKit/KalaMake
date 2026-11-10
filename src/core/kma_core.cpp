@@ -1248,9 +1248,21 @@ string GetGlobalData(const vector<string>& content)
                     }
                     if (replacement.empty())
                     {
-                        return
-                            "Failed to find dereference value '" + refValue + "' in field value '" 
-                            + inValue + "' because it has not been added as a reference!";
+                        if (getenv(refValue.c_str()) != nullptr)
+                        {
+#if defined(KWIN_ANY)
+                            replacement = "%" + refValue + "%";
+#else
+                            replacement = "$" + refValue;
+#endif
+                        }
+                        else
+                        {
+                            return
+                                "Failed to find dereference value '" + refValue + "' in field value '" 
+                                + inValue + "' because it has not been added as a reference "
+                                "or does not exist as an OS environment variable!";
+                        }
                     }
 
                     if (++replacementCount > MAX_EXPANSION_LIMIT)
@@ -1400,8 +1412,23 @@ string GetGlobalData(const vector<string>& content)
                     + finalCategoryContent.first + "' because it is invalid!";
             }
 
+            bool outResult{};
+            err = IsStringInRange(
+                expanded, 
+                MIN_BINARY_NAME_LENGTH, 
+                MAX_BINARY_NAME_LENGTH,
+                outResult);
+
+            if (!err.empty())
+            {
+                return 
+                    "Failed to parse field '" + fieldBlock.fieldName
+                    + "' value '" + expanded + "' in category '" 
+                    + finalCategoryContent.first + "'! Reason: " + err;
+            }
+
             if (fieldBlock.fieldName == field_binary_name
-                && !IsStringInRange(expanded, MIN_BINARY_NAME_LENGTH, MAX_BINARY_NAME_LENGTH))
+                && !outResult)
             {
                 return 
                     "Failed to parse field '" + fieldBlock.fieldName

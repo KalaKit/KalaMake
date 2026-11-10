@@ -1,0 +1,14 @@
+pkgbase = kalamake
+	pkgdesc = KalaMake build system
+	pkgver = 2.0.1
+	pkgrel = 1
+	url = https://github.com/kalakit/kalamake
+	arch = x86_64
+	license = ZLIB
+	makedepends = clang
+	depends = glibc
+	depends = gcc-libs
+	source = kalamake-2.0.1.tar.gz::https://github.com/kalakit/kalamake/archive/refs/tags/v2.0.1.tar.gz
+	sha256sums = 90ffd20adb05878378d333bc7252a3846c6bafa1549f93330794ef4f12bb4ba7
+
+pkgname = kalamake
