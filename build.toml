@@ -1,6 +1,6 @@
 [project]
 name="kalamake"
-version="2-0-2"
+version="2-0-3"
 kmake="project.kmake"
 
 [references]

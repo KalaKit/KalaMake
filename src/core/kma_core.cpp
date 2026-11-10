@@ -1264,10 +1264,10 @@ string GetGlobalData(const vector<string>& content)
 #endif
                         if (replacement.empty())
                         {
-                            return
-                                "Failed to find dereference value '" + refValue + "' in field value '" 
-                                + inValue + "' because it has not been added as a reference "
-                                "or does not exist as an OS environment variable!";
+                            Log::Print(
+                                "Failed to dereference value '" + refValue + "'! Replacing with empty string.",
+                                "KMA_CORE",
+                                LogType::LOG_WARNING);
                         }
                     }
 

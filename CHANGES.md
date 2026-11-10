@@ -1,5 +1,9 @@
 # KalaMake updates
 
+## 2.0.3
+
+- do not force close non-existing reference, replace with empty string instead
+
 ## 2.0.2
 
 - directly resolve os environment variable if used as reference
