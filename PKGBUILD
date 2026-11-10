@@ -1,5 +1,5 @@
 pkgname=kalamake
-pkgver=2.0.1
+pkgver=2.0.2
 pkgrel=1
 pkgdesc="KalaMake build system"
 arch=('x86_64')

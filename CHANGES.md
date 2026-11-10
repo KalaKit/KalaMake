@@ -1,5 +1,9 @@
 # KalaMake updates
 
+## 2.0.2
+
+- directly resolve os environment variable if used as reference
+
 ## 2.0.1
 
 - doc fixes and cleanup

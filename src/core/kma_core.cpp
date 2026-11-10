@@ -1257,12 +1257,10 @@ string GetGlobalData(const vector<string>& content)
                             &envLength, 
                             refValue.c_str());
 
-                        bool envExists = result == 0 && envValue;
+                        if (result == 0 && envValue) replacement = envValue;
                         free(envValue);
-
-                        if (envExists) replacement = "%" + refValue + "%";
 #else
-                        if (getenv(refValue.c_str())) replacement = "$" + refValue;
+                        if (const char* envValue = getenv(refValue.c_str())) replacement = envValue;
 #endif
                         if (replacement.empty())
                         {
