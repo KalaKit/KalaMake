@@ -1,5 +1,9 @@
 # KalaMake updates
 
+## 2.x.x
+
+- standardized enums across KalaHeaders, KalaCLI and KalaMake
+
 ## 2.0.3
 
 - do not force close non-existing reference, replace with empty string instead

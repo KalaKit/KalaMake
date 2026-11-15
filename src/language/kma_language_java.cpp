@@ -72,8 +72,8 @@ static void Compile_Final(const GlobalData& globalData);
 
 static void GenerateSteps(const GlobalData& globalData)
 {
-	bool canGenerateExportSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_JAVA_SLN);
-	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+	bool canGenerateExportSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_JAVA_SLN);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_VSCODE_SLN);
 
 	if (canGenerateExportSln)
 	{
@@ -120,7 +120,7 @@ static void GenerateSteps(const GlobalData& globalData)
 		};
 
 		Generate::GenerateVSCodeSolution(
-			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			globalData.targetProfile.binaryType == BinaryType::EXECUTABLE,
 			launch,
 			task);
 	}
@@ -147,13 +147,13 @@ void PreCheck(GlobalData& globalData)
 	// ENSURE REQUIRED FIELDS ARE NOT MISSING
 	//
 
-    if (globalData.targetProfile.standard == StandardType::S_INVALID)
+    if (globalData.targetProfile.standard == StandardType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'standard' must be assigned in Java!");
     }
-	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
+	if (globalData.targetProfile.buildType == BuildType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -164,19 +164,19 @@ void PreCheck(GlobalData& globalData)
     // ENSURE UNSUPPORTED FIELDS ARE NOT USED
     //
 
-    if (globalData.targetProfile.binaryType != BinaryType::B_EXECUTABLE)
+    if (globalData.targetProfile.binaryType != BinaryType::EXECUTABLE)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Java only supports executables!");
     }
-    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
+    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
 			"Field 'compilerlauncher' is not supported in Java!");
     }
-    if (globalData.targetProfile.targetType != TargetType::T_INVALID)
+    if (globalData.targetProfile.targetType != TargetType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -188,7 +188,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_JAVA",
 			"Field 'headers' is not supported in Java!");
     }
-    if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -210,7 +210,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (ContainsValue(
 			globalData.targetProfile.customFlags, 
-			CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+			CustomFlag::EXPORT_COMPILE_COMMANDS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -218,7 +218,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_MSVC_STATIC_RUNTIME))
+		CustomFlag::MSVC_STATIC_RUNTIME))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -226,7 +226,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_GENERATE_SYMBOLS))
+		CustomFlag::GENERATE_SYMBOLS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -234,7 +234,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_NO_CONSOLE))
+		CustomFlag::NO_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -242,7 +242,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PYTHON_ONE_FILE))
+		CustomFlag::PYTHON_ONE_FILE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -400,7 +400,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -412,7 +412,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -426,7 +426,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -438,7 +438,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_JAVA",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -509,7 +509,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_JAVA",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 
@@ -582,21 +582,21 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (ContainsValue(
 				globalData.targetProfile.customFlags, 
-				CustomFlag::F_WARNINGS_AS_ERRORS))
+				CustomFlag::WARNINGS_AS_ERRORS))
 			{
 				finalFlags.push_back("-Werror");
 			}
 
 			switch (globalData.targetProfile.buildType)
 			{
-			case BuildType::B_DEBUG:
+			case BuildType::DEBUG:
 			{
 				finalFlags.push_back("-g");
 				break;
 			}
-			case BuildType::B_RELEASE:
-			case BuildType::B_MINSIZEREL:
-			case BuildType::B_RELDEBUG:
+			case BuildType::RELEASE:
+			case BuildType::MINSIZEREL:
+			case BuildType::RELDEBUG:
 			{
 				finalFlags.push_back("-g:none");
 				break;
@@ -663,7 +663,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -679,7 +679,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compilation of class files because they are newer than their source files.\n",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 			}
@@ -760,7 +760,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to create jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -774,7 +774,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished creating jar file '" + jarPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
 					0,
 					true);
 			}
@@ -783,7 +783,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping creating jar file '" + jarPath.string() + "' because there are no new class files.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 			}
@@ -911,7 +911,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (ContainsValue(
 				globalData.targetProfile.customFlags, 
-				CustomFlag::F_JAVA_WIN_CONSOLE))
+				CustomFlag::JAVA_WIN_CONSOLE))
 			{
 				command += " --win-console";
 			}
@@ -944,7 +944,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to package jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -970,7 +970,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished packing jar file to path '" + buildPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
 					0,
 					true);
 			}
@@ -979,7 +979,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping packing jar file to path '" + buildPath.string() + "' because it is newer than its jar file.",
 					"LANGUAGE_JAVA",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 			}
@@ -994,7 +994,7 @@ void Compile_Final(const GlobalData& globalData)
 
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PACKAGE_JAR))
+		CustomFlag::PACKAGE_JAR))
 	{
 		package_jar(jarPath);
 	}
@@ -1010,7 +1010,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_JAVA",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -1031,7 +1031,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_JAVA",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 	}

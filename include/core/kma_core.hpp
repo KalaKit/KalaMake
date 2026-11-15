@@ -22,322 +22,319 @@ namespace KalaMake::Core
 	using std::filesystem::path;
 	using std::unordered_map;
 
-	using u8 = uint8_t;
-	using u16 = uint16_t;
-
-	enum class StartType : u8
+	enum class StartType
 	{
-		S_VALIDATE = 0,
-		S_COMPILE = 1
+		VALIDATE,
+		COMPILE
 	};
 
-	enum class Version : u8
+	enum class Version
 	{
-		V_INVALID = 0,
+		V_INVALID,
 
-		V_1_0 = 1,
-		V_2_0 = 2
+		V_1_0,
+		V_2_0
 	};
 
 	//Allowed categories that can be added to any kmake file
-	enum class CategoryType : u8
+	enum class CategoryType
 	{
-		C_INVALID = 0,
+		INVALID,
 
-		//required version category
-		C_VERSION = 1,
-		//optional references category
-		C_REFERENCES = 2,
-		//required global fields category
-		C_GLOBAL = 3,
-		//optional N amount of profile categories with custom names
-		C_PROFILE = 4
+		//Required version category
+		VERSION,
+		//Optional references category
+		REFERENCES,
+		//Required global fields category
+		GLOBAL,
+		//Optional N amount of profile categories with custom names
+		PROFILE
 	};
 
 	//Allowed field types that can be added to global and profile categories
-	enum class FieldType : u8
+	enum class FieldType
 	{
-		T_INVALID = 0,
+		INVALID,
 
-		//what is the target type of the binary,
+		//What is the target type of the binary,
 		//supported by all languages
-		T_BINARY_TYPE = 1,
-		//which compiler launcher runs before the compiler,
+		BINARY_TYPE,
+		//Which compiler launcher runs before the compiler,
 		//only for C and C++
-		T_COMPILER_LAUNCHER = 2,
-		//which compiler is used to compile this binary source code,
+		COMPILER_LAUNCHER,
+		//Which compiler is used to compile this binary source code,
 		//supported by all languages
-		T_COMPILER = 3,
-		//which language standard is used to compile this source code,
+		COMPILER,
+		//Which language standard is used to compile this source code,
 		//only for C, C++, Java and Rust
-		T_STANDARD = 4,
-		//what is the target platform of the binary,
+		STANDARD,
+		//What is the target platform of the binary,
 		//only for C, C++, Zig and Rust
-		T_TARGET_TYPE = 5,
-		//how many jobs are allowed to do in parallel for compilation,
+		TARGET_TYPE,
+		//How many jobs are allowed to do in parallel for compilation,
 		//only for C and C++
-		T_JOBS = 6,
+		JOBS,
 
-		//what is the name of the the binary,
+		//What is the name of the the binary,
 		//supported by all languages
-		T_BINARY_NAME = 7,
-		//which build type is the binary,
+		BINARY_NAME,
+		//Which build type is the binary,
 		//only for C, C++, Java, Zig and Rust
-		T_BUILD_TYPE = 8,
-		//where is the binary built to,
+		BUILD_TYPE,
+		//Where is the binary built to,
 		//supported by all languages
-		T_BUILD_PATH = 9,
-		//where are the source code files of the binary located,
+		BUILD_PATH,
+		//Where are the source code files of the binary located,
 		//supported by all languages
-		T_SOURCES = 10,
-		//where are the header files of the binary located,
+		SOURCES,
+		//Where are the header files of the binary located,
 		//only for C and C++
-		T_HEADERS = 11,
-		//what links will be added to the binary,
+		HEADERS,
+		//What links will be added to the binary,
 		//only for C, C++, Java and Rust
-		T_LINKS = 12,
-		//what warning level will compilation and linking use, defaults to 'none',
+		LINKS,
+		//What warning level will compilation and linking use, defaults to 'none',
 		//only for C and C++
-		T_WARNING_LEVEL = 13,
-		//what defines will be added to the binary,
+		WARNING_LEVEL,
+		//What defines will be added to the binary,
 		//only for C, C++, Java (modules) and Rust (--cfg)
-		T_DEFINES = 14,
-		//what flags will be passed to the compiler stage,
+		DEFINES,
+		//What flags will be passed to the compiler stage,
 		//supported by all languages
-		T_COMPILE_FLAGS = 15,
-		//what flags will be passed to the link stage,
+		COMPILE_FLAGS,
+		//What flags will be passed to the link stage,
 		//only for C and C++
-		T_LINK_FLAGS = 16,
-		//what kalamake-specific flags will trigger extra actions,
+		LINK_FLAGS,
+		//What kalamake-specific flags will trigger extra actions,
 		//supported by all languages
-		T_CUSTOM_FLAGS = 17,
+		CUSTOM_FLAGS,
 
-		//pre-build action field, can add as many as you want,
+		//Pre-build action field, can add as many as you want,
 		//supported by all languages
-		T_PRE_BUILD_ACTION = 18,
-		//post-build action field, can add as many as you want,
+		PRE_BUILD_ACTION,
+		//Post-build action field, can add as many as you want,
 		//supported by all languages
-		T_POST_BUILD_ACTION = 19
+		POST_BUILD_ACTION
 	};
 
 	//Allowed binary types that can be added to the binarytype field
-	enum class BinaryType : u8
+	enum class BinaryType
 	{
-		B_INVALID = 0,
+		INVALID,
 
-		//creates a runnable executable
-		B_EXECUTABLE = 1,
-		//creates a static library,
+		//Creates a runnable executable
+		EXECUTABLE,
+		//Creates a static library,
 		//not used in Java and Python
-		B_STATIC = 2,
-		//creates a shared library,
+		STATIC,
+		//Creates a shared library,
 		//not used in Java and Python
-		B_SHARED = 3
+		SHARED
 	};
 
 	//Specifies a compiler launcher program that runs before the compiler,
 	//only for C and C++
-	enum class CompilerLauncherType : u8
+	enum class CompilerLauncherType
 	{
-		C_INVALID = 0,
+		INVALID,
 
-		//reuses previous compile results
-		C_CCACHE = 1,
-		//same as ccache but supports shared cache servers
-		C_SCCACHE = 2,
-		//sends compile jobs to other servers
-		C_DISTCC = 3,
-		//same as distcc but ships compiler toolchain too
-		C_ICECC = 4
+		//Reuses previous compile results
+		CCACHE,
+		//Same as ccache but supports shared cache servers
+		SCCACHE,
+		//Sends compile jobs to other servers
+		DISTCC,
+		//Same as distcc but ships compiler toolchain too
+		ICECC
 	};
 
 	//Allowed compiler types that can be added to the compiler field
-	enum class CompilerType : u8
+	enum class CompilerType
 	{
-		C_INVALID = 0,
+		INVALID,
 
 		//
 		// C/C++
 		//
 
 		//C, C++ and Zig language, windows + linux, target-specific flags
-		C_ZIG = 1,
+		ZIG,
 
-		//windows only, MSVC-style flags
-		C_CLANG_CL = 2,
-		//windows only, MSVC-style flags
-		C_CL = 3,
+		//Windows only, MSVC-style flags
+		CLANG_CL,
+		//Windows only, MSVC-style flags
+		CL,
 
-		//windows + linux, GNU flags, defaults to C
-		C_CLANG = 4,
-		//windows + linux, GNU flags, defaults to C++
-		C_CLANGPP = 5,
-		//linux, GNU flags, defaults to C
-		C_GCC = 6,
-		//linux, GNU flags, defaults to C++
-		C_GPP = 7,
+		//Windows + linux, GNU flags, defaults to C
+		CLANG,
+		//Windows + linux, GNU flags, defaults to C++
+		CLANGPP,
+		//Linux, GNU flags, defaults to C
+		GCC,
+		//Linux, GNU flags, defaults to C++
+		GPP,
 
 		//
 		// OTHERS
 		//
 
-		//general Java compiler
-		C_JAVA = 8,
-		//general python compiler
-		C_PYTHON = 9,
-		//general rust compiler
-		C_RUST = 10
+		//General Java compiler
+		JAVA,
+		//General python compiler
+		PYTHON,
+		//General rust compiler
+		RUST
 	};
 
 	//Allowed standard types that can be added to the standard field,
 	//only for C, C++, Java and Rust
-	enum class StandardType : u8
+	enum class StandardType
 	{
-		S_INVALID = 0,
+		INVALID,
 
 		//
 		// C/C++
 		//
 
-		C_89 = 1,
-		C_99 = 2,
-		C_11 = 3,
-		C_17 = 4,
-		C_23 = 5,
+		C_89,
+		C_99,
+		C_11,
+		C_17,
+		C_23,
 
-		CPP_14 = 6,
-		CPP_17 = 7,
-		CPP_20 = 8,
-		CPP_23 = 9,
-		CPP_26 = 10,
+		CPP_14,
+		CPP_17,
+		CPP_20,
+		CPP_23,
+		CPP_26,
 
 		//
 		// JAVA
 		//
 
-		JAVA_8  = 11,
-		JAVA_9  = 12,
-		JAVA_10 = 13,
-		JAVA_11 = 14,
-		JAVA_12 = 15,
-		JAVA_13 = 16,
-		JAVA_14 = 17,
-		JAVA_15 = 18,
-		JAVA_16 = 19,
-		JAVA_17 = 20,
-		JAVA_18 = 21,
-		JAVA_19 = 22,
-		JAVA_20 = 23,
-		JAVA_21 = 24,
-		JAVA_22 = 25,
-		JAVA_23 = 26,
-		JAVA_24 = 27,
-		JAVA_25 = 28,
-		JAVA_26 = 29,
+		JAVA_8,
+		JAVA_9,
+		JAVA_10,
+		JAVA_11,
+		JAVA_12,
+		JAVA_13,
+		JAVA_14,
+		JAVA_15,
+		JAVA_16,
+		JAVA_17,
+		JAVA_18,
+		JAVA_19,
+		JAVA_20,
+		JAVA_21,
+		JAVA_22,
+		JAVA_23,
+		JAVA_24,
+		JAVA_25,
+		JAVA_26,
 
 		//
 		// RUST
 		//
 
-		RUST_15 = 30,
-		RUST_18 = 31,
-		RUST_21 = 32,
-		RUST_24 = 33
+		RUST_15,
+		RUST_18,
+		RUST_21,
+		RUST_24
 	};
 
 	//Allowed target types that can be added to the targettype field,
 	//only for C, C++, Zig and Rust
-	enum class TargetType : u8
+	enum class TargetType
 	{
-		T_INVALID = 0,
+		INVALID,
 
-		//build a linux target on windows or linux (glibc)
-		T_LINUX_GNU = 1,
-		//build a linux target on windows or linux (musl)
-		T_LINUX_MUSL = 2,
-		//build a windows target on linux or windows (mingw)
-		T_WINDOWS_GNU = 3,
-		//build a windows target on linux or windows (msvc)
-		T_WINDOWS_MSVC = 4
+		//Build a linux target on windows or linux (glibc)
+		LINUX_GNU,
+		//Build a linux target on windows or linux (musl)
+		LINUX_MUSL,
+		//Build a windows target on linux or windows (mingw)
+		WINDOWS_GNU,
+		//Build a windows target on linux or windows (msvc)
+		WINDOWS_MSVC
 	};
 
 	//Allowed build types that can be added to the buildtype field,
 	//only for C, C++, Java and Rust
-	enum class BuildType : u8
+	enum class BuildType
 	{
-		B_INVALID = 0,
+		INVALID,
 
-		//creates a debug binary
-		B_DEBUG = 1,
-		//creates a release binary
-		B_RELEASE = 2,
-		//creates a release binary with debug flag,
+		//Creates a debug binary
+		DEBUG,
+		//Creates a release binary
+		RELEASE,
+		//Creates a release binary with debug flag,
 		//same as release on Java
-		B_RELDEBUG = 3,
-		//creates a release binary with smallest size flags,
+		RELDEBUG,
+		//Creates a release binary with smallest size flags,
 		//same as release on Java
-		B_MINSIZEREL = 4
+		MINSIZEREL
 	};
 
 	//Allowed warning levels that can be added to the warninglevel field,
 	//only for C and C++
-	enum class WarningLevel : u8
+	enum class WarningLevel
 	{
-		W_INVALID = 0,
+		INVALID,
 
-		//no warnings
-		W_NONE = 1,
-		//very basic warnings
-		W_BASIC = 2,
-		//common, useful warnings, recommended default
-		W_NORMAL = 3,
-		//strong warnings
-		W_STRONG = 4,
-		//very strict, high signal warnings
-		W_STRICT = 5,
-		//all warnings
-		W_ALL = 6
+		//No warnings
+		NONE,
+		//Very basic warnings
+		BASIC,
+		//Common, useful warnings, recommended default
+		NORMAL,
+		//Strong warnings
+		STRONG,
+		//Very strict, high signal warnings
+		STRICT,
+		//All warnings
+		ALL
 	};
 
 	//Allowed custom flags that can be added to the customflags field.
 	//TODO: add vs sln file support here as well
-	enum class CustomFlag : u8
+	enum class CustomFlag
 	{
-		F_INVALID = 0,
+		INVALID,
 
-		//creates compile_commands.json in the same directory as the kmake file
-		F_EXPORT_COMPILE_COMMANDS = 1,
-		//creates .vscode folder with launch.json and tasks.json inside it
-		F_EXPORT_VSCODE_SLN = 2,
+		//Creates compile_commands.json in the same directory as the kmake file
+		EXPORT_COMPILE_COMMANDS,
+		//Creates .vscode folder with launch.json and tasks.json inside it
+		EXPORT_VSCODE_SLN,
 
-		//treats all warnings as errors,
+		//Treats all warnings as errors,
 		//only for C and C++
-		F_WARNINGS_AS_ERRORS = 3,
-		//embed the C/C++ runtime into the binary,
+		WARNINGS_AS_ERRORS,
+		//Embed the C/C++ runtime into the binary,
 		//dynamic runtime is enabled by default unless this is added,
 		//only for C and C++, not used in linux
-		F_MSVC_STATIC_RUNTIME = 4,
-		//creates a .pdb file for debug symbols or embeds the symbols directly to the exe in any build type,
+		MSVC_STATIC_RUNTIME,
+		//Creates a .pdb file for debug symbols or embeds the symbols directly to the exe in any build type,
 		//only for C and C++
-		F_GENERATE_SYMBOLS = 5,
-		//does not show the console on Windows when launching an executable,
+		GENERATE_SYMBOLS,
+		//Does not show the console on Windows when launching an executable,
 		//only for C and C++
-		F_NO_CONSOLE = 6,
+		NO_CONSOLE,
 
-		//package the created jar file into an executable,
+		//Package the created jar file into an executable,
 		//only for Java
-		F_PACKAGE_JAR = 7,
-		//attaches the jpackage-made exe to windows console,
+		PACKAGE_JAR,
+		//Attaches the jpackage-made exe to windows console,
 		//only for Java
-		F_JAVA_WIN_CONSOLE = 8,
-		//creates .classpath file in project root like compile_commans.json,
+		JAVA_WIN_CONSOLE,
+		//Creates .classpath file in project root like compile_commans.json,
 		//only for Java
-		F_EXPORT_JAVA_SLN = 9,
+		EXPORT_JAVA_SLN,
 
-		//pyinstaller bundles everything into a single exe, all files are extracted at each run,
+		//Pyinstaller bundles everything into a single exe, all files are extracted at each run,
 		//otherwise it creates a dir with all content with faster startup.
 		//only for Python
-		F_PYTHON_ONE_FILE = 10
+		PYTHON_ONE_FILE
 	};
 	
 	struct ProfileData

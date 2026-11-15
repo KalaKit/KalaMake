@@ -43,7 +43,7 @@ static void Command_Validate(const vector<string>& params)
         return;
     }
     
-    KalaMakeCore::OpenFile(StartType::S_VALIDATE, params);
+    KalaMakeCore::OpenFile(StartType::VALIDATE, params);
 }
 static void Command_Compile(const vector<string>& params)
 {
@@ -60,7 +60,7 @@ static void Command_Compile(const vector<string>& params)
         return;
     }
     
-    KalaMakeCore::OpenFile(StartType::S_COMPILE, params);
+    KalaMakeCore::OpenFile(StartType::COMPILE, params);
 }
 
 int main(int argc, char* argv[])

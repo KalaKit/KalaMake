@@ -55,7 +55,7 @@ static void Compile_Final(const GlobalData& globalData);
 
 static void GenerateSteps(const GlobalData& globalData)
 {
-    bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+    bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_VSCODE_SLN);
 
 	if (canGenerateVSCodeSln)
 	{
@@ -73,7 +73,7 @@ static void GenerateSteps(const GlobalData& globalData)
 		};
 
 		Generate::GenerateVSCodeSolution(
-			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			globalData.targetProfile.binaryType == BinaryType::EXECUTABLE,
 			launch,
 			task);
 	}
@@ -99,31 +99,31 @@ void PreCheck(GlobalData& globalData)
     // ENSURE UNSUPPORTED FIELDS ARE NOT USED
     //
 
-    if (globalData.targetProfile.binaryType != BinaryType::B_EXECUTABLE)
+    if (globalData.targetProfile.binaryType != BinaryType::EXECUTABLE)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Python only supports executables!");
     }
-    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
+    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'compilerlauncher' is not supported in Python!");
     }
-    if (globalData.targetProfile.standard != StandardType::S_INVALID)
+    if (globalData.targetProfile.standard != StandardType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'standard' is not supported in Python!");
     }
-    if (globalData.targetProfile.targetType != TargetType::T_INVALID)
+    if (globalData.targetProfile.targetType != TargetType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
 			"Field 'targettype' is not supported in Python!");
     }
-    if (globalData.targetProfile.buildType != BuildType::B_INVALID)
+    if (globalData.targetProfile.buildType != BuildType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -141,7 +141,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_PYTHON",
 			"Field 'links' is not supported in Python!");
 	}
-    if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -175,7 +175,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+		CustomFlag::EXPORT_COMPILE_COMMANDS))
 	{
         KalaMakeCore::ForceClose(
 		    "LANGUAGE_PYTHON",
@@ -183,7 +183,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_WARNINGS_AS_ERRORS))
+		CustomFlag::WARNINGS_AS_ERRORS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -191,7 +191,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_MSVC_STATIC_RUNTIME))
+		CustomFlag::MSVC_STATIC_RUNTIME))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -199,7 +199,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_GENERATE_SYMBOLS))
+		CustomFlag::GENERATE_SYMBOLS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -207,7 +207,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_NO_CONSOLE))
+		CustomFlag::NO_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -215,7 +215,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PACKAGE_JAR))
+		CustomFlag::PACKAGE_JAR))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -223,7 +223,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_JAVA_WIN_CONSOLE))
+		CustomFlag::JAVA_WIN_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -231,7 +231,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_JAVA_SLN))
+		CustomFlag::EXPORT_JAVA_SLN))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -329,7 +329,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_PYTHON",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -341,7 +341,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -355,7 +355,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -367,7 +367,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -417,7 +417,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_PYTHON",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -438,7 +438,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_PYTHON",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 
@@ -493,7 +493,7 @@ void Compile_Final(const GlobalData& globalData)
 
             vector<string> finalFlags = globalData.targetProfile.compileFlags;
 
-            if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_PYTHON_ONE_FILE))
+            if (ContainsValue(globalData.targetProfile.customFlags, CustomFlag::PYTHON_ONE_FILE))
             {
                 finalFlags.push_back("--onefile");
             }
@@ -545,7 +545,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_PYTHON",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -561,7 +561,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + globalData.targetProfile.buildPath.string() + "'!",
 					"LANGUAGE_PYTHON",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
 					0,
 					true);
             }
@@ -570,7 +570,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + globalData.targetProfile.buildPath.string() + "' because there are no new source files.",
 					"LANGUAGE_PYTHON",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
             }
@@ -590,7 +590,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_PYTHON",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -611,7 +611,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_PYTHON",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 	}

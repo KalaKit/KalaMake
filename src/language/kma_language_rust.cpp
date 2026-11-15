@@ -74,7 +74,7 @@ static void Compile_Final(const GlobalData& globalData);
 
 static void GenerateSteps(const GlobalData& globalData)
 {
-	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_VSCODE_SLN);
 
 	if (canGenerateVSCodeSln)
 	{
@@ -95,7 +95,7 @@ static void GenerateSteps(const GlobalData& globalData)
 		};
 
 		Generate::GenerateVSCodeSolution(
-			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			globalData.targetProfile.binaryType == BinaryType::EXECUTABLE,
 			launch,
 			task);
 	}
@@ -125,7 +125,7 @@ void PreCheck(GlobalData& globalData)
 			"Target type 'linux-gnu' is not supported for Rust on Windows! Use 'linux-musl' instead.");
     }
 #else
-    if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+    if (globalData.targetProfile.targetType == TargetType::WINDOWS_GNU)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -137,13 +137,13 @@ void PreCheck(GlobalData& globalData)
 	// ENSURE REQUIRED FIELDS ARE NOT MISSING
 	//
 
-    if (globalData.targetProfile.standard == StandardType::S_INVALID)
+    if (globalData.targetProfile.standard == StandardType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
 			"Field 'standard' must be assigned in Rust!");
     }
-	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
+	if (globalData.targetProfile.buildType == BuildType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -154,7 +154,7 @@ void PreCheck(GlobalData& globalData)
     // ENSURE UNSUPPORTED FIELDS ARE NOT USED
     //
 
-    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
+    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -166,7 +166,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_RUST",
 			"Field 'headers' is not supported in Rust!");
     }
-    if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -188,7 +188,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (ContainsValue(
 			globalData.targetProfile.customFlags, 
-			CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+			CustomFlag::EXPORT_COMPILE_COMMANDS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -196,7 +196,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_MSVC_STATIC_RUNTIME))
+		CustomFlag::MSVC_STATIC_RUNTIME))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -204,7 +204,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_GENERATE_SYMBOLS))
+		CustomFlag::GENERATE_SYMBOLS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -212,7 +212,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_NO_CONSOLE))
+		CustomFlag::NO_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -220,7 +220,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PACKAGE_JAR))
+		CustomFlag::PACKAGE_JAR))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -228,7 +228,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_JAVA_WIN_CONSOLE))
+		CustomFlag::JAVA_WIN_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -236,7 +236,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_JAVA_SLN))
+		CustomFlag::EXPORT_JAVA_SLN))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -244,7 +244,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PYTHON_ONE_FILE))
+		CustomFlag::PYTHON_ONE_FILE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -342,7 +342,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_RUST",
-				LogType::LOG_INFO,
+				LogType::INFO,
                 0,
                 true);
 
@@ -354,7 +354,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::LOG_INFO,
+				LogType::INFO,
                 0,
                 true);
 
@@ -368,7 +368,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::LOG_INFO,
+				LogType::INFO,
                 0,
                 true);
 
@@ -380,7 +380,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::LOG_INFO,
+				LogType::INFO,
                 0,
                 true);
 
@@ -430,7 +430,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_RUST",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -451,7 +451,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_RUST",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 
@@ -481,17 +481,17 @@ void Compile_Final(const GlobalData& globalData)
             command += " --crate-type ";
             switch(globalData.targetProfile.binaryType)
             {
-            case BinaryType::B_EXECUTABLE:
+            case BinaryType::EXECUTABLE:
             {
                 command += "bin";
                 break;
             }
-            case BinaryType::B_SHARED:
+            case BinaryType::SHARED:
             {
                 command += "dylib";
                 break;
             }
-            case BinaryType::B_STATIC:
+            case BinaryType::STATIC:
             {
                 command += "rlib";
                 break;
@@ -555,32 +555,32 @@ void Compile_Final(const GlobalData& globalData)
 
             if (ContainsValue(
                 globalData.targetProfile.customFlags,
-                CustomFlag::F_WARNINGS_AS_ERRORS))
+                CustomFlag::WARNINGS_AS_ERRORS))
             {
                 finalFlags.push_back("-D warnings");
             }
 
             switch (globalData.targetProfile.buildType)
             {
-            case BuildType::B_RELEASE:
+            case BuildType::RELEASE:
             {
                 finalFlags.push_back("-C opt-level=2");
                 finalFlags.push_back("-C strip=symbols");
                 break;
             }
-            case BuildType::B_DEBUG:
+            case BuildType::DEBUG:
             {
                 finalFlags.push_back("-C opt-level=0");
                 finalFlags.push_back("-C debuginfo=2");
                 break;
             } 
-            case BuildType::B_RELDEBUG:
+            case BuildType::RELDEBUG:
             {
                 finalFlags.push_back("-C opt-level=1");
                 finalFlags.push_back("-C debuginfo=2");
                 break;
             } 
-            case BuildType::B_MINSIZEREL:
+            case BuildType::MINSIZEREL:
             {
                 finalFlags.push_back("-C opt-level=z");
                 finalFlags.push_back("-C strip=symbols");
@@ -607,19 +607,19 @@ void Compile_Final(const GlobalData& globalData)
 
             switch(globalData.targetProfile.targetType)
             {
-            case TargetType::T_LINUX_GNU:
+            case TargetType::LINUX_GNU:
             {
                 command += " --target " + string(target_type_rust_linux_gnu);
                 command += " -C linker=lld";
                 break;
             }
-            case TargetType::T_LINUX_MUSL:
+            case TargetType::LINUX_MUSL:
             {
                 command += " --target " + string(target_type_rust_linux_musl);
                 command += " -C linker=lld";
                 break;
             }
-            case TargetType::T_WINDOWS_GNU:
+            case TargetType::WINDOWS_GNU:
             {
                 command += " --target " + string(target_type_rust_windows_gnu);
                 break;
@@ -718,7 +718,7 @@ void Compile_Final(const GlobalData& globalData)
 
                     switch (globalData.targetProfile.targetType)
                     {
-                    case TargetType::T_INVALID:
+                    case TargetType::INVALID:
                     {
 #ifdef _WIN32
                         originDir = originDir / win_msvc_std_dir;
@@ -727,17 +727,17 @@ void Compile_Final(const GlobalData& globalData)
 #endif
                         break;
                     }
-                    case TargetType::T_LINUX_GNU:
+                    case TargetType::LINUX_GNU:
                     {
                         originDir = originDir / linux_gnu_std_dir;
                         break;
                     }
-                    case TargetType::T_LINUX_MUSL:
+                    case TargetType::LINUX_MUSL:
                     {
                         originDir = originDir / linux_musl_std_dir;
                         break;
                     }
-                    case TargetType::T_WINDOWS_GNU:
+                    case TargetType::WINDOWS_GNU:
                     {
                         originDir = originDir / win_gnu_std_dir;
                         break;
@@ -761,7 +761,7 @@ void Compile_Final(const GlobalData& globalData)
 
                     bool isWindowsTarget = 
                         globalData.targetProfile.targetType == 
-                            (TargetType::T_INVALID)
+                            (TargetType::INVALID)
                             && isWindows;
 
                     string start = "libstd-";
@@ -809,7 +809,7 @@ void Compile_Final(const GlobalData& globalData)
                         Log::Print(
                             "Copied std library from '" + originPath.string() + "' to target '" + (targetDir / front).string() + "'.",
                             "LANGUAGE_RUST",
-                            LogType::LOG_INFO,
+                            LogType::INFO,
                             0,
                             true);
                     }
@@ -826,7 +826,7 @@ void Compile_Final(const GlobalData& globalData)
             string extension{};
             switch (globalData.targetProfile.binaryType)
             {
-            case BinaryType::B_EXECUTABLE:
+            case BinaryType::EXECUTABLE:
             {
                 if (has_shared_lib())
                 {
@@ -837,9 +837,9 @@ void Compile_Final(const GlobalData& globalData)
                 }
 
                 if ((isOnLinux
-                    && globalData.targetProfile.targetType == TargetType::T_INVALID)
-                    || globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-                    || globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+                    && globalData.targetProfile.targetType == TargetType::INVALID)
+                    || globalData.targetProfile.targetType == TargetType::LINUX_GNU
+                    || globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
                 {
                     
                     if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
@@ -851,14 +851,14 @@ void Compile_Final(const GlobalData& globalData)
 
                 break;
             }
-            case BinaryType::B_SHARED:
+            case BinaryType::SHARED:
             {
                 command += " -C prefer-dynamic";
 
 				if ((isOnLinux
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
                     if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".so")) extension = ".so";
@@ -870,7 +870,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 break;
             }
-            case BinaryType::B_STATIC:
+            case BinaryType::STATIC:
             {
                 if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
                 if (!binaryName.ends_with(".rlib")) extension = ".rlib";
@@ -931,7 +931,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_RUST",
-					LogType::LOG_INFO,
+					LogType::INFO,
                     0,
                     true);
 
@@ -947,7 +947,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + outputPath.string() + "'!",
 					"LANGUAGE_RUST",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
                     0,
                     true);
             }
@@ -956,7 +956,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + outputPath.string() + "' because there are no new source files.",
 					"LANGUAGE_RUST",
-					LogType::LOG_INFO,
+					LogType::INFO,
                     0,
                     true);
             }
@@ -975,7 +975,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_RUST",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -996,7 +996,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_RUST",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 	}

@@ -192,66 +192,66 @@ static const unordered_map<Version, string_view, EnumHash<Version>> versions =
 
 static const unordered_map<CategoryType, string_view, EnumHash<CategoryType>> categoryTypes =
 {
-    { CategoryType::C_VERSION,    category_version },
-    { CategoryType::C_REFERENCES, category_references },
-    { CategoryType::C_GLOBAL,     category_global },
-    { CategoryType::C_PROFILE,    category_profile }
+    { CategoryType::VERSION,    category_version },
+    { CategoryType::REFERENCES, category_references },
+    { CategoryType::GLOBAL,     category_global },
+    { CategoryType::PROFILE,    category_profile }
 };
 
 static const unordered_map<FieldType, string_view, EnumHash<FieldType>> fieldTypes =
 {
-    { FieldType::T_BINARY_TYPE,       field_binary_type },
-    { FieldType::T_COMPILER_LAUNCHER, field_compiler_launcher },
-    { FieldType::T_COMPILER,          field_compiler },
-    { FieldType::T_STANDARD,          field_standard },
-    { FieldType::T_TARGET_TYPE,       field_target_type },
-    { FieldType::T_JOBS,              field_jobs },
+    { FieldType::BINARY_TYPE,       field_binary_type },
+    { FieldType::COMPILER_LAUNCHER, field_compiler_launcher },
+    { FieldType::COMPILER,          field_compiler },
+    { FieldType::STANDARD,          field_standard },
+    { FieldType::TARGET_TYPE,       field_target_type },
+    { FieldType::JOBS,              field_jobs },
 
-    { FieldType::T_BINARY_NAME,    field_binary_name },
-    { FieldType::T_BUILD_TYPE,     field_build_type },
-    { FieldType::T_BUILD_PATH,     field_build_path },
-    { FieldType::T_SOURCES,        field_sources },
-    { FieldType::T_HEADERS,        field_headers },
-    { FieldType::T_LINKS,          field_links },
-    { FieldType::T_WARNING_LEVEL,  field_warning_level },
-    { FieldType::T_DEFINES,        field_defines },
-    { FieldType::T_COMPILE_FLAGS,  field_compile_flags },
-    { FieldType::T_LINK_FLAGS,     field_link_flags },
-    { FieldType::T_CUSTOM_FLAGS,   field_custom_flags },
+    { FieldType::BINARY_NAME,    field_binary_name },
+    { FieldType::BUILD_TYPE,     field_build_type },
+    { FieldType::BUILD_PATH,     field_build_path },
+    { FieldType::SOURCES,        field_sources },
+    { FieldType::HEADERS,        field_headers },
+    { FieldType::LINKS,          field_links },
+    { FieldType::WARNING_LEVEL,  field_warning_level },
+    { FieldType::DEFINES,        field_defines },
+    { FieldType::COMPILE_FLAGS,  field_compile_flags },
+    { FieldType::LINK_FLAGS,     field_link_flags },
+    { FieldType::CUSTOM_FLAGS,   field_custom_flags },
 
-    { FieldType::T_PRE_BUILD_ACTION, field_pre_build_action },
-    { FieldType::T_POST_BUILD_ACTION, field_post_build_action }
+    { FieldType::PRE_BUILD_ACTION, field_pre_build_action },
+    { FieldType::POST_BUILD_ACTION, field_post_build_action }
 };
 
 static const unordered_map<BinaryType, string_view, EnumHash<BinaryType>> binaryTypes =
 {
-    { BinaryType::B_EXECUTABLE, binary_type_executable },
-    { BinaryType::B_STATIC,     binary_type_static },
-    { BinaryType::B_SHARED,     binary_type_shared }
+    { BinaryType::EXECUTABLE, binary_type_executable },
+    { BinaryType::STATIC,     binary_type_static },
+    { BinaryType::SHARED,     binary_type_shared }
 };
 
 static const unordered_map<CompilerLauncherType, string_view, EnumHash<CompilerLauncherType>> compilerLauncherTypes =
 {
-    { CompilerLauncherType::C_CCACHE,  compiler_launcher_ccache },
-    { CompilerLauncherType::C_SCCACHE, compiler_launcher_sccache },
-    { CompilerLauncherType::C_DISTCC,  compiler_launcher_distcc },
-    { CompilerLauncherType::C_ICECC,   compiler_launcher_icecc }
+    { CompilerLauncherType::CCACHE,  compiler_launcher_ccache },
+    { CompilerLauncherType::SCCACHE, compiler_launcher_sccache },
+    { CompilerLauncherType::DISTCC,  compiler_launcher_distcc },
+    { CompilerLauncherType::ICECC,   compiler_launcher_icecc }
 };
 
 static const unordered_map<CompilerType, string_view, EnumHash<CompilerType>> compilerTypes =
 {
-    { CompilerType::C_ZIG,      compiler_zig },
-    { CompilerType::C_CLANG_CL, compiler_clang_cl },
-    { CompilerType::C_CL,       compiler_cl },
+    { CompilerType::ZIG,      compiler_zig },
+    { CompilerType::CLANG_CL, compiler_clang_cl },
+    { CompilerType::CL,       compiler_cl },
 
-    { CompilerType::C_CLANG,   compiler_clang },
-    { CompilerType::C_CLANGPP, compiler_clangpp },
-    { CompilerType::C_GCC,     compiler_gcc },
-    { CompilerType::C_GPP,     compiler_gpp },
+    { CompilerType::CLANG,   compiler_clang },
+    { CompilerType::CLANGPP, compiler_clangpp },
+    { CompilerType::GCC,     compiler_gcc },
+    { CompilerType::GPP,     compiler_gpp },
 
-    { CompilerType::C_JAVA,   compiler_java },
-    { CompilerType::C_PYTHON, compiler_python },
-    { CompilerType::C_RUST,   compiler_rust }
+    { CompilerType::JAVA,   compiler_java },
+    { CompilerType::PYTHON, compiler_python },
+    { CompilerType::RUST,   compiler_rust }
 };
 
 static const unordered_map<StandardType, string_view, EnumHash<StandardType>> standardTypes =
@@ -296,46 +296,46 @@ static const unordered_map<StandardType, string_view, EnumHash<StandardType>> st
 
 static const unordered_map<TargetType, string_view, EnumHash<TargetType>> targetTypes =
 {
-    { TargetType::T_LINUX_GNU,    target_type_linux_gnu },
-    { TargetType::T_LINUX_MUSL,   target_type_linux_musl },
-    { TargetType::T_WINDOWS_GNU,  target_type_windows_gnu },
-    { TargetType::T_WINDOWS_MSVC, target_type_windows_msvc }
+    { TargetType::LINUX_GNU,    target_type_linux_gnu },
+    { TargetType::LINUX_MUSL,   target_type_linux_musl },
+    { TargetType::WINDOWS_GNU,  target_type_windows_gnu },
+    { TargetType::WINDOWS_MSVC, target_type_windows_msvc }
 };
 
 static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTypes =
 {
-    { BuildType::B_DEBUG,      build_type_debug },
-    { BuildType::B_RELEASE,    build_type_release },
-    { BuildType::B_RELDEBUG,   build_type_reldebug },
-    { BuildType::B_MINSIZEREL, build_type_minsizerel }
+    { BuildType::DEBUG,      build_type_debug },
+    { BuildType::RELEASE,    build_type_release },
+    { BuildType::RELDEBUG,   build_type_reldebug },
+    { BuildType::MINSIZEREL, build_type_minsizerel }
 };
 
 //Same warning types are used for both MSVC and GNU,
 //their true meanings change depending on which OS is used
 static const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>> warningLevels =
 {
-    { WarningLevel::W_NONE,   warning_level_none },
-    { WarningLevel::W_BASIC,  warning_level_basic },
-    { WarningLevel::W_NORMAL, warning_level_normal },
-    { WarningLevel::W_STRONG, warning_level_strong },
-    { WarningLevel::W_STRICT, warning_level_strict },
-    { WarningLevel::W_ALL,    warning_level_all }
+    { WarningLevel::NONE,   warning_level_none },
+    { WarningLevel::BASIC,  warning_level_basic },
+    { WarningLevel::NORMAL, warning_level_normal },
+    { WarningLevel::STRONG, warning_level_strong },
+    { WarningLevel::STRICT, warning_level_strict },
+    { WarningLevel::ALL,    warning_level_all }
 };
 
 //Same warning types are used for both MSVC and GNU,
 //their true meanings change depending on which OS is used
 static const unordered_map<CustomFlag, string_view, EnumHash<CustomFlag>> customFlags =
 {
-    { CustomFlag::F_EXPORT_COMPILE_COMMANDS, custom_export_comp_comm },
-    { CustomFlag::F_EXPORT_VSCODE_SLN,       custom_export_vscode_sln },
-    { CustomFlag::F_WARNINGS_AS_ERRORS,      custom_warnings_as_err },
-    { CustomFlag::F_MSVC_STATIC_RUNTIME,     custom_msvc_static_runtime },
-    { CustomFlag::F_GENERATE_SYMBOLS,        custom_generate_symbols },
-    { CustomFlag::F_NO_CONSOLE,              custom_no_console },
-    { CustomFlag::F_PACKAGE_JAR,             custom_package_jar },
-    { CustomFlag::F_JAVA_WIN_CONSOLE,        custom_java_win_console },
-    { CustomFlag::F_EXPORT_JAVA_SLN,         custom_export_java_sln },
-    { CustomFlag::F_PYTHON_ONE_FILE,         custom_python_one_file }
+    { CustomFlag::EXPORT_COMPILE_COMMANDS, custom_export_comp_comm },
+    { CustomFlag::EXPORT_VSCODE_SLN,       custom_export_vscode_sln },
+    { CustomFlag::WARNINGS_AS_ERRORS,      custom_warnings_as_err },
+    { CustomFlag::MSVC_STATIC_RUNTIME,     custom_msvc_static_runtime },
+    { CustomFlag::GENERATE_SYMBOLS,        custom_generate_symbols },
+    { CustomFlag::NO_CONSOLE,              custom_no_console },
+    { CustomFlag::PACKAGE_JAR,             custom_package_jar },
+    { CustomFlag::JAVA_WIN_CONSOLE,        custom_java_win_console },
+    { CustomFlag::EXPORT_JAVA_SLN,         custom_export_java_sln },
+    { CustomFlag::PYTHON_ONE_FILE,         custom_python_one_file }
 };
 
 static constexpr array<string_view, 19> availableFields =
@@ -432,16 +432,16 @@ namespace KalaMake::Core
             Log::Print(
                 "Failed to parse kmake file '" + userParams[0] + "'! Reason: " + err,
                 "KMAKE_CORE",
-                LogType::LOG_ERROR,
+                LogType::ERROR,
                 2);
 
             return;
         }
 
-        if (startType == StartType::S_VALIDATE) isValidating = true;
+        if (startType == StartType::VALIDATE) isValidating = true;
 
         err = GetGlobalData(kmakeContent);
-        if (startType == StartType::S_VALIDATE
+        if (startType == StartType::VALIDATE
             || !err.empty())
         {
             if (!err.empty())
@@ -461,16 +461,16 @@ namespace KalaMake::Core
         switch (c)
         {
         default:
-        case CompilerType::C_ZIG:
-        case CompilerType::C_CL:
-        case CompilerType::C_CLANG_CL:
-        case CompilerType::C_CLANG:
-        case CompilerType::C_CLANGPP:
-        case CompilerType::C_GCC:
-        case CompilerType::C_GPP:
+        case CompilerType::ZIG:
+        case CompilerType::CL:
+        case CompilerType::CLANG_CL:
+        case CompilerType::CLANG:
+        case CompilerType::CLANGPP:
+        case CompilerType::GCC:
+        case CompilerType::GPP:
         {
-            if (c == CompilerType::C_ZIG
-                && globalData.targetProfile.standard == StandardType::S_INVALID)
+            if (c == CompilerType::ZIG
+                && globalData.targetProfile.standard == StandardType::INVALID)
             {
                 LanguageCore::Compile_Zig(globalData);
             }
@@ -479,21 +479,21 @@ namespace KalaMake::Core
             if (isInHeadlessMode) exit(0);
             return;
         }
-        case CompilerType::C_JAVA:
+        case CompilerType::JAVA:
         {
             LanguageCore::Compile_Java(globalData);
 
             if (isInHeadlessMode) exit(0);
             return;
         }
-        case CompilerType::C_PYTHON:
+        case CompilerType::PYTHON:
         {
             LanguageCore::Compile_Python(globalData);
 
             if (isInHeadlessMode) exit(0);
             return;
         }
-        case CompilerType::C_RUST:
+        case CompilerType::RUST:
         {
             LanguageCore::Compile_Rust(globalData);
 
@@ -529,7 +529,7 @@ namespace KalaMake::Core
 		Log::Print(
 			reason,
 			target,
-			LogType::LOG_ERROR,
+			LogType::ERROR,
 			2,
 			true,
 			TimeFormat::TIME_NONE,
@@ -1145,7 +1145,7 @@ string GetGlobalData(const vector<string>& content)
             Log::Print(
                 "Set jobs count to '" + jobsCount + "' because it was not assigned.",
                 "KMAKE_CORE",
-                LogType::LOG_INFO);
+                LogType::INFO);
         }
     }
     else
@@ -1267,7 +1267,7 @@ string GetGlobalData(const vector<string>& content)
                             Log::Print(
                                 "Failed to dereference value '" + refValue + "'! Replacing with empty string.",
                                 "KMA_CORE",
-                                LogType::LOG_WARNING);
+                                LogType::WARNING);
                         }
                     }
 
@@ -1472,7 +1472,7 @@ string GetGlobalData(const vector<string>& content)
                         Log::Print(
                             "Created build directory '" + expanded + "' because it did not exist.",
                             "KMAKE_CORE",
-                            LogType::LOG_INFO);
+                            LogType::INFO);
                     }
                 }
             }

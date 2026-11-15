@@ -115,8 +115,8 @@ static void Compile_Final(const GlobalData& globalData);
 
 static void GenerateSteps(const GlobalData& globalData)
 {
-	bool canGenerateCompComm = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_COMPILE_COMMANDS);
-	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+	bool canGenerateCompComm = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_COMPILE_COMMANDS);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_VSCODE_SLN);
 
 	if (canGenerateCompComm)
 	{
@@ -145,7 +145,7 @@ static void GenerateSteps(const GlobalData& globalData)
 		};
 
 		Generate::GenerateVSCodeSolution(
-			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			globalData.targetProfile.binaryType == BinaryType::EXECUTABLE,
 			launch,
 			task);
 	}
@@ -174,24 +174,24 @@ void PreCheck(GlobalData& globalData)
 	// ENSURE REQUIRED FIELDS ARE NOT MISSING
 	//
 
-    if (globalData.targetProfile.standard == StandardType::S_INVALID)
+    if (globalData.targetProfile.standard == StandardType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Field 'standard' must be assigned in C and C++!");
     }
-	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
+	if (globalData.targetProfile.buildType == BuildType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
 			"Field 'buildtype' must be assigned in C and C++!");
     }
-	if (globalData.targetProfile.targetType == TargetType::T_INVALID)
+	if (globalData.targetProfile.targetType == TargetType::INVALID)
 	{
 #ifdef _WIN32
 		globalData.targetProfile.targetType = TargetType::T_WINDOWS_MSVC;
 #else
-		globalData.targetProfile.targetType = TargetType::T_LINUX_GNU;
+		globalData.targetProfile.targetType = TargetType::LINUX_GNU;
 #endif
 	}
 
@@ -201,7 +201,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PACKAGE_JAR))
+		CustomFlag::PACKAGE_JAR))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
@@ -209,7 +209,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_JAVA_WIN_CONSOLE))
+		CustomFlag::JAVA_WIN_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
@@ -217,7 +217,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_JAVA_SLN))
+		CustomFlag::EXPORT_JAVA_SLN))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
@@ -225,7 +225,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PYTHON_ONE_FILE))
+		CustomFlag::PYTHON_ONE_FILE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
@@ -277,8 +277,8 @@ void PreCheck(GlobalData& globalData)
 	}
 
 #else
-	if (globalData.targetProfile.compiler == CompilerType::C_CL
-		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL)
+	if (globalData.targetProfile.compiler == CompilerType::CL
+		|| globalData.targetProfile.compiler == CompilerType::CLANG_CL)
 	{
 		KalaMakeCore::ForceClose(
 			"LANGUAGE_C_CPP",
@@ -392,7 +392,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -404,7 +404,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -418,7 +418,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -430,7 +430,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -472,8 +472,8 @@ void PreCheck(GlobalData& globalData)
 void Compile_Final(const GlobalData& globalData)
 {
 	bool isMSVC = 
-		globalData.targetProfile.compiler == CompilerType::C_CL
-		|| globalData.targetProfile.compiler == CompilerType::C_CLANG_CL;
+		globalData.targetProfile.compiler == CompilerType::CL
+		|| globalData.targetProfile.compiler == CompilerType::CLANG_CL;
 
 	string frontArg = isMSVC
 		? "/"
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -509,7 +509,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 
@@ -526,7 +526,7 @@ void Compile_Final(const GlobalData& globalData)
 
 			//set compiler launcher
 
-			if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
+			if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID)
 			{
 				string_view compilerLauncher{};
 				string _ = EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
@@ -541,19 +541,19 @@ void Compile_Final(const GlobalData& globalData)
 
 			string _ = EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), compiler);
 
-			if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
+			if (globalData.targetProfile.targetType == TargetType::LINUX_GNU)
 			{
 				if (compiler == "gcc")      compiler = target_type_linux_gnu_gcc;
 				else if (compiler == "g++") compiler = target_type_linux_gnu_gpp;
 				else                        targetTriple = target_type_linux_gnu_clang_zig;
 			}
-			else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+			else if (globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 			{
 				if (compiler == "gcc")      compiler = target_type_linux_musl_gcc;
 				else if (compiler == "g++") compiler = target_type_linux_musl_gpp;
 				else                        targetTriple = target_type_linux_musl_clang_zig;
 			}
-			else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+			else if (globalData.targetProfile.targetType == TargetType::WINDOWS_GNU)
 			{
 				if (compiler == "gcc")      compiler = target_type_win_gnu_gcc;
 				else if (compiler == "g++") compiler = target_type_win_gnu_gpp;
@@ -646,25 +646,25 @@ void Compile_Final(const GlobalData& globalData)
 
 			if (ContainsValue(
 				globalData.targetProfile.customFlags, 
-				CustomFlag::F_WARNINGS_AS_ERRORS))
+				CustomFlag::WARNINGS_AS_ERRORS))
 			{
 				if (isMSVC) finalFlags.push_back("WX");
 				else        finalFlags.push_back("Werror");
 			}
 
 			//always use NDEBUG for release, minsizerel and reldebug
-			if (globalData.targetProfile.buildType != BuildType::B_DEBUG)
+			if (globalData.targetProfile.buildType != BuildType::DEBUG)
 			{
 				finalFlags.push_back("DNDEBUG");
 			}
 
 			bool generateSymbols = ContainsValue(
 				globalData.targetProfile.customFlags,
-				CustomFlag::F_GENERATE_SYMBOLS);
+				CustomFlag::GENERATE_SYMBOLS);
 
 			switch (globalData.targetProfile.buildType)
 			{
-			case BuildType::B_DEBUG:
+			case BuildType::DEBUG:
 			{
 				if (isMSVC)
 				{
@@ -682,7 +682,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case BuildType::B_RELDEBUG:
+			case BuildType::RELDEBUG:
 			{
 				if (isMSVC)
 				{
@@ -701,7 +701,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case BuildType::B_RELEASE:
+			case BuildType::RELEASE:
 			{
 				if (isMSVC)
 				{
@@ -723,7 +723,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case BuildType::B_MINSIZEREL:
+			case BuildType::MINSIZEREL:
 			{
 				if (isMSVC)
 				{
@@ -751,13 +751,13 @@ void Compile_Final(const GlobalData& globalData)
 
 			switch (globalData.targetProfile.warningLevel)
 			{
-			case WarningLevel::W_BASIC:
+			case WarningLevel::BASIC:
 			{
 				if (isMSVC) finalFlags.push_back("W1");
 				else        finalFlags.push_back("Wall");
 				break;
 			}
-			case WarningLevel::W_NORMAL:
+			case WarningLevel::NORMAL:
 			{
 				if (isMSVC) finalFlags.push_back("W3");
 				else
@@ -767,7 +767,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::W_STRONG:
+			case WarningLevel::STRONG:
 			{
 				if (isMSVC) finalFlags.push_back("W4");
 				else
@@ -778,7 +778,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::W_STRICT:
+			case WarningLevel::STRICT:
 			{
 				if (isMSVC)
 				{
@@ -795,12 +795,12 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::W_ALL:
+			case WarningLevel::ALL:
 			{
 				if (isMSVC) finalFlags.push_back("Wall");
-				else if (globalData.targetProfile.compiler == CompilerType::C_CLANG
-						|| globalData.targetProfile.compiler == CompilerType::C_CLANGPP
-						|| globalData.targetProfile.compiler == CompilerType::C_ZIG)
+				else if (globalData.targetProfile.compiler == CompilerType::CLANG
+						|| globalData.targetProfile.compiler == CompilerType::CLANGPP
+						|| globalData.targetProfile.compiler == CompilerType::ZIG)
 				{
 					finalFlags.push_back("Weverything");
 				}
@@ -867,7 +867,7 @@ void Compile_Final(const GlobalData& globalData)
 			//compile-time shared flag for object file
 			if (!isMSVC
 				&& !isWindows
-				&& globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+				&& globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				command += " -fPIC";
 			}
@@ -923,7 +923,7 @@ void Compile_Final(const GlobalData& globalData)
 				&command,
 				&objFront]() -> void
 				{
-					if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+					if (ContainsValue(globalData.targetProfile.customFlags,CustomFlag::EXPORT_COMPILE_COMMANDS))
 					{
 						path fullBuildPath = buildPath.is_absolute()
 							? buildPath
@@ -981,7 +981,7 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Starting to compile via '" + perFileCommand + "'.",
 							"LANGUAGE_C_CPP",
-							LogType::LOG_INFO,
+							LogType::INFO,
 							0,
 							true);
 							
@@ -997,7 +997,7 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Skipping compilation of object file '" + objPath.string() + "' because it is newer than its source and header files.\n",
 							"LANGUAGE_C_CPP",
-							LogType::LOG_INFO,
+							LogType::INFO,
 							0,
 							true);
 					}
@@ -1049,7 +1049,7 @@ void Compile_Final(const GlobalData& globalData)
 
 	auto link = [&isMSVC, &globalData, &frontArg](const vector<path>& objFiles) -> void
 		{
-			string sharedArg = globalData.targetProfile.binaryType == BinaryType::B_SHARED
+			string sharedArg = globalData.targetProfile.binaryType == BinaryType::SHARED
 				? (isMSVC ? "/LD" : "-shared")
 				: string{};
 
@@ -1057,8 +1057,8 @@ void Compile_Final(const GlobalData& globalData)
 
 			//set compiler launcher
 
-			if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID
-				&& globalData.targetProfile.binaryType != BinaryType::B_STATIC)
+			if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID
+				&& globalData.targetProfile.binaryType != BinaryType::STATIC)
 			{
 				string_view compilerLauncher{};
 				string _ = EnumToString(globalData.targetProfile.compilerLauncher, KalaMakeCore::GetCompilerLauncherTypes(), compilerLauncher);
@@ -1071,13 +1071,13 @@ void Compile_Final(const GlobalData& globalData)
 			string compiler{};
 			string targetTriple{};
 
-			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
-				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+			if (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE
+				|| globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				string_view nonStaticCompiler{};
 				string _ = EnumToString(globalData.targetProfile.compiler, KalaMakeCore::GetCompilerTypes(), nonStaticCompiler);
 
-				if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
+				if (globalData.targetProfile.targetType == TargetType::LINUX_GNU)
 				{
 					if (nonStaticCompiler == "gcc")      compiler = target_type_linux_gnu_gcc;
 					else if (nonStaticCompiler == "g++") compiler = target_type_linux_gnu_gpp;
@@ -1087,7 +1087,7 @@ void Compile_Final(const GlobalData& globalData)
 						targetTriple = target_type_linux_gnu_clang_zig;
 					}
 				}
-				else if (globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+				else if (globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					if (nonStaticCompiler == "gcc")      compiler = target_type_linux_musl_gcc;
 					else if (nonStaticCompiler == "g++") compiler = target_type_linux_musl_gpp;
@@ -1097,7 +1097,7 @@ void Compile_Final(const GlobalData& globalData)
 						targetTriple = target_type_linux_musl_clang_zig;
 					}
 				}
-				else if (globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+				else if (globalData.targetProfile.targetType == TargetType::WINDOWS_GNU)
 				{
 					if (nonStaticCompiler == "gcc")      compiler = target_type_win_gnu_gcc;
 					else if (nonStaticCompiler == "g++") compiler = target_type_win_gnu_gpp;
@@ -1152,11 +1152,11 @@ void Compile_Final(const GlobalData& globalData)
 			}
 
 			if (!isWindows
-				&& globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU
-				&& (globalData.targetProfile.compiler == CompilerType::C_CLANG
-				|| globalData.targetProfile.compiler == CompilerType::C_CLANGPP)
-				&& (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
-				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED))
+				&& globalData.targetProfile.targetType == TargetType::WINDOWS_GNU
+				&& (globalData.targetProfile.compiler == CompilerType::CLANG
+				|| globalData.targetProfile.compiler == CompilerType::CLANGPP)
+				&& (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE
+				|| globalData.targetProfile.binaryType == BinaryType::SHARED))
 			{
 				command += " -fuse-ld=lld";
 			}
@@ -1169,11 +1169,11 @@ void Compile_Final(const GlobalData& globalData)
 			string outputArgFront{};
 			string outputArg{};
 
-			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
-				|| globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+			if (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE
+				|| globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				//link-time shared flag for output
-				outputArgFront = globalData.targetProfile.binaryType == BinaryType::B_SHARED
+				outputArgFront = globalData.targetProfile.binaryType == BinaryType::SHARED
 					? (isMSVC ? "/LD " : "-shared " )
 					: string{};
 
@@ -1190,18 +1190,18 @@ void Compile_Final(const GlobalData& globalData)
 			string binaryName = globalData.targetProfile.binaryName;
 
 			string extension{};
-			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE)
+			if (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE)
 			{
 				if (!isWindows
-					&& globalData.targetProfile.targetType != TargetType::T_WINDOWS_GNU)
+					&& globalData.targetProfile.targetType != TargetType::WINDOWS_GNU)
 				{
 					command += " -Wl,-rpath,\\$ORIGIN";
 				}
 
 				if ((!isWindows
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					
 					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
@@ -1211,12 +1211,12 @@ void Compile_Final(const GlobalData& globalData)
 					if (!binaryName.ends_with(".exe")) extension = ".exe";
 				}
 			}
-			else if (globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+			else if (globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				if ((!isWindows
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".so")) extension = ".so";
@@ -1227,18 +1227,18 @@ void Compile_Final(const GlobalData& globalData)
 				}
 
 				if (isWindows
-					&& (globalData.targetProfile.compiler == CompilerType::C_GCC
-					|| globalData.targetProfile.compiler == CompilerType::C_GPP))
+					&& (globalData.targetProfile.compiler == CompilerType::GCC
+					|| globalData.targetProfile.compiler == CompilerType::GPP))
 				{
 					command += " -Wl,--out-implib," + (buildPath / (binaryName + ".lib")).string();
 				}
 			}
-			else if (globalData.targetProfile.binaryType == BinaryType::B_STATIC)
+			else if (globalData.targetProfile.binaryType == BinaryType::STATIC)
 			{
 				if ((!isWindows
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".a")) extension = ".a";
@@ -1292,13 +1292,13 @@ void Compile_Final(const GlobalData& globalData)
 
 			vector<string> finalFlags = globalData.targetProfile.linkFlags;
 
-			if (globalData.targetProfile.binaryType != BinaryType::B_STATIC)
+			if (globalData.targetProfile.binaryType != BinaryType::STATIC)
 			{
 				if (isMSVC)
 				{
-					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
-						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_RELDEBUG
-						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_GENERATE_SYMBOLS))
+					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::DEBUG
+						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::RELDEBUG
+						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::GENERATE_SYMBOLS))
 					{
 						finalFlags.push_back("DEBUG");
 					}
@@ -1306,14 +1306,14 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				else
 				{
-					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
-						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_RELDEBUG
-						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_GENERATE_SYMBOLS))
+					if (globalData.targetProfile.buildType == KalaMake::Core::BuildType::DEBUG
+						|| globalData.targetProfile.buildType == KalaMake::Core::BuildType::RELDEBUG
+						|| ContainsValue(globalData.targetProfile.customFlags, CustomFlag::GENERATE_SYMBOLS))
 					{
 						finalFlags.push_back("g");
 
-						if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-							|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+						if (globalData.targetProfile.targetType == TargetType::LINUX_GNU
+							|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 						{
 							finalFlags.push_back("rdynamic");
 						}
@@ -1387,7 +1387,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to link via '" + command + "'.",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -1401,8 +1401,8 @@ void Compile_Final(const GlobalData& globalData)
 				}
 
 				if (isWindows
-					&& globalData.targetProfile.binaryType == BinaryType::B_SHARED
-					&& globalData.targetProfile.compiler == CompilerType::C_ZIG)
+					&& globalData.targetProfile.binaryType == BinaryType::SHARED
+					&& globalData.targetProfile.compiler == CompilerType::ZIG)
 				{
 					for (auto& f : directory_iterator(globalData.targetProfile.buildPath))
 					{
@@ -1423,7 +1423,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished linking to output '" + outputPath.string() + "'!",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
 					0,
 					true);
 			}
@@ -1432,7 +1432,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping linking of output '" + outputPath.string() + "' because there are no new object files.",
 					"LANGUAGE_C_CPP",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 			}
@@ -1456,7 +1456,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -1477,7 +1477,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 	}

@@ -45,7 +45,7 @@ namespace KalaMake::Core
 		Log::Print(
 			"Starting to create compile commands file at '" + compComm.string() + "'.",
 			"GENERATE",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -130,7 +130,7 @@ namespace KalaMake::Core
 
 		string errorMsg = CreateNewFile(
 			compComm,
-			FileType::FILE_TEXT,
+			FileType::TEXT,
 			{ .inText = out.str() });
 
 		if (!errorMsg.empty())
@@ -143,7 +143,7 @@ namespace KalaMake::Core
 		Log::Print(
 			"Finished generating compile_commands.json!",
 			"GENERATE",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
     }
@@ -157,7 +157,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create classpath file at '" + classPath.string() + "'.",
                     "GENERATE",
-                    LogType::LOG_INFO,
+                    LogType::INFO,
                     0,
                     true);
 
@@ -210,7 +210,7 @@ namespace KalaMake::Core
 
                 string errorMsg = CreateNewFile(
                     classPath,
-                    FileType::FILE_TEXT,
+                    FileType::TEXT,
                     { .inText = out.str() });
 
                 if (!errorMsg.empty())
@@ -223,7 +223,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .classpath!",
                     "GENERATE",
-                    LogType::LOG_SUCCESS,
+                    LogType::SUCCESS,
                     0,
                     true);
 
@@ -237,7 +237,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create project file at '" + projectPath.string() + "'.",
                     "GENERATE",
-                    LogType::LOG_INFO,
+                    LogType::INFO,
                     0,
                     true);
 
@@ -275,7 +275,7 @@ namespace KalaMake::Core
 
                 string errorMsg = CreateNewFile(
                     projectPath,
-                    FileType::FILE_TEXT,
+                    FileType::TEXT,
                     { .inText = out.str() });
 
                 if (!errorMsg.empty())
@@ -288,7 +288,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .project!",
                     "GENERATE",
-                    LogType::LOG_SUCCESS,
+                    LogType::SUCCESS,
                     0,
                     true);
             };
@@ -372,7 +372,7 @@ namespace KalaMake::Core
             Log::Print(
                 "Starting to generate launch.json.",
                 "GENERATE",
-                LogType::LOG_INFO,
+                LogType::INFO,
                 0,
                 true);
 
@@ -563,7 +563,7 @@ namespace KalaMake::Core
 
             string launchErr = CreateNewFile(
                 launchJson,
-                FileType::FILE_TEXT,
+                FileType::TEXT,
                 { .inLines = std::move(launchLines) });
 
             if (!launchErr.empty())
@@ -585,7 +585,7 @@ namespace KalaMake::Core
             Log::Print(
                 "Skipping launch.json generation because target is not an executable.",
                 "GENERATE",
-                LogType::LOG_INFO,
+                LogType::INFO,
                 0,
                 true);
         }
@@ -599,7 +599,7 @@ namespace KalaMake::Core
         Log::Print(
 			"Starting to generate tasks.json.",
 			"GENERATE",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -758,7 +758,7 @@ namespace KalaMake::Core
 
         string tasksErr = CreateNewFile(
             tasksJson,
-            FileType::FILE_TEXT,
+            FileType::TEXT,
             { .inLines = std::move(tasksLines) });
 
         if (!tasksErr.empty())
@@ -778,7 +778,7 @@ namespace KalaMake::Core
         Log::Print(
 			"Finished generating vscode solution files!",
 			"GENERATE",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 

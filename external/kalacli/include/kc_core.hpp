@@ -33,17 +33,22 @@ namespace KalaCLI
 	//after enter was pressed and text was cleared from input box
     static constexpr u32 MAX_TYPED_TEXT_HISTORY = 100;
 
-    enum class PageDirection : u8
+    enum class PageDirection
     {
-        D_UP = 0,  //nth row from bottom
-        D_DOWN = 1 //nth row from top
+		//Nth row from bottom
+        UP,
+		//Nth row from top
+        DOWN
     };
 
-    enum class TextRange : u8
+    enum class TextRange
     {
-        R_ALL             = 0, //all content in page box
-        R_VISIBLE         = 1, //content currently visible in page box
-		R_HIGHLIGHTED_ROW = 2  //content within hovered row in page view
+		//All content in page box
+        ALL,
+		//Content currently visible in page box
+        VISIBLE,
+		//Content within hovered row in page view
+		HIGHLIGHTED_ROW
     };
 
 	struct LIB_API Command
@@ -75,7 +80,7 @@ namespace KalaCLI
 		//Returns row count in page visible area
 		static u32 GetRowCount();
 		//Returns the global or visible range row depending on text range state,
-		//cannot be used with R_HIGHLIGHTED_ROW,
+		//cannot be used with HIGHLIGHTED_ROW,
 		//returns 0 if not in page view mode
 		static u32 GetHighlightedRow(TextRange textRange);
 
@@ -99,12 +104,12 @@ namespace KalaCLI
 		//Choose what to display at the top bar above the table
 		static void SetPageTitle(string_view title);
 
-		//Returns all page content if text range is set to R_ALL,
+		//Returns all page content if text range is set to ALL,
 		//returns all page content within visible page box area
-		//if text range is set to R_VISIBLE,
+		//if text range is set to VISIBLE,
 		//returns content on highlighted row if in page view mode
-		//and if text range is set to R_HIGHLIGHTED_ROW
-		static vector<string> GetPageContent(TextRange textRange = TextRange::R_ALL);
+		//and if text range is set to HIGHLIGHTED_ROW
+		static vector<string> GetPageContent(TextRange textRange = TextRange::ALL);
 		//Decide what to display in the active page,
 		//clears all old data and stores new data
 		static void SetPageContent(const vector<string>& content);
@@ -130,7 +135,7 @@ namespace KalaCLI
 			u32 targetRow);
 
 		//Choose what to do when enter is pressed over a row while in page read mode,
-		//Returns highlighted R_VISIBLE row and text on that row,
+		//Returns highlighted VISIBLE row and text on that row,
 		//changing to empty restores original operation where it copies highlighted page view row to input field
 		static void SetHighlightedRowEnterAction(function<void(u32, string&)> action);
 

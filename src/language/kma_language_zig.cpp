@@ -56,7 +56,7 @@ static void Compile_Final(const GlobalData& globalData);
 
 static void GenerateSteps(const GlobalData& globalData)
 {
-	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_EXPORT_VSCODE_SLN);
+	bool canGenerateVSCodeSln = ContainsValue(globalData.targetProfile.customFlags, CustomFlag::EXPORT_VSCODE_SLN);
 
 	if (canGenerateVSCodeSln)
 	{
@@ -77,7 +77,7 @@ static void GenerateSteps(const GlobalData& globalData)
 		};
 
 		Generate::GenerateVSCodeSolution(
-			globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE,
+			globalData.targetProfile.binaryType == BinaryType::EXECUTABLE,
 			launch,
 			task);
 	}
@@ -103,7 +103,7 @@ void PreCheck(GlobalData& globalData)
 	// ENSURE REQUIRED FIELDS ARE NOT MISSING
 	//
 
-	if (globalData.targetProfile.buildType == BuildType::B_INVALID)
+	if (globalData.targetProfile.buildType == BuildType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -114,13 +114,13 @@ void PreCheck(GlobalData& globalData)
     // ENSURE UNSUPPORTED FIELDS ARE NOT USED
     //
 
-    if (globalData.targetProfile.standard != StandardType::S_INVALID)
+    if (globalData.targetProfile.standard != StandardType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
 			"Field 'standard' is not supported in Zig!");
     }
-    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::C_INVALID)
+    if (globalData.targetProfile.compilerLauncher != CompilerLauncherType::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -138,7 +138,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_ZIG",
 			"Field 'links' is not supported in Zig!");
 	}
-    if (globalData.targetProfile.warningLevel != WarningLevel::W_INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -166,7 +166,7 @@ void PreCheck(GlobalData& globalData)
 
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_COMPILE_COMMANDS))
+		CustomFlag::EXPORT_COMPILE_COMMANDS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -174,7 +174,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_WARNINGS_AS_ERRORS))
+		CustomFlag::WARNINGS_AS_ERRORS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -182,7 +182,7 @@ void PreCheck(GlobalData& globalData)
 	}
     if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_MSVC_STATIC_RUNTIME))
+		CustomFlag::MSVC_STATIC_RUNTIME))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -190,7 +190,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_GENERATE_SYMBOLS))
+		CustomFlag::GENERATE_SYMBOLS))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -198,7 +198,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_NO_CONSOLE))
+		CustomFlag::NO_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -206,7 +206,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PACKAGE_JAR))
+		CustomFlag::PACKAGE_JAR))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -214,7 +214,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_JAVA_WIN_CONSOLE))
+		CustomFlag::JAVA_WIN_CONSOLE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -222,7 +222,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_EXPORT_JAVA_SLN))
+		CustomFlag::EXPORT_JAVA_SLN))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -230,7 +230,7 @@ void PreCheck(GlobalData& globalData)
 	}
 	if (ContainsValue(
 		globalData.targetProfile.customFlags, 
-		CustomFlag::F_PYTHON_ONE_FILE))
+		CustomFlag::PYTHON_ONE_FILE))
 	{
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -328,7 +328,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_ZIG",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -340,7 +340,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -354,7 +354,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -366,7 +366,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::LOG_INFO,
+				LogType::INFO,
 				0,
 				true);
 
@@ -416,7 +416,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_ZIG",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -437,7 +437,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_ZIG",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 
@@ -466,7 +466,7 @@ void Compile_Final(const GlobalData& globalData)
 
             switch(globalData.targetProfile.binaryType)
             {
-            case BinaryType::B_EXECUTABLE:
+            case BinaryType::EXECUTABLE:
             {
                 command += " build-exe";
 
@@ -477,7 +477,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 break;
             }
-            case BinaryType::B_SHARED:
+            case BinaryType::SHARED:
             {
                 command += " build-lib -dynamic";
 
@@ -491,7 +491,7 @@ void Compile_Final(const GlobalData& globalData)
 
                 break;
             }
-            case BinaryType::B_STATIC:
+            case BinaryType::STATIC:
             {
                 command += " build-lib";
                 break;
@@ -505,24 +505,24 @@ void Compile_Final(const GlobalData& globalData)
 
             switch (globalData.targetProfile.buildType)
             {
-            case BuildType::B_DEBUG:
+            case BuildType::DEBUG:
             {
                 finalFlags.push_back("-O Debug");
                 break;
             }
-            case BuildType::B_RELEASE:
+            case BuildType::RELEASE:
             {
                 finalFlags.push_back("-O ReleaseFast");
 				finalFlags.push_back("-fstrip");
 				break;
             }
-            case BuildType::B_MINSIZEREL:
+            case BuildType::MINSIZEREL:
             {
                 finalFlags.push_back("-O ReleaseSmall");
 				finalFlags.push_back("-fstrip");
 				break;
             }
-            case BuildType::B_RELDEBUG:
+            case BuildType::RELDEBUG:
             {
                 finalFlags.push_back("-O ReleaseSafe");
                 break;
@@ -541,17 +541,17 @@ void Compile_Final(const GlobalData& globalData)
 
             switch(globalData.targetProfile.targetType)
             {
-            case TargetType::T_LINUX_GNU:
+            case TargetType::LINUX_GNU:
             {
                 command += " -target " + string(target_type_zig_linux_gnu);
                 break;
             }
-            case TargetType::T_LINUX_MUSL:
+            case TargetType::LINUX_MUSL:
             {
                 command += " -target " + string(target_type_zig_linux_musl);
                 break;
             }
-            case TargetType::T_WINDOWS_GNU:
+            case TargetType::WINDOWS_GNU:
             {
                 command += " -target " + string(target_type_zig_windows_gnu);
                 break;
@@ -594,14 +594,14 @@ void Compile_Final(const GlobalData& globalData)
 #endif
 
             string extension{};
-			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE)
+			if (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE)
 			{
 				if (isOnLinux) command += " -rpath \\$ORIGIN";
 
 				if ((isOnLinux
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					
 					if (binaryName.ends_with(".exe")) binaryName.resize(binaryName.size() - 4);
@@ -611,12 +611,12 @@ void Compile_Final(const GlobalData& globalData)
 					if (!binaryName.ends_with(".exe")) extension = ".exe";
 				}
 			}
-			else if (globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+			else if (globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				if ((isOnLinux
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL)
 				{
 					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".so")) extension = ".so";
@@ -626,13 +626,13 @@ void Compile_Final(const GlobalData& globalData)
 					if (!binaryName.ends_with(".dll")) extension = ".dll";
 				}
 			}
-			else if (globalData.targetProfile.binaryType == BinaryType::B_STATIC)
+			else if (globalData.targetProfile.binaryType == BinaryType::STATIC)
 			{
 				if ((isOnLinux
-					&& globalData.targetProfile.targetType == TargetType::T_INVALID)
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_GNU
-					|| globalData.targetProfile.targetType == TargetType::T_LINUX_MUSL
-					|| globalData.targetProfile.targetType == TargetType::T_WINDOWS_GNU)
+					&& globalData.targetProfile.targetType == TargetType::INVALID)
+					|| globalData.targetProfile.targetType == TargetType::LINUX_GNU
+					|| globalData.targetProfile.targetType == TargetType::LINUX_MUSL
+					|| globalData.targetProfile.targetType == TargetType::WINDOWS_GNU)
 				{
 					if (!binaryName.starts_with("lib")) binaryName = "lib" + binaryName;
 					if (!binaryName.ends_with(".a")) extension = ".a";
@@ -701,7 +701,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_ZIG",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
 
@@ -717,7 +717,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + outputPath.string() + "'!",
 					"LANGUAGE_ZIG",
-					LogType::LOG_SUCCESS,
+					LogType::SUCCESS,
 					0,
 					true);
             }
@@ -726,7 +726,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + outputPath.string() + "' because there are no new source files.",
 					"LANGUAGE_ZIG",
-					LogType::LOG_INFO,
+					LogType::INFO,
 					0,
 					true);
             }
@@ -745,7 +745,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_ZIG",
-			LogType::LOG_INFO,
+			LogType::INFO,
 			0,
 			true);
 
@@ -766,7 +766,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_ZIG",
-			LogType::LOG_SUCCESS,
+			LogType::SUCCESS,
 			0,
 			true);
 	}
