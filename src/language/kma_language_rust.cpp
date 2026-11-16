@@ -118,7 +118,7 @@ namespace KalaMake::Language
 void PreCheck(GlobalData& globalData)
 {
 #ifdef _WIN32
-    if (globalData.targetProfile.targetType == TargetType::T_LINUX_GNU)
+    if (globalData.targetProfile.targetType == TargetType::LINUX_GNU)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -166,7 +166,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_RUST",
 			"Field 'headers' is not supported in Rust!");
     }
-    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::TYPE_INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_RUST",
@@ -342,7 +342,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_RUST",
-				LogType::INFO,
+				LogType::LOG_INFO,
                 0,
                 true);
 
@@ -354,7 +354,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::INFO,
+				LogType::LOG_INFO,
                 0,
                 true);
 
@@ -368,7 +368,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::INFO,
+				LogType::LOG_INFO,
                 0,
                 true);
 
@@ -380,7 +380,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_RUST",
-				LogType::INFO,
+				LogType::LOG_INFO,
                 0,
                 true);
 
@@ -430,7 +430,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_RUST",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -451,7 +451,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_RUST",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
@@ -809,7 +809,7 @@ void Compile_Final(const GlobalData& globalData)
                         Log::Print(
                             "Copied std library from '" + originPath.string() + "' to target '" + (targetDir / front).string() + "'.",
                             "LANGUAGE_RUST",
-                            LogType::INFO,
+                            LogType::LOG_INFO,
                             0,
                             true);
                     }
@@ -931,7 +931,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_RUST",
-					LogType::INFO,
+					LogType::LOG_INFO,
                     0,
                     true);
 
@@ -947,7 +947,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + outputPath.string() + "'!",
 					"LANGUAGE_RUST",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
                     0,
                     true);
             }
@@ -956,7 +956,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + outputPath.string() + "' because there are no new source files.",
 					"LANGUAGE_RUST",
-					LogType::INFO,
+					LogType::LOG_INFO,
                     0,
                     true);
             }
@@ -975,7 +975,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_RUST",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -996,7 +996,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_RUST",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 	}

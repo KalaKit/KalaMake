@@ -141,7 +141,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_PYTHON",
 			"Field 'links' is not supported in Python!");
 	}
-    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::TYPE_INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_PYTHON",
@@ -329,7 +329,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_PYTHON",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -341,7 +341,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -355,7 +355,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -367,7 +367,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_PYTHON",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -417,7 +417,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_PYTHON",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -438,7 +438,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_PYTHON",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
@@ -545,7 +545,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_PYTHON",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -561,7 +561,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + globalData.targetProfile.buildPath.string() + "'!",
 					"LANGUAGE_PYTHON",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
 					0,
 					true);
             }
@@ -570,7 +570,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + globalData.targetProfile.buildPath.string() + "' because there are no new source files.",
 					"LANGUAGE_PYTHON",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
             }
@@ -590,7 +590,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_PYTHON",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -611,7 +611,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_PYTHON",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 	}

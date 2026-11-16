@@ -189,7 +189,7 @@ void PreCheck(GlobalData& globalData)
 	if (globalData.targetProfile.targetType == TargetType::INVALID)
 	{
 #ifdef _WIN32
-		globalData.targetProfile.targetType = TargetType::T_WINDOWS_MSVC;
+		globalData.targetProfile.targetType = TargetType::WINDOWS_MSVC;
 #else
 		globalData.targetProfile.targetType = TargetType::LINUX_GNU;
 #endif
@@ -267,7 +267,7 @@ void PreCheck(GlobalData& globalData)
 			return true;
 		};
 
-	if (globalData.targetProfile.compiler == CompilerType::C_CL
+	if (globalData.targetProfile.compiler == CompilerType::CL
 		&& (!has_env("INCLUDE")
 		|| !has_env("LIB")))
 	{
@@ -392,7 +392,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_C_CPP",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -404,7 +404,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -418,7 +418,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -430,7 +430,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_C_CPP",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -509,7 +509,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
@@ -625,9 +625,9 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				runtimeFlag = ContainsValue(
 					globalData.targetProfile.customFlags, 
-					CustomFlag::F_MSVC_STATIC_RUNTIME) ? "MT" : "MD";
+					CustomFlag::MSVC_STATIC_RUNTIME) ? "MT" : "MD";
 				
-				finalFlags.push_back(globalData.targetProfile.buildType == KalaMake::Core::BuildType::B_DEBUG
+				finalFlags.push_back(globalData.targetProfile.buildType == KalaMake::Core::BuildType::DEBUG
 					? runtimeFlag + "d"
 					: runtimeFlag);
 			}
@@ -635,7 +635,7 @@ void Compile_Final(const GlobalData& globalData)
 			{
 				runtimeFlag = ContainsValue(
 					globalData.targetProfile.customFlags, 
-					CustomFlag::F_MSVC_STATIC_RUNTIME) ? "fms-runtime-lib=static" : "fms-runtime-lib=dll";
+					CustomFlag::MSVC_STATIC_RUNTIME) ? "fms-runtime-lib=static" : "fms-runtime-lib=dll";
 
 				finalFlags.push_back(runtimeFlag);
 			}
@@ -751,13 +751,13 @@ void Compile_Final(const GlobalData& globalData)
 
 			switch (globalData.targetProfile.warningLevel)
 			{
-			case WarningLevel::BASIC:
+			case WarningLevel::TYPE_BASIC:
 			{
 				if (isMSVC) finalFlags.push_back("W1");
 				else        finalFlags.push_back("Wall");
 				break;
 			}
-			case WarningLevel::NORMAL:
+			case WarningLevel::TYPE_NORMAL:
 			{
 				if (isMSVC) finalFlags.push_back("W3");
 				else
@@ -767,7 +767,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::STRONG:
+			case WarningLevel::TYPE_STRONG:
 			{
 				if (isMSVC) finalFlags.push_back("W4");
 				else
@@ -778,7 +778,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::STRICT:
+			case WarningLevel::TYPE_STRICT:
 			{
 				if (isMSVC)
 				{
@@ -795,7 +795,7 @@ void Compile_Final(const GlobalData& globalData)
 				}
 				break;
 			}
-			case WarningLevel::ALL:
+			case WarningLevel::TYPE_ALL:
 			{
 				if (isMSVC) finalFlags.push_back("Wall");
 				else if (globalData.targetProfile.compiler == CompilerType::CLANG
@@ -981,7 +981,7 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Starting to compile via '" + perFileCommand + "'.",
 							"LANGUAGE_C_CPP",
-							LogType::INFO,
+							LogType::LOG_INFO,
 							0,
 							true);
 							
@@ -997,7 +997,7 @@ void Compile_Final(const GlobalData& globalData)
 						Log::Print(
 							"Skipping compilation of object file '" + objPath.string() + "' because it is newer than its source and header files.\n",
 							"LANGUAGE_C_CPP",
-							LogType::INFO,
+							LogType::LOG_INFO,
 							0,
 							true);
 					}
@@ -1322,8 +1322,8 @@ void Compile_Final(const GlobalData& globalData)
 			}
 
 #ifdef _WIN32
-			if (globalData.targetProfile.binaryType == BinaryType::B_EXECUTABLE
-				&& ContainsValue(globalData.targetProfile.customFlags, CustomFlag::F_NO_CONSOLE))
+			if (globalData.targetProfile.binaryType == BinaryType::EXECUTABLE
+				&& ContainsValue(globalData.targetProfile.customFlags, CustomFlag::NO_CONSOLE))
 			{
 				if (isMSVC)
 				{
@@ -1387,7 +1387,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to link via '" + command + "'.",
 					"LANGUAGE_C_CPP",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -1423,7 +1423,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished linking to output '" + outputPath.string() + "'!",
 					"LANGUAGE_C_CPP",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
 					0,
 					true);
 			}
@@ -1432,7 +1432,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping linking of output '" + outputPath.string() + "' because there are no new object files.",
 					"LANGUAGE_C_CPP",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 			}
@@ -1456,7 +1456,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_C_CPP",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -1477,7 +1477,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_C_CPP",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 	}

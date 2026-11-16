@@ -277,23 +277,24 @@ namespace KalaMake::Core
 	};
 
 	//Allowed warning levels that can be added to the warninglevel field,
-	//only for C and C++
+	//only for C and C++,
+	//requires 'TYPE_' prefix because Windows defines STRICT
 	enum class WarningLevel
 	{
-		INVALID,
+		TYPE_INVALID,
 
 		//No warnings
-		NONE,
+		TYPE_NONE,
 		//Very basic warnings
-		BASIC,
+		TYPE_BASIC,
 		//Common, useful warnings, recommended default
-		NORMAL,
+		TYPE_NORMAL,
 		//Strong warnings
-		STRONG,
+		TYPE_STRONG,
 		//Very strict, high signal warnings
-		STRICT,
+		TYPE_STRICT,
 		//All warnings
-		ALL
+		TYPE_ALL
 	};
 
 	//Allowed custom flags that can be added to the customflags field.

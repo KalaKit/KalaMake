@@ -138,7 +138,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_ZIG",
 			"Field 'links' is not supported in Zig!");
 	}
-    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::TYPE_INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_ZIG",
@@ -328,7 +328,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_ZIG",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -340,7 +340,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -354,7 +354,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -366,7 +366,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_ZIG",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -416,7 +416,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_ZIG",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -437,7 +437,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_ZIG",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
@@ -650,7 +650,7 @@ void Compile_Final(const GlobalData& globalData)
             command += " -femit-bin=\"" + outputPath.string() + "\"";
 
 #ifdef _WIN32
-			if (globalData.targetProfile.binaryType == BinaryType::B_SHARED)
+			if (globalData.targetProfile.binaryType == BinaryType::SHARED)
 			{
 				path libOutputPath = path(buildPath / string(binaryName + ".lib"));
 				command += " -femit-implib=\"" + libOutputPath.string() + "\"";
@@ -701,7 +701,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_ZIG",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -717,7 +717,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished compiling to output '" + outputPath.string() + "'!",
 					"LANGUAGE_ZIG",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
 					0,
 					true);
             }
@@ -726,7 +726,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compiling to output '" + outputPath.string() + "' because there are no new source files.",
 					"LANGUAGE_ZIG",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
             }
@@ -745,7 +745,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_ZIG",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -766,7 +766,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_ZIG",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 	}

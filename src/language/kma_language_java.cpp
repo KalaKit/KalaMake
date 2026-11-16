@@ -188,7 +188,7 @@ void PreCheck(GlobalData& globalData)
 			"LANGUAGE_JAVA",
 			"Field 'headers' is not supported in Java!");
     }
-    if (globalData.targetProfile.warningLevel != WarningLevel::INVALID)
+    if (globalData.targetProfile.warningLevel != WarningLevel::TYPE_INVALID)
     {
         KalaMakeCore::ForceClose(
 			"LANGUAGE_JAVA",
@@ -400,7 +400,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring excluded source script path '" + (*itMatch).string() + "'.",
 				"LANGUAGE_JAVA",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -412,7 +412,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring invalid source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -426,7 +426,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-existing source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -438,7 +438,7 @@ void PreCheck(GlobalData& globalData)
 			Log::Print(
 				"Ignoring non-file source script path '" + target.string() + "'",
 				"LANGUAGE_JAVA",
-				LogType::INFO,
+				LogType::LOG_INFO,
 				0,
 				true);
 
@@ -488,7 +488,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run pre build actions.",
 			"LANGUAGE_JAVA",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -509,7 +509,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all pre build actions!",
 			"LANGUAGE_JAVA",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
@@ -663,7 +663,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to compile via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -679,7 +679,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping compilation of class files because they are newer than their source files.\n",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 			}
@@ -760,7 +760,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to create jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -774,7 +774,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished creating jar file '" + jarPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
 					0,
 					true);
 			}
@@ -783,7 +783,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping creating jar file '" + jarPath.string() + "' because there are no new class files.",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 			}
@@ -944,7 +944,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Starting to package jar file via '" + command + "'.",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 
@@ -970,7 +970,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Finished packing jar file to path '" + buildPath.string() + "'!",
 					"LANGUAGE_JAVA",
-					LogType::SUCCESS,
+					LogType::LOG_SUCCESS,
 					0,
 					true);
 			}
@@ -979,7 +979,7 @@ void Compile_Final(const GlobalData& globalData)
 				Log::Print(
 					"Skipping packing jar file to path '" + buildPath.string() + "' because it is newer than its jar file.",
 					"LANGUAGE_JAVA",
-					LogType::INFO,
+					LogType::LOG_INFO,
 					0,
 					true);
 			}
@@ -1010,7 +1010,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Starting to run post build actions.",
 			"LANGUAGE_JAVA",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -1031,7 +1031,7 @@ void Compile_Final(const GlobalData& globalData)
 		Log::Print(
 			"Finished all post build actions!",
 			"LANGUAGE_JAVA",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 	}

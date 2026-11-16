@@ -314,12 +314,12 @@ static const unordered_map<BuildType, string_view, EnumHash<BuildType>> buildTyp
 //their true meanings change depending on which OS is used
 static const unordered_map<WarningLevel, string_view, EnumHash<WarningLevel>> warningLevels =
 {
-    { WarningLevel::NONE,   warning_level_none },
-    { WarningLevel::BASIC,  warning_level_basic },
-    { WarningLevel::NORMAL, warning_level_normal },
-    { WarningLevel::STRONG, warning_level_strong },
-    { WarningLevel::STRICT, warning_level_strict },
-    { WarningLevel::ALL,    warning_level_all }
+    { WarningLevel::TYPE_NONE,   warning_level_none },
+    { WarningLevel::TYPE_BASIC,  warning_level_basic },
+    { WarningLevel::TYPE_NORMAL, warning_level_normal },
+    { WarningLevel::TYPE_STRONG, warning_level_strong },
+    { WarningLevel::TYPE_STRICT, warning_level_strict },
+    { WarningLevel::TYPE_ALL,    warning_level_all }
 };
 
 //Same warning types are used for both MSVC and GNU,
@@ -432,7 +432,7 @@ namespace KalaMake::Core
             Log::Print(
                 "Failed to parse kmake file '" + userParams[0] + "'! Reason: " + err,
                 "KMAKE_CORE",
-                LogType::ERROR,
+                LogType::LOG_ERROR,
                 2);
 
             return;
@@ -529,7 +529,7 @@ namespace KalaMake::Core
 		Log::Print(
 			reason,
 			target,
-			LogType::ERROR,
+			LogType::LOG_ERROR,
 			2,
 			true,
 			TimeFormat::TIME_NONE,
@@ -1145,7 +1145,7 @@ string GetGlobalData(const vector<string>& content)
             Log::Print(
                 "Set jobs count to '" + jobsCount + "' because it was not assigned.",
                 "KMAKE_CORE",
-                LogType::INFO);
+                LogType::LOG_INFO);
         }
     }
     else
@@ -1267,7 +1267,7 @@ string GetGlobalData(const vector<string>& content)
                             Log::Print(
                                 "Failed to dereference value '" + refValue + "'! Replacing with empty string.",
                                 "KMA_CORE",
-                                LogType::WARNING);
+                                LogType::LOG_WARNING);
                         }
                     }
 
@@ -1472,7 +1472,7 @@ string GetGlobalData(const vector<string>& content)
                         Log::Print(
                             "Created build directory '" + expanded + "' because it did not exist.",
                             "KMAKE_CORE",
-                            LogType::INFO);
+                            LogType::LOG_INFO);
                     }
                 }
             }

@@ -45,7 +45,7 @@ namespace KalaMake::Core
 		Log::Print(
 			"Starting to create compile commands file at '" + compComm.string() + "'.",
 			"GENERATE",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -143,7 +143,7 @@ namespace KalaMake::Core
 		Log::Print(
 			"Finished generating compile_commands.json!",
 			"GENERATE",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
     }
@@ -157,7 +157,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create classpath file at '" + classPath.string() + "'.",
                     "GENERATE",
-                    LogType::INFO,
+                    LogType::LOG_INFO,
                     0,
                     true);
 
@@ -223,7 +223,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .classpath!",
                     "GENERATE",
-                    LogType::SUCCESS,
+                    LogType::LOG_SUCCESS,
                     0,
                     true);
 
@@ -237,7 +237,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Starting to create project file at '" + projectPath.string() + "'.",
                     "GENERATE",
-                    LogType::INFO,
+                    LogType::LOG_INFO,
                     0,
                     true);
 
@@ -288,7 +288,7 @@ namespace KalaMake::Core
                 Log::Print(
                     "Finished generating .project!",
                     "GENERATE",
-                    LogType::SUCCESS,
+                    LogType::LOG_SUCCESS,
                     0,
                     true);
             };
@@ -372,7 +372,7 @@ namespace KalaMake::Core
             Log::Print(
                 "Starting to generate launch.json.",
                 "GENERATE",
-                LogType::INFO,
+                LogType::LOG_INFO,
                 0,
                 true);
 
@@ -585,7 +585,7 @@ namespace KalaMake::Core
             Log::Print(
                 "Skipping launch.json generation because target is not an executable.",
                 "GENERATE",
-                LogType::INFO,
+                LogType::LOG_INFO,
                 0,
                 true);
         }
@@ -599,7 +599,7 @@ namespace KalaMake::Core
         Log::Print(
 			"Starting to generate tasks.json.",
 			"GENERATE",
-			LogType::INFO,
+			LogType::LOG_INFO,
 			0,
 			true);
 
@@ -778,7 +778,7 @@ namespace KalaMake::Core
         Log::Print(
 			"Finished generating vscode solution files!",
 			"GENERATE",
-			LogType::SUCCESS,
+			LogType::LOG_SUCCESS,
 			0,
 			true);
 
