@@ -1,6 +1,6 @@
 # KalaMake updates
 
-## 2.x.x
+## 2.1.0
 
 - standardized enums across KalaHeaders, KalaCLI and KalaMake
 
